@@ -83,42 +83,104 @@ app.use(
   swaggerUi.setup(swaggerSpec, { explorer: true }),
 );
 
-// CORS configuration
-const allowedOrigins = [
+// CORS configuration — origins from env (CORS_ORIGINS, CLIENT_URL) + safe defaults
+function normalizeOrigin(value) {
+  if (!value || typeof value !== "string") return null;
+  try {
+    const u = new URL(value.trim());
+    return u.origin; // strips path/trailing slash
+  } catch {
+    return value.trim().replace(/\/$/, "") || null;
+  }
+}
+
+const defaultOrigins = [
   "http://localhost:3000",
   "http://localhost:3001",
   "http://localhost:3002",
   "http://localhost:3003",
   "http://localhost:7501",
-  "https://roxylius.github.io/AdminControl-RBAC",
+  "http://127.0.0.1:3002",
+  "http://127.0.0.1:3003",
+  "https://roxylius.github.io",
   "https://admin-control-rbac.vercel.app",
+  "https://truck.elhaa.com",
+  "http://truck.elhaa.com",
 ];
+
+const envOrigins = [
+  ...(process.env.CORS_ORIGINS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+  process.env.CLIENT_URL,
+  process.env.FRONTEND_URL,
+].map(normalizeOrigin).filter(Boolean);
+
+const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
+const allowAllCors =
+  String(process.env.CORS_ALLOW_ALL || "").toLowerCase() === "true";
+
+console.log(
+  "[CORS] allowed origins:",
+  allowedOrigins.join(", ") || "(none)",
+  allowAllCors ? "(CORS_ALLOW_ALL=true)" : "",
+);
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow server-to-server / tools with no origin
+    // Same-origin / server-to-server / curl (no Origin header)
     if (!origin) return callback(null, true);
+    if (allowAllCors) return callback(null, true);
 
     const isLocalhost =
-      /^http:\/\/localhost:\d+$/.test(origin) ||
-      /^http:\/\/127\.0\.0\.1:\d+$/.test(origin);
+      /^https?:\/\/localhost(?::\d+)?$/.test(origin) ||
+      /^https?:\/\/127\.0\.0\.1(?::\d+)?$/.test(origin);
 
-    // Allow your deployed frontend domain
-    const isTruckElhaa = /^https?:\/\/truck\.elhaa\.com(?::\d+)?$/.test(origin);
+    const isTruckElhaa =
+      /^https?:\/\/([a-z0-9-]+\.)?elhaa\.com(?::\d+)?$/i.test(origin);
 
-    if (allowedOrigins.includes(origin) || isLocalhost || isTruckElhaa) {
+    // Any http(s) origin on the same host as CLIENT_URL (covers :3002 vs :3003)
+    let isSameDeployHost = false;
+    const clientOrigin = normalizeOrigin(process.env.CLIENT_URL);
+    if (clientOrigin) {
+      try {
+        const allowedHost = new URL(clientOrigin).hostname;
+        const reqHost = new URL(origin).hostname;
+        isSameDeployHost = Boolean(allowedHost && reqHost === allowedHost);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    if (
+      allowedOrigins.includes(origin) ||
+      isLocalhost ||
+      isTruckElhaa ||
+      isSameDeployHost
+    ) {
       return callback(null, true);
     }
 
-    return callback(new Error("Not allowed by CORS"));
+    console.warn("[CORS] blocked origin:", origin);
+    // Do not throw — throwing yields 500 without ACAO headers (looks like a CORS failure)
+    return callback(null, false);
   },
   credentials: true,
   methods: ["GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+  ],
+  exposedHeaders: ["Content-Disposition"],
+  optionsSuccessStatus: 204,
 };
 
 // Enable CORS (including preflight) for API routes
-app.use(cors(corsOptions)); // to enable cross origin resource sharing
+app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 app.use(bodyParser.urlencoded({ extended: true })); //to read the post request from html form
 app.use(express.json()); //to interpret json
