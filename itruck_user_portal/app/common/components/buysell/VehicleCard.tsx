@@ -15,12 +15,10 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
 import { alpha } from "@mui/material/styles";
-import Link from "@mui/material/Link";
 import { PRODUCT_THEME as T, INFO, SUCCESS, WARNING } from "@/lib/theme";
 import { getBuySellImageUrl } from "@/lib/buysellUtils";
 import { getBuySellRowId, type BuySellProduct } from "@/model/services/buysellapi";
 import {
-  contactTelHref,
   formatProductPrice,
   getListingCardCategory,
   getListingCardTitle,
@@ -28,6 +26,7 @@ import {
   getSellerDisplayName,
   getSellerMobile,
 } from "./utils";
+import { MetaIconLine, PhoneMetaLine } from "./MetaIconLine";
 import {
   getFeaturedStatus,
   resolveFeaturedListingUi,
@@ -87,7 +86,6 @@ export function VehicleCard({
   const location = getProductLocation(product);
   const sellerName = getSellerDisplayName(product);
   const sellerMobile = getSellerMobile(product);
-  const sellerTel = contactTelHref(sellerMobile);
   const isList = layout === "list";
 
   const handleClick = () => onClick?.(productId);
@@ -248,54 +246,32 @@ export function VehicleCard({
           ) : null}
           <VehicleSpecChips product={product} dense={isList} />
           {location ? (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: T.color.textMuted, mt: 0.85 }}>
-              <LocationOnOutlinedIcon sx={{ fontSize: 15 }} />
-              <Typography sx={{ fontSize: 12.5 }} noWrap>
-                {location}
-              </Typography>
-            </Box>
-          ) : null}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 0.5,
-              color: T.color.textSecondary,
-              mt: 0.75,
-            }}
-          >
-            <PersonOutlineIcon sx={{ fontSize: 15 }} />
-            <Typography sx={{ fontSize: 12.5 }} noWrap>
-              Seller: <Box component="span" sx={{ fontWeight: 700, color: T.color.textPrimary }}>{sellerName}</Box>
-            </Typography>
-          </Box>
-          {sellerMobile ? (
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 0.5,
-                color: T.color.textMuted,
-                mt: 0.35,
-              }}
-              onClick={(e) => e.stopPropagation()}
+            <MetaIconLine
+              icon={<LocationOnOutlinedIcon />}
+              dense
+              sx={{ mt: 0.85, color: T.color.textMuted }}
             >
-              <PhoneOutlinedIcon sx={{ fontSize: 14 }} />
-              {sellerTel ? (
-                <Link
-                  href={sellerTel}
-                  underline="hover"
-                  sx={{ fontSize: 12.5, fontWeight: 600, color: INFO }}
-                >
-                  {sellerMobile}
-                </Link>
-              ) : (
-                <Typography sx={{ fontSize: 12.5 }} noWrap>
-                  {sellerMobile}
-                </Typography>
-              )}
-            </Box>
+              {location}
+            </MetaIconLine>
           ) : null}
+          <MetaIconLine
+            icon={<PersonOutlineIcon />}
+            dense
+            sx={{ mt: 0.75 }}
+          >
+            <>
+              Seller:{" "}
+              <Box component="span" sx={{ fontWeight: 700, color: T.color.textPrimary }}>
+                {sellerName}
+              </Box>
+            </>
+          </MetaIconLine>
+          <PhoneMetaLine
+            icon={<PhoneOutlinedIcon />}
+            mobile={sellerMobile}
+            dense
+            sx={{ mt: 0.35 }}
+          />
         </Box>
 
         <Box

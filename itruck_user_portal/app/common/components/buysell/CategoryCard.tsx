@@ -2,7 +2,14 @@
 
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
+import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
+import AirportShuttleOutlinedIcon from "@mui/icons-material/AirportShuttleOutlined";
+import AgricultureOutlinedIcon from "@mui/icons-material/AgricultureOutlined";
+import DirectionsBusOutlinedIcon from "@mui/icons-material/DirectionsBusOutlined";
+import BuildOutlinedIcon from "@mui/icons-material/BuildOutlined";
+import TerrainOutlinedIcon from "@mui/icons-material/TerrainOutlined";
+import { alpha } from "@mui/material/styles";
+import { PRODUCT_THEME as T, INFO, PRIMARY } from "@/lib/theme";
 import type { Category } from "@/model/services/category";
 
 type CategoryCardProps = {
@@ -10,24 +17,30 @@ type CategoryCardProps = {
   onClick?: (categoryId: string) => void;
 };
 
-const CATEGORY_ICONS: Record<string, string> = {
-  truck: "🚛",
-  trailer: "🚚",
-  jcb: "🏗️",
-  tipper: "⛰️",
-  bus: "🚌",
-};
-
-function getCategoryIcon(name: string): string {
-  const lower = name.toLowerCase();
-  for (const [key, icon] of Object.entries(CATEGORY_ICONS)) {
-    if (lower.includes(key)) return icon;
+function getCategoryIcon(name: string) {
+  const lower = (name || "").toLowerCase();
+  if (lower.includes("truck") || lower.includes("lorry") || lower.includes("vehicle")) {
+    return LocalShippingOutlinedIcon;
   }
-  return "🔧";
+  if (lower.includes("trailer") || lower.includes("tanker")) {
+    return AirportShuttleOutlinedIcon;
+  }
+  if (lower.includes("jcb") || lower.includes("excavator") || lower.includes("crane")) {
+    return AgricultureOutlinedIcon;
+  }
+  if (lower.includes("tipper") || lower.includes("dump")) {
+    return TerrainOutlinedIcon;
+  }
+  if (lower.includes("bus") || lower.includes("coach")) {
+    return DirectionsBusOutlinedIcon;
+  }
+  return BuildOutlinedIcon;
 }
 
 export function CategoryCard({ category, onClick }: CategoryCardProps) {
   const id = category._id;
+  const Icon = getCategoryIcon(category.category_name);
+
   return (
     <Box
       role="button"
@@ -44,22 +57,43 @@ export function CategoryCard({ category, onClick }: CategoryCardProps) {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: 1,
+        gap: 1.25,
         p: 2,
-        minWidth: 110,
+        minWidth: 112,
         borderRadius: T.radius.lg,
         border: `1px solid ${T.color.border}`,
         bgcolor: T.color.surface,
         cursor: onClick ? "pointer" : "default",
-        transition: "border-color 0.2s, box-shadow 0.2s",
+        transition: "border-color 0.2s, box-shadow 0.2s, transform 0.2s",
         "&:hover": onClick
-          ? { borderColor: INFO, boxShadow: T.shadow.card }
+          ? {
+              borderColor: alpha(PRIMARY, 0.45),
+              boxShadow: T.shadow.card,
+              transform: "translateY(-2px)",
+              "& .category-icon-wrap": {
+                bgcolor: alpha(PRIMARY, 0.14),
+                color: PRIMARY,
+              },
+            }
           : undefined,
       }}
     >
-      <Typography sx={{ fontSize: 28, lineHeight: 1 }}>
-        {getCategoryIcon(category.category_name)}
-      </Typography>
+      <Box
+        className="category-icon-wrap"
+        sx={{
+          width: 44,
+          height: 44,
+          borderRadius: 2,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          bgcolor: alpha(PRIMARY, 0.08),
+          color: INFO,
+          transition: "background-color 0.2s, color 0.2s",
+        }}
+      >
+        <Icon sx={{ fontSize: 24 }} />
+      </Box>
       <Typography
         sx={{
           fontSize: 12.5,

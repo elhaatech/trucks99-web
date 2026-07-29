@@ -148,6 +148,8 @@ export const LAYOUT = {
   contentMaxWidth: "100%" as const,
   /** Shared left/right page gutter (theme spacing units) */
   pageGutterX: { xs: 2, sm: 2.5, md: 3 } as const,
+  /** Top padding under sticky header (skipped on hero pages) */
+  pageGutterTop: { xs: 1.5, md: 2 } as const,
 } as const;
 
 /* ── Z-index scale ────────────────────────────────────────────────────────── */

@@ -9,14 +9,15 @@ import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
-import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
 import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 import StarIcon from "@mui/icons-material/Star";
+import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
 import {
   VehicleGrid,
   deriveMarketplaceStats,
 } from "@/app/common/components/buysell";
+import { MetaIconLine, PhoneMetaLine } from "@/app/common/components/buysell/MetaIconLine";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 import {
@@ -124,25 +125,15 @@ export default function SellerProfilePage() {
 
         <Box sx={{ mt: 2.5, display: "flex", flexDirection: "column", gap: 1.25 }}>
           {sellerLocation ? (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: T.color.textSecondary }}>
-              <LocationOnOutlinedIcon sx={{ fontSize: 18 }} />
-              <Typography sx={{ fontSize: 14 }}>{sellerLocation}</Typography>
-            </Box>
+            <MetaIconLine icon={<LocationOnOutlinedIcon />}>{sellerLocation}</MetaIconLine>
           ) : null}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: T.color.textSecondary }}>
-            <EmailOutlinedIcon sx={{ fontSize: 18 }} />
-            <Typography sx={{ fontSize: 14 }}>Contact via chat</Typography>
-          </Box>
-          {sellerPhone ? (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: T.color.textSecondary }}>
-              <PhoneOutlinedIcon sx={{ fontSize: 18 }} />
-              <Typography sx={{ fontSize: 14 }}>{sellerPhone}</Typography>
-            </Box>
-          ) : null}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: T.color.textSecondary }}>
-            <CalendarTodayOutlinedIcon sx={{ fontSize: 18 }} />
-            <Typography sx={{ fontSize: 14 }}>Member on TRUCK99</Typography>
-          </Box>
+          <MetaIconLine icon={<ChatBubbleOutlineRoundedIcon />}>
+            Contact via chat
+          </MetaIconLine>
+          <PhoneMetaLine icon={<PhoneOutlinedIcon />} mobile={sellerPhone} />
+          <MetaIconLine icon={<CalendarTodayOutlinedIcon />}>
+            Member on TRUCKS99
+          </MetaIconLine>
         </Box>
 
         <Box

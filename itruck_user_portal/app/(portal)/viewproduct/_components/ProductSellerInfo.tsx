@@ -3,11 +3,11 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Avatar from "@mui/material/Avatar";
-import Link from "@mui/material/Link";
 import StarIcon from "@mui/icons-material/Star";
 import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
+import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
-import { contactTelHref, formatContactMobile } from "@/app/common/components/buysell/utils";
+import { MetaIconLine, PhoneMetaLine } from "@/app/common/components/buysell/MetaIconLine";
 
 type ProductSellerInfoProps = {
   sellerName?: string;
@@ -25,9 +25,6 @@ export function ProductSellerInfo({
   reviewCount,
 }: ProductSellerInfoProps) {
   if (!sellerName) return null;
-
-  const mobile = formatContactMobile(sellerMobile);
-  const telHref = contactTelHref(mobile);
 
   return (
     <Box
@@ -51,35 +48,18 @@ export function ProductSellerInfo({
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography sx={{ fontWeight: 700, fontSize: 16 }}>{sellerName}</Typography>
           {location ? (
-            <Typography sx={{ fontSize: 13, color: T.color.textSecondary, mt: 0.35 }}>
-              {location}
-            </Typography>
-          ) : null}
-          {mobile ? (
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 0.5,
-                mt: 0.65,
-                color: T.color.textSecondary,
-              }}
+            <MetaIconLine
+              icon={<LocationOnOutlinedIcon />}
+              sx={{ mt: 0.5 }}
             >
-              <PhoneOutlinedIcon sx={{ fontSize: 16 }} />
-              {telHref ? (
-                <Link
-                  href={telHref}
-                  underline="hover"
-                  sx={{ fontSize: 13.5, fontWeight: 600, color: INFO }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {mobile}
-                </Link>
-              ) : (
-                <Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>{mobile}</Typography>
-              )}
-            </Box>
+              {location}
+            </MetaIconLine>
           ) : null}
+          <PhoneMetaLine
+            icon={<PhoneOutlinedIcon />}
+            mobile={sellerMobile}
+            sx={{ mt: 0.5 }}
+          />
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.35, mt: 0.75, color: "#f59e0b" }}>
             <StarIcon sx={{ fontSize: 17 }} />
             <Typography sx={{ fontWeight: 700, fontSize: 14, color: T.color.textPrimary }}>

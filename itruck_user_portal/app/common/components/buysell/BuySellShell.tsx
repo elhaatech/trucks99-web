@@ -16,7 +16,7 @@ import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
 import { alpha } from "@mui/material/styles";
-import { isSellHubPath } from "@/lib/userProductRoutes";
+import { isSellHubPath, userProductRoutes } from "@/lib/userProductRoutes";
 import {
   PRODUCT_THEME as T,
   INFO,
@@ -58,6 +58,9 @@ export function BuySellShell({ children }: BuySellShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
+  const isHeroFlush =
+    pathname === "/" ||
+    pathname === userProductRoutes.dashboard();
 
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0, behavior: "auto" });
@@ -183,7 +186,7 @@ export function BuySellShell({ children }: BuySellShellProps) {
           overflowX: "hidden",
           WebkitOverflowScrolling: "touch",
           px: LAYOUT.pageGutterX,
-          pt: { xs: 1.5, md: 2 },
+          pt: isHeroFlush ? 0 : LAYOUT.pageGutterTop,
           pb: { xs: 2.5, md: 3 },
         }}
       >

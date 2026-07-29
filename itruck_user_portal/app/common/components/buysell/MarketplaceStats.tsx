@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import { PRODUCT_THEME as T, DASHBOARD_ACCENTS, INFO } from "@/lib/theme";
+import { PRODUCT_THEME as T, DASHBOARD_ACCENTS, INFO, LAYOUT } from "@/lib/theme";
 import { HERO_TRUCK_IMAGES } from "@/lib/heroTruckImages";
 import type { MarketplaceStats } from "./utils";
 
@@ -211,12 +211,19 @@ export function HeroSearchSection({
         mb: 4,
         ...(fullBleed
           ? {
-              mx: { xs: -2, sm: -2.5, md: -3 },
-              width: {
-                xs: "calc(100% + 32px)",
-                sm: "calc(100% + 40px)",
-                md: "calc(100% + 48px)",
+              // Bleed to shell edges so hero sits flush under the sticky header
+              mx: {
+                xs: -LAYOUT.pageGutterX.xs,
+                sm: -LAYOUT.pageGutterX.sm,
+                md: -LAYOUT.pageGutterX.md,
               },
+              width: {
+                xs: `calc(100% + ${LAYOUT.pageGutterX.xs * 2 * 8}px)`,
+                sm: `calc(100% + ${LAYOUT.pageGutterX.sm * 2 * 8}px)`,
+                md: `calc(100% + ${LAYOUT.pageGutterX.md * 2 * 8}px)`,
+              },
+              borderTopLeftRadius: 0,
+              borderTopRightRadius: 0,
             }
           : {}),
       }}
