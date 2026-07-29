@@ -76,19 +76,11 @@ const advertisementRouter = require("./views/advertisementrouter");
 // const reportRouter = require('./views/handleBuySellReport');
 const app = express();
 
-// Swagger UI at /api-docs (public, before auth middlewares)
-app.use(
-  "/api-docs",
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerSpec, { explorer: true }),
-);
-
-// CORS configuration — origins from env (CORS_ORIGINS, CLIENT_URL) + safe defaults
+// ─── CORS (must run before any other middleware / routes) ───────────────────
 function normalizeOrigin(value) {
   if (!value || typeof value !== "string") return null;
   try {
-    const u = new URL(value.trim());
-    return u.origin; // strips path/trailing slash
+    return new URL(value.trim()).origin;
   } catch {
     return value.trim().replace(/\/$/, "") || null;
   }
@@ -104,8 +96,14 @@ const defaultOrigins = [
   "http://127.0.0.1:3003",
   "https://roxylius.github.io",
   "https://admin-control-rbac.vercel.app",
-  "https://truck.elhaa.com",
+  // Production frontend (port matters — browser Origin includes :3002)
+  "http://truck.elhaa.com:3002",
+  "https://truck.elhaa.com:3002",
   "http://truck.elhaa.com",
+  "https://truck.elhaa.com",
+  "http://truck.elhaa.com:3000",
+  "http://46.202.176.124:3002",
+  "http://46.202.176.124:3000",
 ];
 
 const envOrigins = [
@@ -115,55 +113,83 @@ const envOrigins = [
     .filter(Boolean),
   process.env.CLIENT_URL,
   process.env.FRONTEND_URL,
-].map(normalizeOrigin).filter(Boolean);
+]
+  .map(normalizeOrigin)
+  .filter(Boolean);
 
 const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
 const allowAllCors =
   String(process.env.CORS_ALLOW_ALL || "").toLowerCase() === "true";
 
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  if (allowAllCors) return true;
+  if (allowedOrigins.includes(origin)) return true;
+
+  if (
+    /^https?:\/\/localhost(?::\d+)?$/i.test(origin) ||
+    /^https?:\/\/127\.0\.0\.1(?::\d+)?$/i.test(origin)
+  ) {
+    return true;
+  }
+
+  // Any subdomain of elhaa.com on any port (http://truck.elhaa.com:3002)
+  if (/^https?:\/\/([a-z0-9-]+\.)*elhaa\.com(?::\d+)?$/i.test(origin)) {
+    return true;
+  }
+
+  // Same hostname as CLIENT_URL (any port)
+  const clientOrigin = normalizeOrigin(process.env.CLIENT_URL);
+  if (clientOrigin) {
+    try {
+      if (new URL(origin).hostname === new URL(clientOrigin).hostname) {
+        return true;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return false;
+}
+
 console.log(
   "[CORS] allowed origins:",
-  allowedOrigins.join(", ") || "(none)",
+  allowedOrigins.join(", "),
   allowAllCors ? "(CORS_ALLOW_ALL=true)" : "",
 );
 
+// Manual CORS headers first — reliable behind nginx / when cors package alone is insufficient
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  if (origin && isAllowedOrigin(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader(
+      "Access-Control-Allow-Methods",
+      "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    );
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, X-Requested-With, Accept, Origin",
+    );
+    res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+    res.setHeader("Vary", "Origin");
+  } else if (origin) {
+    console.warn("[CORS] blocked origin:", origin);
+  }
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  return next();
+});
+
 const corsOptions = {
   origin: (origin, callback) => {
-    // Same-origin / server-to-server / curl (no Origin header)
-    if (!origin) return callback(null, true);
-    if (allowAllCors) return callback(null, true);
-
-    const isLocalhost =
-      /^https?:\/\/localhost(?::\d+)?$/.test(origin) ||
-      /^https?:\/\/127\.0\.0\.1(?::\d+)?$/.test(origin);
-
-    const isTruckElhaa =
-      /^https?:\/\/([a-z0-9-]+\.)?elhaa\.com(?::\d+)?$/i.test(origin);
-
-    // Any http(s) origin on the same host as CLIENT_URL (covers :3002 vs :3003)
-    let isSameDeployHost = false;
-    const clientOrigin = normalizeOrigin(process.env.CLIENT_URL);
-    if (clientOrigin) {
-      try {
-        const allowedHost = new URL(clientOrigin).hostname;
-        const reqHost = new URL(origin).hostname;
-        isSameDeployHost = Boolean(allowedHost && reqHost === allowedHost);
-      } catch {
-        /* ignore */
-      }
-    }
-
-    if (
-      allowedOrigins.includes(origin) ||
-      isLocalhost ||
-      isTruckElhaa ||
-      isSameDeployHost
-    ) {
-      return callback(null, true);
-    }
-
+    if (isAllowedOrigin(origin)) return callback(null, true);
     console.warn("[CORS] blocked origin:", origin);
-    // Do not throw — throwing yields 500 without ACAO headers (looks like a CORS failure)
     return callback(null, false);
   },
   credentials: true,
@@ -179,9 +205,15 @@ const corsOptions = {
   optionsSuccessStatus: 204,
 };
 
-// Enable CORS (including preflight) for API routes
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
+
+// Swagger UI at /api-docs (public, before auth middlewares)
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, { explorer: true }),
+);
 app.use(bodyParser.urlencoded({ extended: true })); //to read the post request from html form
 app.use(express.json()); //to interpret json
 
@@ -199,16 +231,19 @@ store.on("error", function (error) {
 });
 
 app.set("trust proxy", 1); //allows express.js behind a reverse proxy to trust proxy server
-// On localhost (HTTP), secure: true would prevent the cookie from being set/sent; use secure only in production
+// On HTTP (no TLS), secure cookies are never sent — detect from CALLBACK/CLIENT URL
 const isProduction = process.env.NODE_ENV === "production";
+const usesHttps = [process.env.CLIENT_URL, process.env.CALLBACK_URL_ORIGIN]
+  .some((u) => typeof u === "string" && u.trim().toLowerCase().startsWith("https://"));
+const cookieSecure = isProduction && usesHttps;
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      sameSite: isProduction ? "none" : "lax", // lax allows cookie on same-site redirects in dev
-      secure: isProduction, // false on localhost so cookie works over HTTP
+      sameSite: cookieSecure ? "none" : "lax",
+      secure: cookieSecure,
       maxAge: 1000 * 60 * 60 * 24 * 180, //180 days
     },
     store: store,

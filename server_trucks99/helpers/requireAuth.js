@@ -82,6 +82,8 @@ function isPublicMethodPath(method, path) {
  * Middleware: Require auth for all /api/* except public paths.
  */
 function requireAuthUnlessPublic(req, res, next) {
+  // Preflight must never require auth (browser sends OPTIONS without token)
+  if (req.method === "OPTIONS") return next();
   if (!req.originalUrl.startsWith("/api")) return next();
   const path = req.originalUrl.split("?")[0];
   if (isPublicPath(path)) return next();
