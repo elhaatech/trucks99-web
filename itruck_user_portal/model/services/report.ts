@@ -523,7 +523,7 @@ export async function downloadReport(
     "buysell-category-sold":    "download/buysell-category-sold",
   };
 
-  const base  = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").replace(/\/$/, "");
+  const base  = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3003").replace(/\/$/, "");
   const token = typeof window !== "undefined" ? localStorage.getItem("itruck_token") : null;
   const url   = `${base}/api/reports/${endpointMap[type]}`;
 

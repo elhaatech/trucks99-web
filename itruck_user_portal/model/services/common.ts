@@ -2,7 +2,7 @@ import {
   persistMarketplaceUserId,
 } from "@/lib/marketplaceUser";
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003";
 
 const TOKEN_KEY = "itruck_token";
 

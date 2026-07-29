@@ -10,7 +10,7 @@ module.exports = {
     description: 'Complete API documentation for the iTruck logistics backend. Most endpoints require a valid session (cookie) or Bearer token. Public endpoints: OTP send/verify, signup, OAuth init.',
   },
   servers: [
-    { url: 'http://localhost:3001', description: 'Local development' },
+    { url: 'http://localhost:3003', description: 'Local development' },
   ],
   tags: [
     { name: 'Health', description: 'Server health' },

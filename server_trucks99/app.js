@@ -87,6 +87,8 @@ app.use(
 const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:3001",
+  "http://localhost:3002",
+  "http://localhost:3003",
   "http://localhost:7501",
   "https://roxylius.github.io/AdminControl-RBAC",
   "https://admin-control-rbac.vercel.app",

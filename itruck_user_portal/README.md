@@ -2,7 +2,7 @@
 
 Standalone Next.js + TypeScript app for the **Buy & Sell marketplace** (formerly under `itruck_ui` at `/usear/product/*`).
 
-Runs on **port 3002** by default so it can sit beside `itruck_ui` (3000) and the API server (3001).
+Runs on **port 3002** by default; the API server (`server_trucks99`) runs on **port 3003**.
 
 ## Folder structure
 
@@ -31,7 +31,7 @@ itruck_user_portal/
 
 Copy `.env.example` to `.env.local` and set the same values you use for `itruck_ui`:
 
-- `NEXT_PUBLIC_API_URL` — backend base URL (e.g. `http://localhost:3001`)
+- `NEXT_PUBLIC_API_URL` — backend base URL (e.g. `http://localhost:3003`)
 - `NEXT_PUBLIC_GOOGLE_API_KEY` — Maps / Places
 - Firebase / Ads keys — optional, same as main UI
 
