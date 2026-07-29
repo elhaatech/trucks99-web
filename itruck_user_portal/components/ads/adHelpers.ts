@@ -1,10 +1,10 @@
-import { API_BASE } from "@/model/services/common";
+import { resolveApiBase } from "@/lib/apiBase";
 import type { AdvertisementAdType } from "@/model/api";
 
 export function resolveMediaUrl(url: string): string {
   if (!url) return "";
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  const base = API_BASE.replace(/\/+$/, "");
+  const base = resolveApiBase().replace(/\/+$/, "");
   const path = url.startsWith("/") ? url : `/${url}`;
   return `${base}${path}`;
 }

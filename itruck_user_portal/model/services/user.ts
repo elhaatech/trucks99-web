@@ -1,4 +1,4 @@
-import { API_BASE, api, clearToken, getAuthHeaders, setToken } from "./common";
+import { api, clearToken, getAuthHeaders, setToken, resolveApiBase } from "./common";
 import { persistMarketplaceUserId, clearMarketplaceUserId } from "@/lib/marketplaceUser";
 import { clearMarketplaceGuestKey } from "@/lib/marketplaceGuest";
 import { notifyMarketplaceAuthChanged } from "@/lib/marketplaceAuth";
@@ -132,7 +132,7 @@ export async function registerMarketplaceUser(body: MarketplaceRegisterInput) {
 }
 
 export async function logout(): Promise<void> {
-  await fetch(`${API_BASE}/api/logout`, {
+  await fetch(`${resolveApiBase()}/api/logout`, {
     method: "DELETE",
     credentials: "include",
     headers: getAuthHeaders(),

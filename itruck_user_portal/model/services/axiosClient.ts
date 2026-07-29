@@ -1,5 +1,5 @@
 import axios from "axios";
-import { API_BASE } from "./common";
+import { resolveApiBase } from "@/lib/apiBase";
 
 const TOKEN_KEY = "itruck_token";
 
@@ -9,11 +9,14 @@ function getToken(): string | null {
 }
 
 export const axiosClient = axios.create({
-  baseURL: API_BASE,
+  baseURL: resolveApiBase(),
   withCredentials: true,
 });
 
 axiosClient.interceptors.request.use((config) => {
+  // Re-resolve on every request so deploy host never stays stuck on localhost
+  config.baseURL = resolveApiBase();
+
   const token = getToken();
   const headers = config.headers || {};
 

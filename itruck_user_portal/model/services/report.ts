@@ -1,4 +1,5 @@
 import { api } from "./common";
+import { resolveApiBase } from "@/lib/apiBase";
 
 // ——— Shared filter body ———
 export type ReportFilters = {
@@ -523,7 +524,7 @@ export async function downloadReport(
     "buysell-category-sold":    "download/buysell-category-sold",
   };
 
-  const base  = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3003").replace(/\/$/, "");
+  const base = resolveApiBase().replace(/\/$/, "");
   const token = typeof window !== "undefined" ? localStorage.getItem("itruck_token") : null;
   const url   = `${base}/api/reports/${endpointMap[type]}`;
 

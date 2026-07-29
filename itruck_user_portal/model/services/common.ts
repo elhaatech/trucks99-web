@@ -1,8 +1,11 @@
 import {
   persistMarketplaceUserId,
 } from "@/lib/marketplaceUser";
+import { resolveApiBase } from "@/lib/apiBase";
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003";
+/** @deprecated Prefer resolveApiBase() — kept for imports; value is resolved at module load */
+export const API_BASE = resolveApiBase();
+export { resolveApiBase };
 
 const TOKEN_KEY = "itruck_token";
 
@@ -47,7 +50,8 @@ export async function api<T = unknown>(
   options: RequestOptions = {}
 ): Promise<T> {
   const { params, ...init } = options;
-  const url = new URL(path.startsWith("http") ? path : `${API_BASE}${path}`);
+  const base = resolveApiBase();
+  const url = new URL(path.startsWith("http") ? path : `${base}${path}`);
   if (params) {
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   }
@@ -97,7 +101,8 @@ export async function publicApi<T = unknown>(
   options: RequestOptions = {}
 ): Promise<T> {
   const { params, ...init } = options;
-  const url = new URL(path.startsWith("http") ? path : `${API_BASE}${path}`);
+  const base = resolveApiBase();
+  const url = new URL(path.startsWith("http") ? path : `${base}${path}`);
   if (params) {
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   }
