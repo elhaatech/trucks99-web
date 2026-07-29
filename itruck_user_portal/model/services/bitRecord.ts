@@ -57,6 +57,8 @@ export type LoadBitRecord = BitRecordBase & { loadId: string };
 export type TruckBitRecord = BitRecordBase & { truckId: string };
 export type ProductBitRecord = BitRecordBase & {
   productId: string;
+  buyer_name?: string | null;
+  buyer_mobile?: string | null;
   product_info?: {
     _id?: string;
     id?: string;
@@ -66,6 +68,8 @@ export type ProductBitRecord = BitRecordBase & {
     images?: string[];
     status?: string;
     created_by?: string;
+    sellerName?: string;
+    seller_mobile?: string | null;
   } | null;
 };
 

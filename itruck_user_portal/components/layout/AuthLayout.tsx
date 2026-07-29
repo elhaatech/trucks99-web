@@ -3,14 +3,8 @@
 import * as React from "react";
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
-import { GRADIENT_AUTH } from "@/lib/theme";
-
-const blobSx = {
-  position: "absolute" as const,
-  borderRadius: "50%",
-  filter: "blur(60px)",
-  opacity: 0.4,
-};
+import { GRADIENT_AUTH, PRIMARY, NEUTRAL } from "@/lib/theme";
+import { alpha } from "@mui/material/styles";
 
 export interface AuthLayoutProps {
   leftContent: React.ReactNode;
@@ -20,63 +14,44 @@ export interface AuthLayoutProps {
 export function AuthLayout({ leftContent, rightContent }: AuthLayoutProps) {
   return (
     <Grid container sx={{ minHeight: "100vh", overflow: "hidden" }}>
-      <Grid size={{ xs: 0, md: 6 }} sx={{ display: { xs: "none", md: "block" } }}>
+      <Grid size={{ xs: 0, md: 5 }} sx={{ display: { xs: "none", md: "block" } }}>
         <Box
           sx={{
             position: "relative",
             minHeight: "100vh",
             background: GRADIENT_AUTH,
-            display: { xs: "none", md: "flex" },
+            display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
-            p: 5,
+            p: { md: 5, lg: 6 },
             overflow: "hidden",
           }}
         >
           <Box
             sx={{
-              ...blobSx,
-              width: 320,
-              height: 320,
-              top: -80,
-              left: -80,
-              background: "rgba(255,255,255,0.08)",
-            }}
-          />
-          <Box
-            sx={{
-              ...blobSx,
-              width: 280,
-              height: 280,
-              bottom: "20%",
-              right: -60,
-              background: "rgba(255,255,255,0.06)",
-            }}
-          />
-          <Box
-            sx={{
-              ...blobSx,
-              width: 200,
-              height: 200,
-              top: "40%",
-              left: "30%",
-              background: "rgba(255,255,255,0.05)",
+              position: "absolute",
+              inset: 0,
+              backgroundImage: `
+                radial-gradient(circle at 20% 20%, ${alpha("#fff", 0.12)} 0%, transparent 40%),
+                radial-gradient(circle at 85% 75%, ${alpha(PRIMARY, 0.35)} 0%, transparent 45%),
+                linear-gradient(180deg, transparent 60%, ${alpha(NEUTRAL[950], 0.35)} 100%)
+              `,
+              pointerEvents: "none",
             }}
           />
           <Box
             sx={{
               position: "absolute",
-              border: "2px solid rgba(255,255,255,0.12)",
-              borderRadius: "50%",
               width: 420,
               height: 420,
-              top: "50%",
+              borderRadius: "50%",
+              border: `1px solid ${alpha("#fff", 0.12)}`,
+              top: "55%",
               left: "50%",
               transform: "translate(-50%, -50%)",
-              opacity: 0.4,
+              pointerEvents: "none",
             }}
           />
-
           <Box
             sx={{
               position: "relative",
@@ -90,7 +65,7 @@ export function AuthLayout({ leftContent, rightContent }: AuthLayoutProps) {
           </Box>
         </Box>
       </Grid>
-      <Grid size={{ xs: 12, md: 6 }}>
+      <Grid size={{ xs: 12, md: 7 }}>
         <Box
           sx={{
             minHeight: "100vh",
@@ -98,13 +73,32 @@ export function AuthLayout({ leftContent, rightContent }: AuthLayoutProps) {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            bgcolor: "background.paper",
-            p: { xs: 3, sm: 6 },
-            backgroundImage:
-              "radial-gradient(circle at 80% 20%, rgba(92, 77, 150, 0.03) 0%, transparent 50%)",
+            bgcolor: NEUTRAL[50],
+            p: { xs: 3, sm: 5, md: 6 },
+            backgroundImage: `
+              radial-gradient(ellipse at 100% 0%, ${alpha(PRIMARY, 0.06)} 0%, transparent 50%),
+              radial-gradient(ellipse at 0% 100%, ${alpha(PRIMARY, 0.04)} 0%, transparent 40%)
+            `,
           }}
         >
-          {rightContent}
+          <Box
+            sx={{
+              width: "100%",
+              maxWidth: 440,
+              p: { xs: 3, sm: 4 },
+              borderRadius: 3,
+              bgcolor: "#fff",
+              border: `1px solid ${NEUTRAL[200]}`,
+              boxShadow: "0 12px 40px rgba(15, 23, 42, 0.08)",
+              animation: "authCardIn 320ms ease-out",
+              "@keyframes authCardIn": {
+                from: { opacity: 0, transform: "translateY(10px)" },
+                to: { opacity: 1, transform: "translateY(0)" },
+              },
+            }}
+          >
+            {rightContent}
+          </Box>
         </Box>
       </Grid>
     </Grid>

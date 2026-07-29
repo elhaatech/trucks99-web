@@ -56,6 +56,9 @@ export function ProductOfferDetailDialog({
 
         <Box sx={{ display: "grid", gap: 1.5 }}>
           <Row label={mode === "my" ? "Seller" : "Buyer"} value={offer.counterpartyName || offer.userName || "—"} />
+          {offer.counterpartyMobile ? (
+            <Row label="Contact" value={offer.counterpartyMobile} />
+          ) : null}
           <Row
             label={mode === "my" ? "My offer" : "Offer price"}
             value={formatProductPrice(offer.bit)}

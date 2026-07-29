@@ -11,12 +11,17 @@ import { PRODUCT_THEME as T, INFO, WARNING } from "@/lib/theme";
 import { getBuySellImageUrl } from "@/lib/buysellUtils";
 import { getBuySellRowId, type BuySellProduct } from "@/model/services/buysellapi";
 import {
+  contactTelHref,
   formatProductPrice,
   getListingCardCategory,
   getListingCardTitle,
   getProductLocation,
+  getSellerDisplayName,
+  getSellerMobile,
 } from "./utils";
 import { VehicleSpecChips } from "./VehicleSpecChips";
+import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
+import Link from "@mui/material/Link";
 
 type FeaturedVehicleCardProps = {
   product: BuySellProduct;
@@ -40,7 +45,9 @@ export function FeaturedVehicleCard({ product, onViewDetails }: FeaturedVehicleC
   const title = getListingCardTitle(product);
   const categoryLabel = getListingCardCategory(product);
   const location = getProductLocation(product);
-  const sellerName = product.sellerName?.trim() || "Seller";
+  const sellerName = getSellerDisplayName(product);
+  const sellerMobile = getSellerMobile(product);
+  const sellerTel = contactTelHref(sellerMobile);
   const expiry =
     product.featured?.featuredEndDate ||
     product.featured?.expiresAt ||
@@ -131,6 +138,23 @@ export function FeaturedVehicleCard({ product, onViewDetails }: FeaturedVehicleC
         <Typography variant="body2" color="text.secondary">
           Seller: <strong>{sellerName}</strong>
         </Typography>
+        {sellerMobile ? (
+          <Box
+            sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <PhoneOutlinedIcon sx={{ fontSize: 15, color: "text.secondary" }} />
+            {sellerTel ? (
+              <Link href={sellerTel} underline="hover" sx={{ fontSize: 13, fontWeight: 600 }}>
+                {sellerMobile}
+              </Link>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                {sellerMobile}
+              </Typography>
+            )}
+          </Box>
+        ) : null}
 
         <Typography variant="caption" color="text.secondary">
           Featured until {formatExpiry(expiry)}

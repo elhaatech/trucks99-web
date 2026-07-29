@@ -11,27 +11,41 @@ import IconButton from "@mui/material/IconButton";
 import Badge from "@mui/material/Badge";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
+import Divider from "@mui/material/Divider";
 import InputBase from "@mui/material/InputBase";
 import Avatar from "@mui/material/Avatar";
+import Tooltip from "@mui/material/Tooltip";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import MenuIcon from "@mui/icons-material/Menu";
 import SearchIcon from "@mui/icons-material/Search";
 import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
 import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
-import { INFO, LAYOUT, PRODUCT_THEME as T, GRADIENT } from "@/lib/theme";
+import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
+import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
+import ShoppingBagOutlinedIcon from "@mui/icons-material/ShoppingBagOutlined";
+import DirectionsCarOutlinedIcon from "@mui/icons-material/DirectionsCarOutlined";
+import { alpha } from "@mui/material/styles";
+import {
+  INFO,
+  LAYOUT,
+  PRODUCT_THEME as T,
+  GRADIENT,
+  PRIMARY,
+  SHADOW,
+  TRANSITION,
+} from "@/lib/theme";
 import { isSellHubPath, userProductRoutes } from "@/lib/userProductRoutes";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { getBuySellFavoriteCount } from "@/model/services/favoriteapi";
 
-/** Primary marketplace nav — chatbot is a dedicated navbar control. */
 const NAV_LINKS = [
   { label: "Buy Vehicle", href: userProductRoutes.list() },
-  { label: "Featured Vehicles", href: userProductRoutes.featuredVehicles() },
+  { label: "Featured", href: userProductRoutes.featuredVehicles() },
   { label: "My Listings", href: userProductRoutes.sellVehicle() },
-  { label: "My Favorite List", href: userProductRoutes.favorites() },
+  { label: "Favorites", href: userProductRoutes.favorites() },
 ];
 
-/** Extra items shown in the mobile drawer (includes chatbot). */
 const MOBILE_EXTRA_LINKS = [
   { label: "AI Chatbot", href: userProductRoutes.assistant() },
 ];
@@ -73,42 +87,46 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
   };
 
   const isLinkActive = (link: { label: string; href: string }) => {
-    if (link.label === "My Listings") {
-      return isSellHubPath(pathname);
-    }
-    if (link.label === "My Favorite List") {
+    if (link.label === "My Listings") return isSellHubPath(pathname);
+    if (link.label === "Favorites" || link.label === "My Favorite List") {
       return pathname === userProductRoutes.favorites() || pathname === userProductRoutes.cart();
     }
-    if (link.label === "AI Chatbot") {
-      return assistantActive;
-    }
+    if (link.label === "AI Chatbot") return assistantActive;
     return pathname === link.href || pathname.startsWith(`${link.href}/`);
   };
 
   return (
     <AppBar
-      position="static"
+      position="sticky"
       elevation={0}
       sx={{
-        bgcolor: T.color.surface,
+        bgcolor: alpha("#FFFFFF", 0.92),
         color: T.color.textPrimary,
-        borderBottom: "none",
-        boxShadow: "none !important",
+        backdropFilter: "blur(12px)",
+        borderBottom: `1px solid ${T.color.border}`,
+        boxShadow: `${SHADOW.navbar} !important`,
       }}
     >
       <Toolbar
+        disableGutters
         sx={{
-          minHeight: LAYOUT.navbarHeight,
+          minHeight: `${LAYOUT.navbarHeight}px !important`,
           maxHeight: LAYOUT.navbarHeight,
           width: "100%",
-          px: { xs: 2, sm: 3, lg: 4 },
+          maxWidth: LAYOUT.contentMaxWidth,
+          mx: "auto",
+          px: LAYOUT.pageGutterX,
           py: 0,
           gap: { xs: 1, md: 2 },
         }}
       >
         <IconButton
           edge="start"
-          sx={{ display: { lg: "none" } }}
+          sx={{
+            display: { lg: "none" },
+            border: `1px solid ${T.color.border}`,
+            borderRadius: 2,
+          }}
           onClick={onMobileMenuToggle}
           aria-label="Open menu"
         >
@@ -116,19 +134,63 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
         </IconButton>
 
         <Box
-          sx={{ display: "flex", alignItems: "center", gap: 1, cursor: "pointer", flexShrink: 0 }}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1.25,
+            cursor: "pointer",
+            flexShrink: 0,
+            transition: `opacity ${TRANSITION.fast}`,
+            "&:hover": { opacity: 0.88 },
+          }}
           onClick={() => router.push(userProductRoutes.dashboard())}
         >
-          <LocalShippingOutlinedIcon sx={{ color: INFO, fontSize: 28 }} />
-          <Typography sx={{ fontWeight: 800, fontSize: 18, color: INFO, letterSpacing: "-0.02em" }}>
-            TRUCKS99
-          </Typography>
+          <Box
+            sx={{
+              width: 36,
+              height: 36,
+              borderRadius: 2,
+              background: GRADIENT,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: SHADOW.primary,
+            }}
+          >
+            <LocalShippingOutlinedIcon sx={{ color: "#fff", fontSize: 20 }} />
+          </Box>
+          <Box sx={{ display: { xs: "none", sm: "block" } }}>
+            <Typography
+              sx={{
+                fontWeight: 800,
+                fontSize: 17,
+                color: T.color.trustNavyDark,
+                letterSpacing: "-0.03em",
+                lineHeight: 1.1,
+              }}
+            >
+              TRUCKS99
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: 10,
+                fontWeight: 600,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: T.color.textMuted,
+              }}
+            >
+              Marketplace
+            </Typography>
+          </Box>
         </Box>
 
-        <Box sx={{ display: { xs: "none", lg: "flex" }, gap: 0.25, ml: 1 }}>
+        <Box sx={{ display: { xs: "none", lg: "flex" }, gap: 0.5, ml: 1.5 }}>
           {NAV_LINKS.map((link) => {
             const active = isLinkActive(link);
-            const showFavoriteBadge = link.label === "My Favorite List" && favoriteCount > 0;
+            const showFavoriteBadge =
+              (link.label === "Favorites" || link.label === "My Favorite List") &&
+              favoriteCount > 0;
             return (
               <Button
                 key={link.href}
@@ -136,15 +198,23 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                 sx={{
                   textTransform: "none",
                   fontWeight: active ? 700 : 500,
-                  color: active ? INFO : T.color.textSecondary,
+                  color: active ? PRIMARY : T.color.textSecondary,
                   fontSize: 13.5,
-                  px: 1.25,
+                  px: 1.5,
+                  py: 0.85,
                   minWidth: "auto",
                   gap: 0.75,
+                  borderRadius: 2,
+                  bgcolor: active ? alpha(PRIMARY, 0.08) : "transparent",
+                  transition: `all ${TRANSITION.fast}`,
+                  "&:hover": {
+                    bgcolor: alpha(PRIMARY, 0.1),
+                    color: PRIMARY,
+                  },
                 }}
               >
-                {link.label === "My Favorite List" ? (
-                  <FavoriteBorderIcon sx={{ fontSize: 18, color: active ? INFO : T.color.textSecondary }} />
+                {link.label === "Favorites" ? (
+                  <FavoriteBorderIcon sx={{ fontSize: 18 }} />
                 ) : null}
                 {link.label}
                 {showFavoriteBadge ? (
@@ -155,7 +225,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                       height: 20,
                       px: 0.75,
                       borderRadius: 10,
-                      bgcolor: INFO,
+                      bgcolor: PRIMARY,
                       color: "#fff",
                       fontSize: 11,
                       fontWeight: 700,
@@ -182,76 +252,76 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
             display: { xs: "none", md: "flex" },
             alignItems: "center",
             flex: 1,
-            maxWidth: 360,
+            maxWidth: 380,
             mx: "auto",
-            px: 1.5,
-            py: 0.6,
-            borderRadius: "999px",
+            px: 1.75,
+            py: 0.85,
+            borderRadius: 2.5,
             border: `1px solid ${T.color.border}`,
             bgcolor: T.color.surfaceMuted,
+            transition: `all ${TRANSITION.fast}`,
+            "&:focus-within": {
+              borderColor: PRIMARY,
+              bgcolor: "#fff",
+              boxShadow: `0 0 0 3px ${alpha(PRIMARY, 0.12)}`,
+            },
           }}
         >
-          <SearchIcon sx={{ color: T.color.textMuted, fontSize: 20, mr: 0.5 }} />
+          <SearchIcon sx={{ color: T.color.textMuted, fontSize: 20, mr: 0.75 }} />
           <InputBase
-            placeholder="Search vehicles…"
+            placeholder="Search trucks, tippers, trailers…"
             value={headerSearch}
             onChange={(e) => setHeaderSearch(e.target.value)}
-            sx={{ flex: 1, fontSize: 14 }}
+            inputProps={{ "aria-label": "Search vehicles" }}
+            sx={{ flex: 1, fontSize: 14, fontWeight: 500 }}
           />
         </Box>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, ml: "auto" }}>
-          <Button
-            onClick={() => router.push(userProductRoutes.assistant())}
-            aria-label="Open AI Chatbot"
-            startIcon={<ChatBubbleOutlineRoundedIcon sx={{ fontSize: 20 }} />}
-            sx={{
-              textTransform: "none",
-              fontWeight: 700,
-              fontSize: 13,
-              minWidth: "auto",
-              px: { xs: 1.25, sm: 1.75 },
-              py: 0.75,
-              borderRadius: 999,
-              color: assistantActive ? "#fff" : T.color.textPrimary,
-              background: assistantActive ? GRADIENT : "rgba(92,77,150,0.08)",
-              border: assistantActive ? "none" : "1px solid rgba(92,77,150,0.25)",
-              boxShadow: assistantActive ? "0 6px 16px rgba(92,77,150,0.35)" : "none",
-              "&:hover": {
-                background: GRADIENT,
-                color: "#fff",
-                borderColor: "transparent",
-              },
-              "& .MuiButton-startIcon": {
-                mr: { xs: 0, sm: 0.75 },
-              },
-            }}
-          >
-            <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
-              Chatbot
-            </Box>
-          </Button>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: "auto" }}>
+          <Tooltip title="AI Assistant">
+            <Button
+              onClick={() => router.push(userProductRoutes.assistant())}
+              aria-label="Open AI Chatbot"
+              startIcon={<ChatBubbleOutlineRoundedIcon sx={{ fontSize: 18 }} />}
+              sx={{
+                textTransform: "none",
+                fontWeight: 700,
+                fontSize: 13,
+                minWidth: "auto",
+                px: { xs: 1.25, sm: 1.75 },
+                py: 0.85,
+                borderRadius: 2.5,
+                color: assistantActive ? "#fff" : T.color.textPrimary,
+                background: assistantActive ? GRADIENT : alpha(PRIMARY, 0.06),
+                border: assistantActive ? "none" : `1px solid ${alpha(PRIMARY, 0.2)}`,
+                boxShadow: assistantActive ? SHADOW.primary : "none",
+                "&:hover": {
+                  background: GRADIENT,
+                  color: "#fff",
+                  borderColor: "transparent",
+                },
+                "& .MuiButton-startIcon": { mr: { xs: 0, sm: 0.75 } },
+              }}
+            >
+              <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+                Assistant
+              </Box>
+            </Button>
+          </Tooltip>
 
-          <Button
+          <IconButton
             onClick={() => router.push(userProductRoutes.favorites())}
-            aria-label="My Favorite List"
+            aria-label="Favorites"
             sx={{
               display: { lg: "none" },
-              textTransform: "none",
-              fontWeight: pathname === userProductRoutes.favorites() ? 700 : 500,
-              color: pathname === userProductRoutes.favorites() ? INFO : T.color.textSecondary,
-              fontSize: 13,
-              minWidth: "auto",
-              px: 1,
+              border: `1px solid ${T.color.border}`,
+              borderRadius: 2,
             }}
-            startIcon={
-              <Badge badgeContent={favoriteCount} color="primary" max={99}>
-                <FavoriteBorderIcon sx={{ fontSize: 20 }} />
-              </Badge>
-            }
           >
-            My Favorite List
-          </Button>
+            <Badge badgeContent={favoriteCount} color="primary" max={99}>
+              <FavoriteBorderIcon sx={{ fontSize: 20 }} />
+            </Badge>
+          </IconButton>
 
           {user ? (
             <>
@@ -260,15 +330,38 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                 sx={{
                   textTransform: "none",
                   fontWeight: 600,
-                  ml: 0.5,
+                  ml: 0.25,
                   gap: 1,
                   color: T.color.textPrimary,
+                  borderRadius: 2.5,
+                  px: 1,
+                  py: 0.5,
+                  border: `1px solid ${T.color.border}`,
+                  "&:hover": { bgcolor: alpha(PRIMARY, 0.04) },
                 }}
               >
-                <Typography sx={{ display: { xs: "none", sm: "block" }, fontSize: 14 }}>
+                <Typography
+                  sx={{
+                    display: { xs: "none", sm: "block" },
+                    fontSize: 13.5,
+                    fontWeight: 600,
+                    maxWidth: 120,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   {user.name || "Account"}
                 </Typography>
-                <Avatar sx={{ width: 32, height: 32, bgcolor: INFO, fontSize: 14 }}>
+                <Avatar
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    bgcolor: PRIMARY,
+                    fontSize: 13,
+                    fontWeight: 700,
+                  }}
+                >
                   {(user.name || "U").charAt(0).toUpperCase()}
                 </Avatar>
               </Button>
@@ -276,22 +369,31 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                 anchorEl={userMenuAnchor}
                 open={Boolean(userMenuAnchor)}
                 onClose={() => setUserMenuAnchor(null)}
+                transformOrigin={{ horizontal: "right", vertical: "top" }}
+                anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+                slotProps={{
+                  paper: {
+                    sx: { minWidth: 220, mt: 1 },
+                  },
+                }}
               >
+                <Box sx={{ px: 2, py: 1.5 }}>
+                  <Typography fontWeight={700} fontSize={14}>
+                    {user.name || "Account"}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Marketplace account
+                  </Typography>
+                </Box>
+                <Divider />
                 <MenuItem
                   onClick={() => {
                     setUserMenuAnchor(null);
                     router.push(userProductRoutes.dashboard());
                   }}
                 >
+                  <DashboardOutlinedIcon sx={{ mr: 1.5, fontSize: 18, color: "text.secondary" }} />
                   Dashboard
-                </MenuItem>
-                <MenuItem
-                  onClick={() => {
-                    setUserMenuAnchor(null);
-                    router.push(userProductRoutes.assistant());
-                  }}
-                >
-                  AI Chatbot
                 </MenuItem>
                 <MenuItem
                   onClick={() => {
@@ -299,15 +401,8 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                     router.push(userProductRoutes.sellVehicle());
                   }}
                 >
+                  <DirectionsCarOutlinedIcon sx={{ mr: 1.5, fontSize: 18, color: "text.secondary" }} />
                   My Listings
-                </MenuItem>
-                <MenuItem
-                  onClick={() => {
-                    setUserMenuAnchor(null);
-                    router.push(userProductRoutes.favorites());
-                  }}
-                >
-                  My Favorite List
                 </MenuItem>
                 <MenuItem
                   onClick={() => {
@@ -315,6 +410,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                     router.push(userProductRoutes.offers());
                   }}
                 >
+                  <LocalOfferOutlinedIcon sx={{ mr: 1.5, fontSize: 18, color: "text.secondary" }} />
                   My Offers
                 </MenuItem>
                 <MenuItem
@@ -323,14 +419,18 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                     router.push(userProductRoutes.purchases());
                   }}
                 >
+                  <ShoppingBagOutlinedIcon sx={{ mr: 1.5, fontSize: 18, color: "text.secondary" }} />
                   My Purchases
                 </MenuItem>
+                <Divider />
                 <MenuItem
                   onClick={() => {
                     setUserMenuAnchor(null);
                     void marketplaceLogout().then(() => router.replace(userProductRoutes.list()));
                   }}
+                  sx={{ color: "error.main" }}
                 >
+                  <LogoutRoundedIcon sx={{ mr: 1.5, fontSize: 18 }} />
                   Log out
                 </MenuItem>
               </Menu>
@@ -340,7 +440,16 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
               variant="contained"
               size="small"
               onClick={() => router.push(userProductRoutes.login())}
-              sx={{ bgcolor: INFO, ml: 0.5, textTransform: "none", fontWeight: 600 }}
+              sx={{
+                ml: 0.5,
+                textTransform: "none",
+                fontWeight: 700,
+                borderRadius: 2.5,
+                px: 2,
+                background: GRADIENT,
+                boxShadow: SHADOW.primary,
+                "&:hover": { boxShadow: SHADOW.primaryLg },
+              }}
             >
               Login
             </Button>

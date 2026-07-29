@@ -92,14 +92,23 @@ export function MarketplaceLoginPanel({
   }
 
   return (
-    <Box sx={{ width: "100%", maxWidth: 420 }}>
-      <Typography variant="h4" sx={{ fontWeight: 800, textAlign: "center", mb: 1 }}>
+    <Box sx={{ width: "100%" }}>
+      <Typography
+        variant="h4"
+        sx={{
+          fontWeight: 800,
+          textAlign: "center",
+          mb: 1,
+          letterSpacing: "-0.03em",
+          fontSize: { xs: "1.5rem", sm: "1.75rem" },
+        }}
+      >
         {title}
       </Typography>
       <Typography
         variant="body2"
         color="text.secondary"
-        sx={{ textAlign: "center", mb: 3, lineHeight: 1.6 }}
+        sx={{ textAlign: "center", mb: 3.5, lineHeight: 1.65 }}
       >
         {subtitle}
       </Typography>
@@ -209,7 +218,7 @@ export function MarketplaceLoginPanel({
       </Typography>
 
       <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 3, textAlign: "center" }}>
-        By continuing, you agree to use TRUCK99 marketplace services securely.
+        By continuing, you agree to use TRUCKS99 marketplace services securely.
       </Typography>
     </Box>
   );

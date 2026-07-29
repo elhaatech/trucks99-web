@@ -12,8 +12,10 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Avatar from "@mui/material/Avatar";
 import { getBuySellImageUrl } from "@/lib/buysellUtils";
-import { formatProductPrice, getProductTitle } from "./utils";
+import { contactTelHref, formatProductPrice, getProductTitle } from "./utils";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
+import Link from "@mui/material/Link";
+import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
 import type { ProductBitRecord } from "@/model/services/bitRecord";
 import type { BuySellProduct } from "@/model/services/buysellapi";
 import {
@@ -27,6 +29,7 @@ export type OfferRow = ProductBitRecord & {
   product?: BuySellProduct | null;
   productTitle?: string;
   counterpartyName?: string;
+  counterpartyMobile?: string | null;
 };
 
 function statusLabel(status?: string): string {
@@ -177,7 +180,31 @@ export function OfferTable({
                     </Typography>
                   </Box>
                 </TableCell>
-                <TableCell sx={{ fontSize: 14 }}>{row.counterpartyName || row.userName || "—"}</TableCell>
+                <TableCell sx={{ fontSize: 14 }}>
+                  <Box>
+                    <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+                      {row.counterpartyName || row.userName || "—"}
+                    </Typography>
+                    {row.counterpartyMobile ? (
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.4, mt: 0.25 }}>
+                        <PhoneOutlinedIcon sx={{ fontSize: 13, color: T.color.textMuted }} />
+                        {contactTelHref(row.counterpartyMobile) ? (
+                          <Link
+                            href={contactTelHref(row.counterpartyMobile)!}
+                            underline="hover"
+                            sx={{ fontSize: 12.5, color: INFO, fontWeight: 600 }}
+                          >
+                            {row.counterpartyMobile}
+                          </Link>
+                        ) : (
+                          <Typography sx={{ fontSize: 12.5, color: T.color.textSecondary }}>
+                            {row.counterpartyMobile}
+                          </Typography>
+                        )}
+                      </Box>
+                    ) : null}
+                  </Box>
+                </TableCell>
                 <TableCell>
                   <Typography fontWeight={600} fontSize={14} sx={{ color: T.color.textPrimary }}>
                     {formatProductPrice(row.bit)}

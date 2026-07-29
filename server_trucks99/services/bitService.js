@@ -267,9 +267,86 @@ async function mapBitRecordRow(record, sourceKind, entityMaps) {
 async function mapBitRecordList(records) {
   if (!records.length) return [];
   const entityMaps = await loadEntityMaps(records);
-  return Promise.all(
+  const mapped = await Promise.all(
     records.map((r) => mapBitRecordRow(r, r._sourceKind, entityMaps)),
   );
+
+  const contactIds = [];
+  for (const row of mapped) {
+    if (row.userId) contactIds.push(String(row.userId));
+    const sellerId =
+      row.product_owner ||
+      (row.product_info && (row.product_info.userid || row.product_info.userId));
+    if (sellerId) contactIds.push(String(sellerId));
+  }
+
+  const uniqueIds = [...new Set(contactIds.filter(Boolean))];
+  if (!uniqueIds.length) return mapped;
+
+  const objectIds = uniqueIds
+    .filter((id) => isObjectId(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+
+  const users = await User.find({
+    $or: [{ id: { $in: uniqueIds } }, { _id: { $in: objectIds } }],
+  })
+    .select('_id id mobile name')
+    .lean();
+
+  const contactMap = {};
+  users.forEach((u) => {
+    const contact = {
+      mobile: u.mobile || null,
+      name: (u.name && String(u.name).trim()) || null,
+    };
+    if (u._id) contactMap[String(u._id)] = contact;
+    if (u.id) contactMap[String(u.id)] = contact;
+  });
+
+  const isPlaceholder = (value) => {
+    if (!value || typeof value !== 'string') return true;
+    const n = value.trim().toLowerCase();
+    return !n || ['buyer', 'seller', 'unknown', 'admin', 'user', 'guest'].includes(n);
+  };
+
+  return mapped.map((row) => {
+    if (row.type && row.type !== 'product') return row;
+
+    const buyerContact = row.userId ? contactMap[String(row.userId)] : null;
+    const sellerId =
+      row.product_owner ||
+      (row.product_info && (row.product_info.userid || row.product_info.userId));
+    const sellerContact = sellerId ? contactMap[String(sellerId)] : null;
+
+    const buyerName =
+      (!isPlaceholder(buyerContact?.name) && buyerContact.name) ||
+      (!isPlaceholder(row.userName) && row.userName) ||
+      row.userName ||
+      'Buyer';
+
+    const sellerName =
+      (!isPlaceholder(sellerContact?.name) && sellerContact.name) ||
+      (!isPlaceholder(row.product_info?.sellerName) && row.product_info.sellerName) ||
+      (!isPlaceholder(row.product_info?.created_by) && row.product_info.created_by) ||
+      'Seller';
+
+    const productInfo = row.product_info
+      ? {
+          ...row.product_info,
+          sellerName,
+          created_by: sellerName,
+          seller_mobile: sellerContact?.mobile || row.product_info.seller_mobile || null,
+        }
+      : row.product_info;
+
+    return {
+      ...row,
+      userName: buyerName,
+      buyer_name: buyerName,
+      buyer_mobile: buyerContact?.mobile || row.buyer_mobile || null,
+      product_info: productInfo,
+    };
+  });
 }
 
 function dedupeRecords(records) {

@@ -26,6 +26,7 @@ import {
   getProductTitle,
   getProductSubtitle,
   getProductLocation,
+  getSellerDisplayName,
   productSpecsToEntries,
   MakeOfferModal,
   EmiCalculator,
@@ -270,7 +271,8 @@ export default function UserProductViewPage() {
       title,
       imageUrl: getBuySellImageUrl(item.images?.[0]) || undefined,
       listedPrice: Number(item.price) || 0,
-      sellerName: item.created_by ?? "Seller",
+      sellerName: getSellerDisplayName(item),
+      sellerMobile: item.seller_mobile ?? null,
     },
     currentUserId,
     isOwner,
@@ -319,7 +321,8 @@ export default function UserProductViewPage() {
           />
 
           <ProductSellerInfo
-            sellerName={item.created_by ?? "Seller"}
+            sellerName={getSellerDisplayName(item)}
+            sellerMobile={item.seller_mobile}
             location={locationLabel || item.address || undefined}
             reviewCount={106}
           />
@@ -427,7 +430,11 @@ export default function UserProductViewPage() {
           {relatedOwnerId ? (
             <UserRelatedProductsSection
               sellerId={relatedOwnerId}
-              sellerName={isOwner ? currentUser?.name ?? item.created_by : item.created_by}
+              sellerName={
+                isOwner
+                  ? currentUser?.name ?? getSellerDisplayName(item)
+                  : getSellerDisplayName(item)
+              }
               excludeProductId={id}
               isLoggedIn={authReady && Boolean(currentUserId)}
               isOwnerView={isOwner}

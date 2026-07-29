@@ -9,7 +9,7 @@ import Tab from "@mui/material/Tab";
 import Alert from "@mui/material/Alert";
 import { Spinner } from "@/components/ui";
 import { OfferTable, type OfferRow } from "@/app/common/components/buysell";
-import { getProductTitle } from "@/app/common/components/buysell/utils";
+import { getBuyerDisplayName, getBuyerMobile, getProductTitle, getSellerDisplayName, getSellerMobile } from "@/app/common/components/buysell/utils";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 import { listProductOffers, type ProductBitRecord } from "@/model/services/bitRecord";
@@ -41,8 +41,18 @@ function toOfferRow(record: ProductBitRecord, mode: TabValue): OfferRow {
     productTitle: product ? getProductTitle(product) : undefined,
     counterpartyName:
       mode === "my"
-        ? product?.created_by || "Seller"
-        : record.userName || "Buyer",
+        ? (product ? getSellerDisplayName(product) : "Seller")
+        : getBuyerDisplayName({
+            buyer_name: (record as { buyer_name?: string }).buyer_name,
+            userName: record.userName,
+          }),
+    counterpartyMobile:
+      mode === "my"
+        ? (product ? getSellerMobile(product) : null)
+        : getBuyerMobile({
+            buyer_mobile: (record as { buyer_mobile?: string | null }).buyer_mobile,
+            userEmail: record.userEmail,
+          }),
   };
 }
 

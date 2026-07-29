@@ -53,7 +53,7 @@ export function PageHeader({
               color="primary"
               sx={{ fontWeight: 700, letterSpacing: 1.2, fontSize: 11, display: "block" }}
             >
-              iTruck
+              TRUCKS99
             </Typography>
             <Typography
               variant="h4"

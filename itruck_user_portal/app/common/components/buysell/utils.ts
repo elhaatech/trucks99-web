@@ -225,6 +225,97 @@ export function getListingCardCategory(product: BuySellProduct): string {
   return (sub || cat || "").trim();
 }
 
+const PLACEHOLDER_PERSON_NAMES = new Set([
+  "buyer",
+  "seller",
+  "unknown",
+  "admin",
+  "user",
+  "",
+]);
+
+function isPlaceholderPersonName(value?: string | null): boolean {
+  if (value == null) return true;
+  try {
+    return PLACEHOLDER_PERSON_NAMES.has(String(value).trim().toLowerCase());
+  } catch {
+    return true;
+  }
+}
+
+/** Prefer live `sellerName` from API enrichment; skip role placeholders like "Buyer". */
+export function getSellerDisplayName(
+  product?: BuySellProduct | null | Partial<BuySellProduct>,
+): string {
+  if (!product) return "Seller";
+  try {
+    const candidates = [product.sellerName, product.created_by];
+    for (const c of candidates) {
+      if (!isPlaceholderPersonName(c)) return String(c).trim();
+    }
+  } catch {
+    /* ignore */
+  }
+  return "Seller";
+}
+
+export function getBuyerDisplayName(bit?: {
+  buyer_name?: string | null;
+  userName?: string | null;
+} | null): string {
+  if (!bit) return "Buyer";
+  try {
+    const candidates = [bit.buyer_name, bit.userName];
+    for (const c of candidates) {
+      if (!isPlaceholderPersonName(c)) return String(c).trim();
+    }
+  } catch {
+    /* ignore */
+  }
+  return "Buyer";
+}
+
+/** Seller / buyer contact from API enrichment (or bid `userEmail` when it holds a phone). */
+export function getSellerMobile(
+  product?: BuySellProduct | null | Partial<BuySellProduct>,
+): string | null {
+  if (!product) return null;
+  return formatContactMobile(product.seller_mobile);
+}
+
+export function getBuyerMobile(bit?: {
+  buyer_mobile?: string | null;
+  userEmail?: string | null;
+} | null): string | null {
+  if (!bit) return null;
+  return (
+    formatContactMobile(bit.buyer_mobile) ||
+    formatContactMobile(looksLikePhone(bit.userEmail) ? bit.userEmail : null)
+  );
+}
+
+function looksLikePhone(value?: string | null): boolean {
+  if (!value) return false;
+  const digits = String(value).replace(/\D/g, "");
+  return digits.length >= 10 && !String(value).includes("@");
+}
+
+/** Normalize for display; returns null when empty. */
+export function formatContactMobile(value?: string | null): string | null {
+  if (value == null) return null;
+  const raw = String(value).trim();
+  if (!raw || raw.toLowerCase() === "unknown") return null;
+  return raw;
+}
+
+/** `tel:` href from a stored mobile value. */
+export function contactTelHref(mobile?: string | null): string | null {
+  const formatted = formatContactMobile(mobile);
+  if (!formatted) return null;
+  const digits = formatted.replace(/[^\d+]/g, "");
+  return digits ? `tel:${digits}` : null;
+}
+
 export function getSpecDisplayValue(spec: BuySellSpecification): string {
   const name = spec.specification_info?.specification_name?.toLowerCase() ?? "";
   const raw =

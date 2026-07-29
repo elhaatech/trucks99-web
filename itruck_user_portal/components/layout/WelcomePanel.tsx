@@ -4,7 +4,8 @@ import * as React from "react";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Link from "next/link";
-import { PRIMARY } from "@/lib/theme";
+import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
+import { alpha } from "@mui/material/styles";
 
 export interface WelcomePanelProps {
   title?: string;
@@ -13,38 +14,47 @@ export interface WelcomePanelProps {
 }
 
 export function WelcomePanel({
-  title = "Welcome to iTruck",
-  subtitle = "Your smart fleet and load management platform",
-  siteUrl = "www.itruck.com",
+  title = "Welcome to TRUCKS99",
+  subtitle = "Buy and sell commercial vehicles with verified sellers across India.",
+  siteUrl = "truck.elhaa.com",
 }: WelcomePanelProps) {
   return (
     <>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 8 }}>
         <Box
           sx={{
-            width: 44,
-            height: 44,
-            borderRadius: "12px",
-            bgcolor: "rgba(255,255,255,0.15)",
+            width: 48,
+            height: 48,
+            borderRadius: "14px",
+            bgcolor: alpha("#fff", 0.12),
             backdropFilter: "blur(8px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "#fff",
-            fontWeight: 800,
-            fontSize: 16,
-            letterSpacing: "-0.02em",
-            border: "1px solid rgba(255,255,255,0.2)",
+            border: `1px solid ${alpha("#fff", 0.22)}`,
           }}
         >
-          iT
+          <LocalShippingOutlinedIcon sx={{ color: "#fff", fontSize: 26 }} />
         </Box>
-        <Typography
-          variant="h6"
-          sx={{ color: "#fff", fontWeight: 700, letterSpacing: "0.06em" }}
-        >
-          iTruck
-        </Typography>
+        <Box>
+          <Typography
+            variant="h6"
+            sx={{ color: "#fff", fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1.1 }}
+          >
+            TRUCKS99
+          </Typography>
+          <Typography
+            sx={{
+              color: alpha("#fff", 0.7),
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+            }}
+          >
+            Vehicle Marketplace
+          </Typography>
+        </Box>
       </Box>
 
       <Typography
@@ -52,42 +62,37 @@ export function WelcomePanel({
         sx={{
           color: "#fff",
           fontWeight: 800,
-          mb: 1.5,
-          letterSpacing: "-0.025em",
-          lineHeight: 1.15,
+          mb: 2,
+          letterSpacing: "-0.03em",
+          lineHeight: 1.12,
+          fontSize: { md: "2.35rem", lg: "2.75rem" },
         }}
       >
         {title}
       </Typography>
       <Typography
         sx={{
-          color: "rgba(255,255,255,0.88)",
-          fontSize: "1.125rem",
+          color: alpha("#fff", 0.88),
+          fontSize: "1.05rem",
           mb: 6,
-          lineHeight: 1.6,
-          maxWidth: 400,
+          lineHeight: 1.65,
+          maxWidth: 420,
         }}
       >
         {subtitle}
       </Typography>
 
-      <Box
-        sx={{
-          display: "flex",
-          gap: 3,
-          mb: 6,
-        }}
-      >
+      <Box sx={{ display: "flex", gap: 4, mb: 6, flexWrap: "wrap" }}>
         {[
-          { value: "10K+", label: "Active Users" },
-          { value: "50K+", label: "Loads Managed" },
-          { value: "99%", label: "Uptime" },
+          { value: "Verified", label: "Seller listings" },
+          { value: "Secure", label: "OTP sign-in" },
+          { value: "Fast", label: "Offers & deals" },
         ].map((stat) => (
           <Box key={stat.label}>
-            <Typography sx={{ color: "#fff", fontWeight: 800, fontSize: 24 }}>
+            <Typography sx={{ color: "#fff", fontWeight: 800, fontSize: 22 }}>
               {stat.value}
             </Typography>
-            <Typography sx={{ color: "rgba(255,255,255,0.7)", fontSize: 13 }}>
+            <Typography sx={{ color: alpha("#fff", 0.68), fontSize: 13, fontWeight: 500 }}>
               {stat.label}
             </Typography>
           </Box>
@@ -98,9 +103,10 @@ export function WelcomePanel({
         <Link
           href="/"
           style={{
-            color: "rgba(255,255,255,0.75)",
+            color: "rgba(255,255,255,0.72)",
             fontSize: "0.875rem",
             textDecoration: "none",
+            fontWeight: 500,
           }}
         >
           {siteUrl}

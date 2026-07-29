@@ -1,6 +1,12 @@
 import type { ProductBitRecord } from "@/model/services/bitRecord";
 import type { BuySellProduct } from "@/model/services/buysellapi";
-import { getProductTitle } from "../utils";
+import {
+  getBuyerDisplayName,
+  getBuyerMobile,
+  getProductTitle,
+  getSellerDisplayName,
+  getSellerMobile,
+} from "../utils";
 import type { OfferRow } from "../OfferTable";
 
 export type ProductOfferVehicleContext = {
@@ -9,6 +15,7 @@ export type ProductOfferVehicleContext = {
   imageUrl?: string;
   listedPrice?: number;
   sellerName?: string;
+  sellerMobile?: string | null;
 };
 
 export function formatOfferDate(iso?: string): string {
@@ -74,6 +81,22 @@ export function toProductViewOfferRow(
     created_by: vehicle.sellerName ?? productInfo?.created_by,
   } as BuySellProduct;
 
+  const sellerLabel =
+    vehicle.sellerName ||
+    (productInfo ? getSellerDisplayName(productInfo) : null) ||
+    "Seller";
+  const buyerLabel = getBuyerDisplayName({
+    buyer_name: (record as { buyer_name?: string }).buyer_name,
+    userName: record.userName,
+  });
+  const sellerMobile =
+    vehicle.sellerMobile ||
+    (productInfo ? getSellerMobile(productInfo) : null);
+  const buyerMobile = getBuyerMobile({
+    buyer_mobile: (record as { buyer_mobile?: string | null }).buyer_mobile,
+    userEmail: record.userEmail,
+  });
+
   return {
     ...record,
     productId: vehicle.productId,
@@ -83,9 +106,7 @@ export function toProductViewOfferRow(
       (productInfo ? getProductTitle(productInfo) : undefined) ||
       productInfo?.description ||
       "Vehicle",
-    counterpartyName:
-      mode === "my"
-        ? vehicle.sellerName || productInfo?.created_by || "Seller"
-        : record.userName || "Buyer",
+    counterpartyName: mode === "my" ? sellerLabel : buyerLabel,
+    counterpartyMobile: mode === "my" ? sellerMobile : buyerMobile,
   };
 }

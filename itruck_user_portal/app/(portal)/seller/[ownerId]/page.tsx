@@ -36,6 +36,7 @@ export default function SellerProfilePage() {
   const [products, setProducts] = useState<BuySellProduct[]>([]);
   const [ownerName, setOwnerName] = useState("");
   const [ownerImage, setOwnerImage] = useState<string | null>(null);
+  const [ownerMobile, setOwnerMobile] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -62,6 +63,7 @@ export default function SellerProfilePage() {
         setProducts(data.products ?? []);
         setOwnerName(data.owner?.name ?? "Seller");
         setOwnerImage(data.owner?.profileImage ?? null);
+        setOwnerMobile(data.owner?.mobile ?? null);
       })
       .catch((err) =>
         setError(err instanceof Error ? err.message : "Failed to load seller profile"),
@@ -72,7 +74,7 @@ export default function SellerProfilePage() {
   const stats = useMemo(() => deriveMarketplaceStats(products), [products]);
   const isOwnProfile = currentUserId && ownerId && currentUserId === ownerId;
   const sampleProduct = products[0];
-  const sellerPhone = sampleProduct?.seller_mobile;
+  const sellerPhone = ownerMobile || sampleProduct?.seller_mobile || null;
   const sellerLocation =
     sampleProduct?.address ||
     [sampleProduct?.city_info?.name, sampleProduct?.state_info?.name].filter(Boolean).join(", ");

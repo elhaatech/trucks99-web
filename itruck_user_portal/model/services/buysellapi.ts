@@ -74,6 +74,8 @@ export type BuySellProduct = {
     status?: string;
     userId?: string;
     userName?: string;
+    buyer_name?: string | null;
+    buyer_mobile?: string | null;
     createdAt?: string;
   }>;
   bid_count?: number;
@@ -688,6 +690,7 @@ export type BuySellOwnerProductsOwner = {
   id?: string | null;
   name?: string | null;
   profileImage?: string | null;
+  mobile?: string | null;
 };
 
 export type BuySellOwnerProductsResponse = {

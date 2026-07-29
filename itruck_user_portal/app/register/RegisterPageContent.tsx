@@ -228,15 +228,24 @@ export default function MarketplaceRegisterPage() {
     <AuthLayout
       leftContent={
         <WelcomePanel
-          title="Join TRUCK99"
+          title="Join TRUCKS99"
           subtitle="Create a marketplace account to list vehicles, make offers, and view full details."
-          siteUrl="www.truck99.com"
+          siteUrl="truck.elhaa.com"
         />
       }
       rightContent={
-        <Box sx={{ width: "100%", maxWidth: 420 }}>
-          <Typography variant="h4" sx={{ fontWeight: 800, textAlign: "center", mb: 1 }}>
-            Register
+        <Box sx={{ width: "100%" }}>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 800,
+              textAlign: "center",
+              mb: 1,
+              letterSpacing: "-0.03em",
+              fontSize: { xs: "1.5rem", sm: "1.75rem" },
+            }}
+          >
+            Create your account
           </Typography>
           <Typography
             variant="body2"

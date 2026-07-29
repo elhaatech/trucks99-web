@@ -37,6 +37,22 @@ export function MarketplaceStatsCards({ stats }: MarketplaceStatsProps) {
             border: `1px solid ${T.color.border}`,
             bgcolor: T.color.surface,
             boxShadow: T.shadow.card,
+            position: "relative",
+            overflow: "hidden",
+            transition: "box-shadow 220ms ease, transform 220ms ease",
+            "&:hover": {
+              boxShadow: T.shadow.cardHover,
+              transform: "translateY(-2px)",
+            },
+            "&::before": {
+              content: '""',
+              position: "absolute",
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 3,
+              bgcolor: accent.main,
+            },
           }}
         >
           <Typography
@@ -53,9 +69,10 @@ export function MarketplaceStatsCards({ stats }: MarketplaceStatsProps) {
           <Typography
             sx={{
               mt: 1,
-              fontSize: 28,
+              fontSize: { xs: 24, md: 28 },
               fontWeight: 800,
               color: accent.text,
+              letterSpacing: "-0.02em",
             }}
           >
             {stats[key].toLocaleString("en-IN")}
@@ -194,8 +211,12 @@ export function HeroSearchSection({
         mb: 4,
         ...(fullBleed
           ? {
-              mx: { xs: -2, sm: -3, lg: -4 },
-              width: { xs: "calc(100% + 32px)", sm: "calc(100% + 48px)", lg: "calc(100% + 64px)" },
+              mx: { xs: -2, sm: -2.5, md: -3 },
+              width: {
+                xs: "calc(100% + 32px)",
+                sm: "calc(100% + 40px)",
+                md: "calc(100% + 48px)",
+              },
             }
           : {}),
       }}

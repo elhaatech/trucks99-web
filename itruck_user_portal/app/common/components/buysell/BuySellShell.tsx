@@ -1,81 +1,82 @@
 "use client";
 
-
-
 import { useEffect, useRef, useState } from "react";
-
 import Box from "@mui/material/Box";
-
 import Drawer from "@mui/material/Drawer";
-
 import List from "@mui/material/List";
-
 import ListItemButton from "@mui/material/ListItemButton";
-
+import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
-
+import Typography from "@mui/material/Typography";
+import Divider from "@mui/material/Divider";
 import { useRouter, usePathname } from "next/navigation";
-
+import DirectionsCarOutlinedIcon from "@mui/icons-material/DirectionsCarOutlined";
+import StarOutlineRoundedIcon from "@mui/icons-material/StarOutlineRounded";
+import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
+import { alpha } from "@mui/material/styles";
 import { isSellHubPath } from "@/lib/userProductRoutes";
-import { PRODUCT_THEME as T, INFO, Z_INDEX } from "@/lib/theme";
-
+import {
+  PRODUCT_THEME as T,
+  INFO,
+  PRIMARY,
+  LAYOUT,
+  Z_INDEX,
+  TRANSITION,
+} from "@/lib/theme";
 import { BuySellHeader, BUYSELL_NAV_LINKS, MOBILE_EXTRA_LINKS } from "./BuySellHeader";
-
 import { BuySellFooter } from "./BuySellFooter";
-
 import { BuySellPageBack } from "./BuySellPageBack";
 import { AssistantFab } from "@/components/chat/AssistantFab";
 
-
-
 type BuySellShellProps = {
-
   children: React.ReactNode;
-
 };
 
-
+function navIcon(label: string) {
+  switch (label) {
+    case "Buy Vehicle":
+      return <DirectionsCarOutlinedIcon fontSize="small" />;
+    case "Featured":
+    case "Featured Vehicles":
+      return <StarOutlineRoundedIcon fontSize="small" />;
+    case "My Listings":
+      return <StorefrontOutlinedIcon fontSize="small" />;
+    case "Favorites":
+    case "My Favorite List":
+      return <FavoriteBorderIcon fontSize="small" />;
+    case "AI Chatbot":
+      return <ChatBubbleOutlineRoundedIcon fontSize="small" />;
+    default:
+      return <DirectionsCarOutlinedIcon fontSize="small" />;
+  }
+}
 
 export function BuySellShell({ children }: BuySellShellProps) {
-
   const router = useRouter();
-
   const pathname = usePathname();
-
   const [mobileOpen, setMobileOpen] = useState(false);
-
   const mainRef = useRef<HTMLElement>(null);
 
-
-
   useEffect(() => {
-
     mainRef.current?.scrollTo({ top: 0, behavior: "auto" });
-
   }, [pathname]);
 
-
-
   return (
-
     <Box
-
       sx={{
-
         height: "100dvh",
-
         display: "flex",
-
         flexDirection: "column",
-
         overflow: "hidden",
-
         bgcolor: T.color.bg,
-
+        backgroundImage: `
+          radial-gradient(ellipse 80% 50% at 50% -20%, ${alpha(PRIMARY, 0.07)}, transparent),
+          linear-gradient(180deg, ${T.color.bg} 0%, ${T.color.surfaceMuted} 100%)
+        `,
       }}
-
     >
-
       <Box
         component="header"
         sx={{
@@ -88,141 +89,132 @@ export function BuySellShell({ children }: BuySellShellProps) {
         <BuySellHeader onMobileMenuToggle={() => setMobileOpen(true)} />
       </Box>
 
-
-
       <Drawer
-
         anchor="left"
-
         open={mobileOpen}
-
         onClose={() => setMobileOpen(false)}
-
         sx={{ display: { md: "none" }, zIndex: Z_INDEX.drawer }}
-
+        PaperProps={{
+          sx: {
+            width: 300,
+            bgcolor: T.color.surface,
+            borderRight: `1px solid ${T.color.border}`,
+          },
+        }}
       >
-
-        <Box sx={{ width: 280, pt: 2 }}>
-
-          <List>
-
-            {[...BUYSELL_NAV_LINKS, ...MOBILE_EXTRA_LINKS].map((link) => {
-              const selected =
-                link.label === "My Listings"
-                  ? isSellHubPath(pathname)
-                  : link.label === "My Favorite List"
-                    ? pathname === link.href
-                    : link.label === "AI Chatbot"
-                      ? pathname === link.href || pathname.startsWith(`${link.href}/`)
+        <Box sx={{ px: 2.5, pt: 3, pb: 2 }}>
+          <Typography
+            sx={{
+              fontWeight: 800,
+              fontSize: 18,
+              letterSpacing: "-0.02em",
+              color: T.color.trustNavyDark,
+            }}
+          >
+            TRUCKS99
+          </Typography>
+          <Typography variant="caption" color="text.secondary" fontWeight={600}>
+            Marketplace navigation
+          </Typography>
+        </Box>
+        <Divider />
+        <List sx={{ px: 1.5, py: 1.5 }}>
+          {[...BUYSELL_NAV_LINKS, ...MOBILE_EXTRA_LINKS].map((link) => {
+            const selected =
+              link.label === "My Listings"
+                ? isSellHubPath(pathname)
+                : link.label === "Favorites" || link.label === "My Favorite List"
+                  ? pathname === link.href
+                  : link.label === "AI Chatbot"
+                    ? pathname === link.href || pathname.startsWith(`${link.href}/`)
                     : pathname === link.href || pathname.startsWith(`${link.href}/`);
 
-              return (
+            return (
               <ListItemButton
-
                 key={link.href}
-
                 selected={selected}
-
                 onClick={() => {
-
                   setMobileOpen(false);
-
                   router.push(link.href);
-
                 }}
-
+                sx={{
+                  mb: 0.5,
+                  borderRadius: 2,
+                  py: 1.25,
+                  "&.Mui-selected": {
+                    bgcolor: alpha(PRIMARY, 0.1),
+                    color: PRIMARY,
+                    "&:hover": { bgcolor: alpha(PRIMARY, 0.14) },
+                  },
+                  transition: `all ${TRANSITION.fast}`,
+                }}
               >
-
-                <ListItemText
-
-                  primary={link.label}
-
-                  primaryTypographyProps={{
-
-                    fontWeight: selected ? 700 : 500,
-
-                    color: selected ? INFO : "inherit",
-
+                <ListItemIcon
+                  sx={{
+                    minWidth: 40,
+                    color: selected ? PRIMARY : T.color.textSecondary,
                   }}
-
+                >
+                  {navIcon(link.label)}
+                </ListItemIcon>
+                <ListItemText
+                  primary={link.label}
+                  primaryTypographyProps={{
+                    fontWeight: selected ? 700 : 500,
+                    fontSize: 14,
+                    color: selected ? PRIMARY : "inherit",
+                  }}
                 />
-
               </ListItemButton>
-              );
-            })}
-
-          </List>
-
-        </Box>
-
+            );
+          })}
+        </List>
       </Drawer>
 
-
-
       <Box
-
         ref={mainRef}
-
         component="main"
-
         id="buy-sell-main-scroll"
-
         sx={{
-
           flex: 1,
-
           minHeight: 0,
-
           width: "100%",
-
           overflowY: "auto",
-
           overflowX: "hidden",
-
           WebkitOverflowScrolling: "touch",
-
-          px: { xs: 2, sm: 3, lg: 4 },
-
-          pt: 0,
-          pb: { xs: 2, md: 3 },
-
+          px: LAYOUT.pageGutterX,
+          pt: { xs: 1.5, md: 2 },
+          pb: { xs: 2.5, md: 3 },
         }}
-
       >
-
-        <BuySellPageBack />
-
-        {children}
-
+        <Box
+          sx={{
+            width: "100%",
+            maxWidth: LAYOUT.contentMaxWidth,
+            mx: "auto",
+            animation: "pageFadeIn 280ms ease-out",
+            "@keyframes pageFadeIn": {
+              from: { opacity: 0, transform: "translateY(6px)" },
+              to: { opacity: 1, transform: "translateY(0)" },
+            },
+          }}
+        >
+          <BuySellPageBack />
+          {children}
+        </Box>
       </Box>
-
-
 
       <Box
-
         component="footer"
-
         sx={{
-
           flexShrink: 0,
-
           width: "100%",
-
           zIndex: Z_INDEX.navbar - 1,
-
         }}
-
       >
-
         <BuySellFooter compact />
-
       </Box>
-
       <AssistantFab />
-
     </Box>
-
   );
-
 }
-

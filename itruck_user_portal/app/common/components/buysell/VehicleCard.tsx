@@ -12,15 +12,21 @@ import FavoriteIcon from "@mui/icons-material/Favorite";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
 import { alpha } from "@mui/material/styles";
+import Link from "@mui/material/Link";
 import { PRODUCT_THEME as T, INFO, SUCCESS, WARNING } from "@/lib/theme";
 import { getBuySellImageUrl } from "@/lib/buysellUtils";
 import { getBuySellRowId, type BuySellProduct } from "@/model/services/buysellapi";
 import {
+  contactTelHref,
   formatProductPrice,
   getListingCardCategory,
   getListingCardTitle,
   getProductLocation,
+  getSellerDisplayName,
+  getSellerMobile,
 } from "./utils";
 import {
   getFeaturedStatus,
@@ -79,6 +85,9 @@ export function VehicleCard({
   const title = getListingCardTitle(product);
   const categoryLabel = getListingCardCategory(product);
   const location = getProductLocation(product);
+  const sellerName = getSellerDisplayName(product);
+  const sellerMobile = getSellerMobile(product);
+  const sellerTel = contactTelHref(sellerMobile);
   const isList = layout === "list";
 
   const handleClick = () => onClick?.(productId);
@@ -131,9 +140,13 @@ export function VehicleCard({
         overflow: "hidden",
         cursor: onClick ? "pointer" : "default",
         boxShadow: T.shadow.card,
-        transition: "box-shadow 0.2s ease, transform 0.2s ease",
+        transition: "box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease",
         "&:hover": onClick
-          ? { boxShadow: T.shadow.cardHover, transform: isList ? "none" : "translateY(-2px)" }
+          ? {
+              boxShadow: T.shadow.cardHover,
+              transform: isList ? "none" : "translateY(-3px)",
+              borderColor: alpha(INFO, 0.35),
+            }
           : undefined,
       }}
     >
@@ -240,6 +253,47 @@ export function VehicleCard({
               <Typography sx={{ fontSize: 12.5 }} noWrap>
                 {location}
               </Typography>
+            </Box>
+          ) : null}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 0.5,
+              color: T.color.textSecondary,
+              mt: 0.75,
+            }}
+          >
+            <PersonOutlineIcon sx={{ fontSize: 15 }} />
+            <Typography sx={{ fontSize: 12.5 }} noWrap>
+              Seller: <Box component="span" sx={{ fontWeight: 700, color: T.color.textPrimary }}>{sellerName}</Box>
+            </Typography>
+          </Box>
+          {sellerMobile ? (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.5,
+                color: T.color.textMuted,
+                mt: 0.35,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <PhoneOutlinedIcon sx={{ fontSize: 14 }} />
+              {sellerTel ? (
+                <Link
+                  href={sellerTel}
+                  underline="hover"
+                  sx={{ fontSize: 12.5, fontWeight: 600, color: INFO }}
+                >
+                  {sellerMobile}
+                </Link>
+              ) : (
+                <Typography sx={{ fontSize: 12.5 }} noWrap>
+                  {sellerMobile}
+                </Typography>
+              )}
             </Box>
           ) : null}
         </Box>

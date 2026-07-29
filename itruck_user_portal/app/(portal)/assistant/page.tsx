@@ -10,7 +10,7 @@ import { ChatLayout } from "@/components/chat";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { getMarketplaceLoginPath } from "@/lib/requireMarketplaceLogin";
 import { userProductRoutes } from "@/lib/userProductRoutes";
-import { GRADIENT, NEUTRAL } from "@/lib/theme";
+import { GRADIENT, LAYOUT, NEUTRAL } from "@/lib/theme";
 
 function AssistantPageInner() {
   const router = useRouter();
@@ -62,10 +62,9 @@ function AssistantPageInner() {
   return (
     <Box
       sx={{
-        px: { xs: 1.5, md: 3 },
-        py: { xs: 2, md: 3 },
-        maxWidth: 1280,
-        mx: "auto",
+        width: "100%",
+        maxWidth: LAYOUT.contentMaxWidth,
+        py: { xs: 1, md: 1.5 },
       }}
     >
       <Box sx={{ mb: 2.5 }}>

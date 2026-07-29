@@ -1,49 +1,49 @@
 /**
- * iTruck Design System — single source of truth for visual tokens.
- * Used by MUI theme (createAppTheme), components, and CSS variables.
+ * TRUCKS99 Design System — enterprise fleet marketplace tokens.
+ * Single source of truth for MUI theme, shell, and product UI.
  */
 
-/* ── Brand colors ─────────────────────────────────────────────────────────── */
-export const PRIMARY = "#5c4d96";
-export const PRIMARY_LIGHT = "#7e6fb0";
-export const PRIMARY_DARK = "#403466";
-export const SECONDARY = "#c2185b";
-export const SECONDARY_LIGHT = "#e91e63";
-export const SECONDARY_DARK = "#880e4f";
+/* ── Brand colors (deep marine + signal sky — not purple) ─────────────────── */
+export const PRIMARY = "#0369A1";
+export const PRIMARY_LIGHT = "#0EA5E9";
+export const PRIMARY_DARK = "#0C4A6E";
+export const SECONDARY = "#D97706";
+export const SECONDARY_LIGHT = "#F59E0B";
+export const SECONDARY_DARK = "#B45309";
 
 export const GRADIENT =
-  "linear-gradient(135deg, #5c4d96 0%, #7e6fb0 45%, #c2185b 100%)";
+  "linear-gradient(135deg, #0C4A6E 0%, #0369A1 48%, #0EA5E9 100%)";
 export const GRADIENT_HOVER =
-  "linear-gradient(135deg, #403466 0%, #5c4d96 45%, #880e4f 100%)";
+  "linear-gradient(135deg, #082F49 0%, #0C4A6E 45%, #0369A1 100%)";
 export const GRADIENT_AUTH =
-  "linear-gradient(135deg, #4A2C6B 0%, #6B4EAA 30%, #9C27B0 60%, #E91E63 100%)";
+  "linear-gradient(145deg, #020617 0%, #0C4A6E 42%, #0369A1 78%, #0284C7 100%)";
 
 /* ── Semantic colors ──────────────────────────────────────────────────────── */
-export const SUCCESS = "#16a34a";
-export const SUCCESS_LIGHT = "#22c55e";
-export const SUCCESS_DARK = "#15803d";
-export const WARNING = "#f59e0b";
-export const WARNING_LIGHT = "#fbbf24";
-export const WARNING_DARK = "#d97706";
-export const ERROR = "#dc2626";
-export const ERROR_LIGHT = "#ef4444";
-export const ERROR_DARK = "#b91c1c";
-export const INFO = "#2563eb";
-export const INFO_LIGHT = "#3b82f6";
-export const INFO_DARK = "#1d4ed8";
+export const SUCCESS = "#059669";
+export const SUCCESS_LIGHT = "#10B981";
+export const SUCCESS_DARK = "#047857";
+export const WARNING = "#D97706";
+export const WARNING_LIGHT = "#F59E0B";
+export const WARNING_DARK = "#B45309";
+export const ERROR = "#DC2626";
+export const ERROR_LIGHT = "#EF4444";
+export const ERROR_DARK = "#B91C1C";
+export const INFO = "#0284C7";
+export const INFO_LIGHT = "#38BDF8";
+export const INFO_DARK = "#0369A1";
 
 /* ── Neutrals (slate scale) ───────────────────────────────────────────────── */
 export const NEUTRAL = {
-  50: "#f8fafc",
-  100: "#f1f5f9",
-  200: "#e2e8f0",
-  300: "#cbd5e1",
-  400: "#94a3b8",
-  500: "#64748b",
+  50: "#F8FAFC",
+  100: "#F1F5F9",
+  200: "#E2E8F0",
+  300: "#CBD5E1",
+  400: "#94A3B8",
+  500: "#64748B",
   600: "#475569",
   700: "#334155",
-  800: "#1e293b",
-  900: "#0f172a",
+  800: "#1E293B",
+  900: "#0F172A",
   950: "#020617",
 } as const;
 
@@ -52,19 +52,19 @@ export const CHART_COLORS = [
   PRIMARY,
   SECONDARY,
   SUCCESS,
-  WARNING,
   INFO,
-  "#8b5cf6",
-  "#06b6d4",
+  "#6366F1",
+  "#14B8A6",
+  "#F43F5E",
 ] as const;
 
 export const DASHBOARD_ACCENTS = {
-  blue: { main: "#3b82f6", bg: "rgba(59, 130, 246, 0.1)", text: "#2563eb" },
-  purple: { main: "#8b5cf6", bg: "rgba(139, 92, 246, 0.1)", text: "#7c3aed" },
-  teal: { main: "#10b981", bg: "rgba(16, 185, 129, 0.1)", text: "#059669" },
-  amber: { main: "#f59e0b", bg: "rgba(245, 158, 11, 0.1)", text: "#d97706" },
-  red: { main: "#ef4444", bg: "rgba(239, 68, 68, 0.1)", text: "#dc2626" },
-  green: { main: "#22c55e", bg: "rgba(34, 197, 94, 0.1)", text: "#16a34a" },
+  blue: { main: "#0284C7", bg: "rgba(2, 132, 199, 0.10)", text: "#0369A1" },
+  purple: { main: "#0F766E", bg: "rgba(15, 118, 110, 0.10)", text: "#0F766E" },
+  teal: { main: "#0D9488", bg: "rgba(13, 148, 136, 0.10)", text: "#0F766E" },
+  amber: { main: "#D97706", bg: "rgba(217, 119, 6, 0.10)", text: "#B45309" },
+  red: { main: "#EF4444", bg: "rgba(239, 68, 68, 0.10)", text: "#DC2626" },
+  green: { main: "#059669", bg: "rgba(5, 150, 105, 0.10)", text: "#047857" },
 } as const;
 
 /* ── 8px grid spacing ─────────────────────────────────────────────────────── */
@@ -99,18 +99,18 @@ export const SHADOW = {
   md: "0 4px 16px rgba(15, 23, 42, 0.08)",
   lg: "0 8px 32px rgba(15, 23, 42, 0.10)",
   xl: "0 16px 48px rgba(15, 23, 42, 0.14)",
-  card: "0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.06)",
-  cardHover: "0 8px 28px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.06)",
-  primary: "0 4px 14px rgba(92, 77, 150, 0.35)",
-  primaryLg: "0 8px 24px rgba(92, 77, 150, 0.40)",
-  modal: "0 24px 64px rgba(2, 6, 23, 0.24)",
-  navbar: "0 1px 3px rgba(15, 23, 42, 0.04)",
+  card: "0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.05)",
+  cardHover: "0 12px 32px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.06)",
+  primary: "0 4px 14px rgba(3, 105, 161, 0.32)",
+  primaryLg: "0 10px 28px rgba(3, 105, 161, 0.38)",
+  modal: "0 24px 64px rgba(2, 6, 23, 0.28)",
+  navbar: "0 1px 0 rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.04)",
 } as const;
 
 /* ── Typography scale ─────────────────────────────────────────────────────── */
 export const TYPOGRAPHY = {
   fontFamily:
-    'var(--font-geist-sans), "Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    'var(--font-jakarta), var(--font-geist-sans), "Segoe UI", sans-serif',
   fontFamilyMono:
     'var(--font-geist-mono), "JetBrains Mono", "Fira Code", monospace',
   weights: {
@@ -138,14 +138,16 @@ export const TRANSITION = {
 /* ── Layout ───────────────────────────────────────────────────────────────── */
 export const LAYOUT = {
   sidebarCollapsed: 72,
-  sidebarExpanded: 240,
+  sidebarExpanded: 260,
   sidebarBg: NEUTRAL[900],
   sidebarBorder: "rgba(148, 163, 184, 0.12)",
   sidebarMuted: "rgba(248, 250, 252, 0.65)",
-  navbarHeight: 64,
-  /** Fixed buy/sell shell compact footer bar height */
-  buySellCompactFooterHeight: 52,
-  contentMaxWidth: 1440,
+  navbarHeight: 68,
+  buySellCompactFooterHeight: 56,
+  /** Full-bleed content — only page gutters create side space */
+  contentMaxWidth: "100%" as const,
+  /** Shared left/right page gutter (theme spacing units) */
+  pageGutterX: { xs: 2, sm: 2.5, md: 3 } as const,
 } as const;
 
 /* ── Z-index scale ────────────────────────────────────────────────────────── */
@@ -157,7 +159,7 @@ export const Z_INDEX = {
   toast: 1600,
 } as const;
 
-/* ── Product page theme (Buy/Sell) — extends base tokens ──────────────────── */
+/* ── Product page theme (Buy/Sell) ────────────────────────────────────────── */
 export const PRODUCT_THEME = {
   color: {
     bg: NEUTRAL[100],
@@ -167,12 +169,12 @@ export const PRODUCT_THEME = {
     borderStrong: NEUTRAL[300],
     trustNavy: PRIMARY_DARK,
     trustNavyDark: NEUTRAL[900],
-    trustNavySoft: "rgba(92, 77, 150, 0.08)",
+    trustNavySoft: "rgba(3, 105, 161, 0.08)",
     accentGreen: SUCCESS,
     accentGreenDark: SUCCESS_DARK,
-    accentGreenSoft: "rgba(22, 163, 74, 0.08)",
+    accentGreenSoft: "rgba(5, 150, 105, 0.08)",
     accentAmber: WARNING,
-    accentAmberSoft: "rgba(245, 158, 11, 0.08)",
+    accentAmberSoft: "rgba(217, 119, 6, 0.08)",
     danger: ERROR,
     textPrimary: NEUTRAL[900],
     textSecondary: NEUTRAL[500],

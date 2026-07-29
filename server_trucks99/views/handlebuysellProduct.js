@@ -447,9 +447,8 @@ async function getUserMobile(userId) {
   return user?.mobile || null;
 }
 
-/** Batch lookup - used by /list to avoid N+1 queries. Returns a map keyed by
- *  both possible id representations (_id string and custom id string). */
-async function getUsersMobileMap(userIds) {
+/** Batch lookup — sellers/buyers. Map keyed by both `_id` and custom `id`. */
+async function getUsersContactMap(userIds) {
   const uniqueIds = [...new Set((userIds || []).filter(Boolean).map(String))];
   if (!uniqueIds.length) return {};
 
@@ -460,20 +459,99 @@ async function getUsersMobileMap(userIds) {
   const users = await User.find({
     $or: [{ id: { $in: uniqueIds } }, { _id: { $in: objectIds } }],
   })
-    .select("_id id mobile")
+    .select("_id id mobile name")
     .lean();
 
   const map = {};
   users.forEach((u) => {
-    if (u._id) map[String(u._id)] = u.mobile || null;
-    if (u.id) map[String(u.id)] = u.mobile || null;
+    const contact = {
+      mobile: u.mobile || null,
+      name: (u.name && String(u.name).trim()) || null,
+    };
+    if (u._id) map[String(u._id)] = contact;
+    if (u.id) map[String(u.id)] = contact;
   });
   return map;
 }
 
+/** Backward-compatible mobile-only map. */
+async function getUsersMobileMap(userIds) {
+  const contactMap = await getUsersContactMap(userIds);
+  const mobileMap = {};
+  Object.entries(contactMap).forEach(([id, contact]) => {
+    mobileMap[id] = contact?.mobile || null;
+  });
+  return mobileMap;
+}
+
+function bitRecordUserId(record) {
+  return record?.userId || record?.userid || null;
+}
+
+function isPlaceholderPersonName(value) {
+  if (!value || typeof value !== "string") return true;
+  const n = value.trim().toLowerCase();
+  return (
+    !n ||
+    n === "buyer" ||
+    n === "seller" ||
+    n === "unknown" ||
+    n === "admin" ||
+    n === "user"
+  );
+}
+
+function resolvePersonName(...candidates) {
+  for (const c of candidates) {
+    if (!isPlaceholderPersonName(c)) return String(c).trim();
+  }
+  return null;
+}
+
+function contactFromMap(contactMap, userId) {
+  if (!userId) return { mobile: null, name: null };
+  return contactMap[String(userId)] || { mobile: null, name: null };
+}
+
+function enrichBitRecordForResponse(record, contactMap) {
+  const buyerId = bitRecordUserId(record);
+  const contact = contactFromMap(contactMap, buyerId);
+  const buyerName =
+    resolvePersonName(contact.name, record.userName, record.buyer_name) ||
+    "Buyer";
+  return {
+    ...record,
+    userId: buyerId,
+    userName: buyerName,
+    buyer_name: buyerName,
+    buyer_mobile: contact.mobile || record.buyer_mobile || null,
+    status: record.status || "pending",
+  };
+}
+
+function enrichProductListItem(item, contactMap, favoriteSet, bitRecords) {
+  const sellerContact = contactFromMap(contactMap, item.userid);
+  const sellerName =
+    resolvePersonName(sellerContact.name, item.sellerName, item.created_by) ||
+    "Seller";
+  return {
+    ...item,
+    bsNumber: formatBsNumberWithDate(item.bsNumber, item.createdAt) || null,
+    seller_mobile: sellerContact.mobile || null,
+    sellerName,
+    created_by: sellerName,
+    is_favorite: favoriteSet.has(String(item._id)),
+    bit_records: bitRecords,
+    bid_count: bitRecords.length,
+    highest_bid: bitRecords.length
+      ? bitRecords.reduce((max, r) => (Number(r.bit) > max ? Number(r.bit) : max), 0)
+      : null,
+  };
+}
+
 // ─── SHARED ENRICHMENT HELPER ──────────────────────────────────────────────────
 async function buildEnrichedResponse(data) {
-  const [countryDoc, stateDoc, cityDoc, sellerMobile] = await Promise.all([
+  const [countryDoc, stateDoc, cityDoc, sellerContactMap] = await Promise.all([
     data.country_id
       ? LocationCountry.findById(data.country_id).select("name sortname").lean()
       : null,
@@ -483,8 +561,13 @@ async function buildEnrichedResponse(data) {
     data.city_id
       ? LocationCity.findById(data.city_id).select("name").lean()
       : null,
-    getUserMobile(data.userid),
+    getUsersContactMap([data.userid].filter(Boolean)),
   ]);
+  const sellerContact = contactFromMap(sellerContactMap, data.userid);
+  const sellerMobile = sellerContact.mobile;
+  const sellerName =
+    resolvePersonName(sellerContact.name, data.sellerName, data.created_by) ||
+    "Seller";
 
   const enrichedSpecs = await Promise.all(
     (data.specifications || []).map(async (spec) => {
@@ -532,6 +615,7 @@ async function buildEnrichedResponse(data) {
     subcategory_id: data.subcategory_id || null,
     userid: data.userid || null,
     seller_mobile: sellerMobile || null,
+    sellerName,
     price: data.price,
     description: data.description || "",
     images: data.images || [],
@@ -554,7 +638,7 @@ async function buildEnrichedResponse(data) {
     purchasedAt: data.purchasedAt || null,
     purchaseAmount: data.purchaseAmount ?? null,
     soldAt: data.soldAt || null,
-    created_by: data.created_by || null,
+    created_by: sellerName,
     updated_by: data.updated_by || null,
     id: data.id,
     createdAt: data.createdAt,
@@ -678,7 +762,7 @@ async function enrichBuySellProductsWithLocation(items) {
   }));
 }
 
-/** Shared list enrichment: favorites, seller mobile, and bid summary. */
+/** Shared list enrichment: favorites, seller mobile/name, and bid summary. */
 async function enrichBuySellListItems(items, actor) {
   if (!Array.isArray(items) || items.length === 0) return [];
 
@@ -701,34 +785,22 @@ async function enrichBuySellListItems(items, actor) {
     .lean();
 
   const sellerIds = items.map((item) => item.userid).filter(Boolean);
-  const buyerIds = allBitRecords.map((r) => r.userid).filter(Boolean);
-  const mobileMap = await getUsersMobileMap([...sellerIds, ...buyerIds]);
+  const buyerIds = allBitRecords.map((r) => bitRecordUserId(r)).filter(Boolean);
+  const contactMap = await getUsersContactMap([...sellerIds, ...buyerIds]);
 
   const bitRecordsByProductId = {};
   allBitRecords.forEach((record) => {
     const key = String(record.productId);
     if (!bitRecordsByProductId[key]) bitRecordsByProductId[key] = [];
-    bitRecordsByProductId[key].push({
-      ...record,
-      status: record.status || "pending",
-      buyer_mobile: mobileMap[String(record.userid)] || null,
-    });
+    bitRecordsByProductId[key].push(
+      enrichBitRecordForResponse(record, contactMap),
+    );
   });
 
   return items.map((item) => {
     const productKey = String(item._id);
     const bitRecords = bitRecordsByProductId[productKey] || [];
-    return {
-      ...item,
-      bsNumber: formatBsNumberWithDate(item.bsNumber, item.createdAt) || null,
-      seller_mobile: mobileMap[String(item.userid)] || null,
-      is_favorite: favoriteSet.has(productKey),
-      bit_records: bitRecords,
-      bid_count: bitRecords.length,
-      highest_bid: bitRecords.length
-        ? bitRecords.reduce((max, r) => (r.bit > max ? r.bit : max), 0)
-        : null,
-    };
+    return enrichProductListItem(item, contactMap, favoriteSet, bitRecords);
   });
 }
 
@@ -961,37 +1033,25 @@ buySellRouter.post("/list", async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    // ─── Mobile numbers (batch — sellers from products + buyers from bit records) ──
+    // ─── Contacts (batch — sellers from products + buyers from bit records) ──
     const sellerIds = trimmedList.map((item) => item.userid).filter(Boolean);
-    const buyerIds = allBitRecords.map((r) => r.userid).filter(Boolean);
-    const mobileMap = await getUsersMobileMap([...sellerIds, ...buyerIds]);
+    const buyerIds = allBitRecords.map((r) => bitRecordUserId(r)).filter(Boolean);
+    const contactMap = await getUsersContactMap([...sellerIds, ...buyerIds]);
 
     const bitRecordsByProductId = {};
     allBitRecords.forEach((record) => {
       const key = String(record.productId);
       if (!bitRecordsByProductId[key]) bitRecordsByProductId[key] = [];
-      bitRecordsByProductId[key].push({
-        ...record,
-        status: record.status || "pending",
-        buyer_mobile: mobileMap[String(record.userid)] || null,
-      });
+      bitRecordsByProductId[key].push(
+        enrichBitRecordForResponse(record, contactMap),
+      );
     });
 
     // ─── Merge & respond ──────────────────────────────────────────────────────
     const enrichedList = trimmedList.map((item) => {
       const productKey = String(item._id);
       const bitRecords = bitRecordsByProductId[productKey] || [];
-      return {
-        ...item,
-        bsNumber: formatBsNumberWithDate(item.bsNumber, item.createdAt) || null,
-        seller_mobile: mobileMap[String(item.userid)] || null,
-        is_favorite: favoriteSet.has(productKey),
-        bit_records: bitRecords,
-        bid_count: bitRecords.length,
-        highest_bid: bitRecords.length
-          ? bitRecords.reduce((max, r) => (r.bit > max ? r.bit : max), 0)
-          : null,
-      };
+      return enrichProductListItem(item, contactMap, favoriteSet, bitRecords);
     });
 
     res.json(toResponseList(enrichedList));
@@ -2744,20 +2804,18 @@ buySellRouter.post("/purchase-list", async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    // ─── Mobile numbers (batch — sellers from products + buyers from bit records) ──
+    // ─── Contacts (batch — sellers from products + buyers from bit records) ──
     const sellerIds = trimmedList.map((item) => item.userid).filter(Boolean);
-    const buyerIds = allBitRecords.map((r) => r.userid).filter(Boolean);
-    const mobileMap = await getUsersMobileMap([...sellerIds, ...buyerIds]);
+    const buyerIds = allBitRecords.map((r) => bitRecordUserId(r)).filter(Boolean);
+    const contactMap = await getUsersContactMap([...sellerIds, ...buyerIds]);
 
     const bitRecordsByProductId = {};
     allBitRecords.forEach((record) => {
       const key = String(record.productId);
       if (!bitRecordsByProductId[key]) bitRecordsByProductId[key] = [];
-      bitRecordsByProductId[key].push({
-        ...record,
-        status: record.status || "pending",
-        buyer_mobile: mobileMap[String(record.userid)] || null,
-      });
+      bitRecordsByProductId[key].push(
+        enrichBitRecordForResponse(record, contactMap),
+      );
     });
 
     // ─── Merge & split by product status ────────────────────────────────────
@@ -2767,17 +2825,12 @@ buySellRouter.post("/purchase-list", async (req, res) => {
     trimmedList.forEach((item) => {
       const productKey = String(item._id);
       const bitRecords = bitRecordsByProductId[productKey] || [];
-      const enrichedItem = {
-        ...item,
-        bsNumber: formatBsNumberWithDate(item.bsNumber, item.createdAt) || null,
-        seller_mobile: mobileMap[String(item.userid)] || null,
-        is_favorite: favoriteSet.has(productKey),
-        bit_records: bitRecords,
-        bid_count: bitRecords.length,
-        highest_bid: bitRecords.length
-          ? bitRecords.reduce((max, r) => (r.bit > max ? r.bit : max), 0)
-          : null,
-      };
+      const enrichedItem = enrichProductListItem(
+        item,
+        contactMap,
+        favoriteSet,
+        bitRecords,
+      );
 
       if (item.status === "purchased") {
         purchasedProducts.push(enrichedItem);
@@ -2979,6 +3032,7 @@ buySellRouter.post("/products/owner/:ownerId", async (req, res) => {
           id: ownerUser.id || null,
           name: ownerUser.name || null,
           profileImage: ownerUser.profileImage || null,
+          mobile: ownerUser.mobile || null,
         },
         products: toResponseList(enrichedList),
         total,
@@ -3021,19 +3075,29 @@ buySellRouter.get("/:id", async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    const buyerMobileMap = await getUsersMobileMap(
-      bitRecords.map((r) => r.userid),
+    const buyerContactMap = await getUsersContactMap(
+      bitRecords.map((r) => bitRecordUserId(r)),
     );
 
-    response.bit_records = bitRecords.map((r) => ({
-      ...r,
-      status: r.status || "pending",
-      buyer_mobile: buyerMobileMap[String(r.userid)] || null,
-    }));
+    response.bit_records = bitRecords.map((r) =>
+      enrichBitRecordForResponse(r, buyerContactMap),
+    );
     response.bid_count = bitRecords.length;
     response.highest_bid = bitRecords.length
-      ? bitRecords.reduce((max, r) => (r.bit > max ? r.bit : max), 0)
+      ? bitRecords.reduce((max, r) => (Number(r.bit) > max ? Number(r.bit) : max), 0)
       : null;
+
+    // Also resolve seller name on single-product view
+    const sellerContact = contactFromMap(
+      await getUsersContactMap([data.userid].filter(Boolean)),
+      data.userid,
+    );
+    response.sellerName =
+      resolvePersonName(sellerContact.name, response.sellerName, response.created_by) ||
+      "Seller";
+    if (isPlaceholderPersonName(response.created_by)) {
+      response.created_by = response.sellerName;
+    }
 
     res.json(response);
   } catch (error) {

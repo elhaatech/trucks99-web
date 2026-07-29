@@ -239,23 +239,37 @@ export default function UserProductDashboardPage() {
         sx={{
           mt: 3,
           mb: 1,
-          p: { xs: 2, md: 2.5 },
+          p: { xs: 2.5, md: 3 },
           borderRadius: 3,
-          background: "linear-gradient(135deg, #5c4d96 0%, #7e6fb0 45%, #c2185b 100%)",
+          background: "linear-gradient(135deg, #0C4A6E 0%, #0369A1 48%, #0EA5E9 100%)",
           color: "#fff",
           display: "flex",
           flexDirection: { xs: "column", sm: "row" },
           alignItems: { sm: "center" },
           justifyContent: "space-between",
           gap: 2,
+          boxShadow: "0 12px 32px rgba(3, 105, 161, 0.28)",
+          border: "1px solid rgba(255,255,255,0.12)",
         }}
       >
         <Box>
-          <Typography sx={{ fontWeight: 800, fontSize: { xs: 18, md: 22 }, mb: 0.5 }}>
+          <Typography
+            sx={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              opacity: 0.85,
+              mb: 0.75,
+            }}
+          >
+            Quick actions
+          </Typography>
+          <Typography sx={{ fontWeight: 800, fontSize: { xs: 18, md: 22 }, mb: 0.5, letterSpacing: "-0.02em" }}>
             AI Assistant
           </Typography>
-          <Typography sx={{ opacity: 0.92, fontSize: 14, maxWidth: 560 }}>
-            Create listings by chatting, check active/sold/pending inventory, and search your vehicles — no forms needed.
+          <Typography sx={{ opacity: 0.92, fontSize: 14, maxWidth: 560, lineHeight: 1.55 }}>
+            Create listings by chatting, check inventory status, and search your vehicles — no forms needed.
           </Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
@@ -266,10 +280,11 @@ export default function UserProductDashboardPage() {
               textTransform: "none",
               fontWeight: 700,
               bgcolor: "#fff",
-              color: "#5c4d96",
-              borderRadius: 999,
+              color: "#0C4A6E",
+              borderRadius: 2.5,
               px: 2.5,
-              "&:hover": { bgcolor: "rgba(255,255,255,0.92)" },
+              boxShadow: "none",
+              "&:hover": { bgcolor: "rgba(255,255,255,0.92)", boxShadow: "none" },
             }}
           >
             Open Assistant
@@ -286,7 +301,7 @@ export default function UserProductDashboardPage() {
               fontWeight: 600,
               color: "#fff",
               borderColor: "rgba(255,255,255,0.55)",
-              borderRadius: 999,
+              borderRadius: 2.5,
               "&:hover": { borderColor: "#fff", bgcolor: "rgba(255,255,255,0.08)" },
             }}
           >
@@ -295,9 +310,20 @@ export default function UserProductDashboardPage() {
         </Box>
       </Box>
 
-      <Box>
-        <Typography sx={{ fontWeight: 800, fontSize: 20, mb: 2, color: T.color.textPrimary }}>
-          Marketplace Statistics
+      <Box sx={{ mt: 4 }}>
+        <Typography
+          sx={{
+            fontWeight: 800,
+            fontSize: { xs: 18, md: 20 },
+            mb: 0.75,
+            color: T.color.textPrimary,
+            letterSpacing: "-0.02em",
+          }}
+        >
+          Marketplace overview
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Live inventory signals across the TRUCKS99 marketplace.
         </Typography>
         {statsError && !loading ? (
           <Alert severity="warning" sx={{ mb: 2 }}>
@@ -309,16 +335,35 @@ export default function UserProductDashboardPage() {
 
       {mySellStats ? (
         <Box sx={{ mt: 4 }}>
-          <Typography sx={{ fontWeight: 800, fontSize: 20, mb: 2, color: T.color.textPrimary }}>
-            Your Sell Activity
+          <Typography
+            sx={{
+              fontWeight: 800,
+              fontSize: { xs: 18, md: 20 },
+              mb: 0.75,
+              color: T.color.textPrimary,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Your sell activity
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Snapshot of your listings, sales, and offers.
           </Typography>
           <MarketplaceStatsCards stats={mySellStats} />
         </Box>
       ) : null}
 
       <Box sx={{ mt: 5 }}>
-        <Typography sx={{ fontWeight: 800, fontSize: 20, mb: 2, color: T.color.textPrimary }}>
-          Top Categories
+        <Typography
+          sx={{
+            fontWeight: 800,
+            fontSize: { xs: 18, md: 20 },
+            mb: 2,
+            color: T.color.textPrimary,
+            letterSpacing: "-0.02em",
+          }}
+        >
+          Top categories
         </Typography>
         <CategoryScroller>
           {categories.map((cat) => (
@@ -340,28 +385,28 @@ export default function UserProductDashboardPage() {
             justifyContent: "space-between",
             alignItems: "center",
             mb: 1,
+            gap: 2,
           }}
         >
-          <Typography sx={{ fontWeight: 800, fontSize: 20, color: T.color.textPrimary }}>
-            Explore All Vehicles
-          </Typography>
           <Typography
-            component="button"
-            onClick={() => router.push(userProductRoutes.list())}
             sx={{
-              border: "none",
-              bgcolor: "transparent",
-              color: T.color.textSecondary,
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 14,
+              fontWeight: 800,
+              fontSize: { xs: 18, md: 20 },
+              color: T.color.textPrimary,
+              letterSpacing: "-0.02em",
             }}
           >
-            View all →
+            Explore all vehicles
           </Typography>
+          <Button
+            onClick={() => router.push(userProductRoutes.list())}
+            sx={{ textTransform: "none", fontWeight: 700, color: "primary.main" }}
+          >
+            View all →
+          </Button>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Browse every active listing on TRUCK99
+          Browse every active listing on TRUCKS99
           {!loading && allVehicles.length > 0
             ? ` · ${allVehicles.length.toLocaleString("en-IN")} vehicles`
             : ""}
@@ -382,7 +427,7 @@ export default function UserProductDashboardPage() {
           page={explorePage}
           totalPages={exploreTotalPages}
           onPageChange={setExplorePage}
-          emptyDescription="No vehicles to explore yet. Be the first to list on TRUCK99."
+          emptyDescription="No vehicles to explore yet. Be the first to list on TRUCKS99."
         />
       </Box>
 
@@ -393,28 +438,28 @@ export default function UserProductDashboardPage() {
             justifyContent: "space-between",
             alignItems: "center",
             mb: 1,
+            gap: 2,
           }}
         >
-          <Typography sx={{ fontWeight: 800, fontSize: 20, color: T.color.textPrimary }}>
-            Featured Vehicles
-          </Typography>
           <Typography
-            component="button"
-            onClick={() => router.push(userProductRoutes.featuredVehicles())}
             sx={{
-              border: "none",
-              bgcolor: "transparent",
-              color: T.color.textSecondary,
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 14,
+              fontWeight: 800,
+              fontSize: { xs: 18, md: 20 },
+              color: T.color.textPrimary,
+              letterSpacing: "-0.02em",
             }}
           >
-            View all →
+            Featured vehicles
           </Typography>
+          <Button
+            onClick={() => router.push(userProductRoutes.featuredVehicles())}
+            sx={{ textTransform: "none", fontWeight: 700, color: "primary.main" }}
+          >
+            View all →
+          </Button>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Premium listings with paid featured visibility on TRUCK99.
+          Premium listings with paid featured visibility on TRUCKS99.
         </Typography>
         <FeaturedVehiclesGrid
           products={featuredVehicles}
