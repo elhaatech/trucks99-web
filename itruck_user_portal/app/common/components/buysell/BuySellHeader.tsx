@@ -92,15 +92,17 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
       sx={{
         bgcolor: T.color.surface,
         color: T.color.textPrimary,
-        borderBottom: `1px solid ${T.color.border}`,
-        boxShadow: "0 1px 0 rgba(15,23,42,0.04)",
+        borderBottom: "none",
+        boxShadow: "none !important",
       }}
     >
       <Toolbar
         sx={{
           minHeight: LAYOUT.navbarHeight,
+          maxHeight: LAYOUT.navbarHeight,
           width: "100%",
           px: { xs: 2, sm: 3, lg: 4 },
+          py: 0,
           gap: { xs: 1, md: 2 },
         }}
       >

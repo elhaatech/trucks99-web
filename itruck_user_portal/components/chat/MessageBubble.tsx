@@ -37,8 +37,10 @@ function RichText({ text }: { text: string }) {
 }
 
 /** Detect numbered guide steps like "1. **Login** …" for timeline UI */
-function isNumberedGuideList(block: { type: string; ordered?: boolean; items?: string[] }) {
-  return block.type === "list" && block.ordered && (block.items?.length || 0) >= 3;
+function isNumberedGuideList(
+  block: { type: string; ordered?: boolean; items?: string[] },
+): boolean {
+  return block.type === "list" && !!block.ordered && (block.items?.length || 0) >= 3;
 }
 
 export function MessageBubble({
@@ -148,9 +150,10 @@ export function MessageBubble({
             }
 
             if (isNumberedGuideList(block)) {
+              const listBlock = block as { type: "list"; ordered: boolean; items: string[] };
               return (
                 <Box key={idx} sx={{ my: 1 }}>
-                  {block.items!.map((item, j) => (
+                  {listBlock.items.map((item, j) => (
                     <Box
                       key={j}
                       sx={{
@@ -160,7 +163,7 @@ export function MessageBubble({
                         mb: 1.1,
                         position: "relative",
                         "&::before":
-                          j < block.items!.length - 1
+                          j < listBlock.items.length - 1
                             ? {
                                 content: '""',
                                 position: "absolute",

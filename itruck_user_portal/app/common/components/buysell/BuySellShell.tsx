@@ -77,23 +77,15 @@ export function BuySellShell({ children }: BuySellShellProps) {
     >
 
       <Box
-
         component="header"
-
         sx={{
-
           flexShrink: 0,
-
           width: "100%",
-
           zIndex: Z_INDEX.navbar,
-
+          lineHeight: 0,
         }}
-
       >
-
         <BuySellHeader onMobileMenuToggle={() => setMobileOpen(true)} />
-
       </Box>
 
 
@@ -191,7 +183,8 @@ export function BuySellShell({ children }: BuySellShellProps) {
 
           px: { xs: 2, sm: 3, lg: 4 },
 
-          py: { xs: 2, md: 3 },
+          pt: 0,
+          pb: { xs: 2, md: 3 },
 
         }}
 
