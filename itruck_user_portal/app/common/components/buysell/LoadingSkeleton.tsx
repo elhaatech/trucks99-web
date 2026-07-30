@@ -47,27 +47,49 @@ export function VehicleGridSkeleton({ count = 6 }: { count?: number }) {
 
 export function StatsSkeleton() {
   return (
-    <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" },
-        gap: 2,
-      }}
-    >
-      {Array.from({ length: 4 }).map((_, i) => (
-        <Box
-          key={i}
-          sx={{
-            p: 2.5,
-            borderRadius: T.radius.md,
-            border: `1px solid ${T.color.border}`,
-            bgcolor: T.color.surface,
-          }}
-        >
-          <Skeleton width="60%" height={14} />
-          <Skeleton width="40%" height={32} sx={{ mt: 1 }} />
-        </Box>
-      ))}
+    <Box>
+      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+        <Skeleton width={200} height={28} />
+        <Skeleton width={120} height={18} />
+      </Box>
+      <Skeleton width={280} height={18} sx={{ mb: 2 }} />
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr 1fr",
+            md: "repeat(12, 1fr)",
+          },
+          gap: 1.5,
+        }}
+      >
+        {[4, 4, 2, 2].map((span, i) => (
+          <Box
+            key={i}
+            sx={{
+              gridColumn: {
+                xs: i < 2 ? "span 2" : "span 1",
+                sm: i < 2 ? "span 1" : "span 1",
+                md: `span ${span}`,
+              },
+              p: 2,
+              borderRadius: T.radius.md,
+              border: `1px solid ${T.color.border}`,
+              bgcolor: T.color.surface,
+              minHeight: i < 2 ? 120 : 96,
+            }}
+          >
+            <Skeleton width="55%" height={12} />
+            <Skeleton width="40%" height={i < 2 ? 36 : 28} sx={{ mt: 1.25 }} />
+            <Skeleton width="70%" height={8} sx={{ mt: 1.5 }} />
+          </Box>
+        ))}
+      </Box>
+      <Skeleton
+        variant="rounded"
+        height={52}
+        sx={{ mt: 2, borderRadius: T.radius.lg }}
+      />
     </Box>
   );
 }

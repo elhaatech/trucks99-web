@@ -4,81 +4,376 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import { PRODUCT_THEME as T, DASHBOARD_ACCENTS, INFO, LAYOUT } from "@/lib/theme";
+import Button from "@mui/material/Button";
+import { alpha } from "@mui/material/styles";
+import NorthEastIcon from "@mui/icons-material/NorthEast";
+import { PRODUCT_THEME as T, DASHBOARD_ACCENTS, INFO, LAYOUT, PRIMARY, SHADOW } from "@/lib/theme";
 import { HERO_TRUCK_IMAGES } from "@/lib/heroTruckImages";
+import { userProductRoutes } from "@/lib/userProductRoutes";
 import type { MarketplaceStats } from "./utils";
 
 type MarketplaceStatsProps = {
   stats: MarketplaceStats;
+  /** Compact seller summary — not a second full card row */
+  mySell?: MarketplaceStats | null;
+  updatedAt?: Date | string | null;
+  onViewMyListings?: () => void;
 };
 
-const STAT_CONFIG = [
-  { key: "totalListings" as const, label: "Total Listings", accent: DASHBOARD_ACCENTS.blue },
-  { key: "activeListings" as const, label: "Active Listings", accent: DASHBOARD_ACCENTS.green },
-  { key: "soldVehicles" as const, label: "Sold Vehicles", accent: DASHBOARD_ACCENTS.purple },
-  { key: "totalOffers" as const, label: "Total Offers", accent: DASHBOARD_ACCENTS.amber },
-];
+function pct(part: number, total: number): number {
+  if (!total || total <= 0) return 0;
+  return Math.min(100, Math.round((part / total) * 1000) / 10);
+}
 
-export function MarketplaceStatsCards({ stats }: MarketplaceStatsProps) {
+function formatUpdatedAt(value?: Date | string | null): string {
+  if (!value) return "Just now";
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return "Just now";
+  return d.toLocaleTimeString("en-IN", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function CompositionBar({
+  value,
+  color,
+  label,
+}: {
+  value: number;
+  color: string;
+  label: string;
+}) {
+  return (
+    <Box sx={{ mt: 1.25 }}>
+      <Box
+        sx={{
+          height: 4,
+          borderRadius: 99,
+          bgcolor: alpha(color, 0.12),
+          overflow: "hidden",
+        }}
+      >
+        <Box
+          sx={{
+            width: `${Math.max(2, value)}%`,
+            height: "100%",
+            bgcolor: color,
+            borderRadius: 99,
+            transition: "width 280ms ease",
+          }}
+        />
+      </Box>
+      <Typography
+        sx={{
+          mt: 0.6,
+          fontSize: 11,
+          fontWeight: 500,
+          color: T.color.textMuted,
+          letterSpacing: "0.01em",
+        }}
+      >
+        {label}
+      </Typography>
+    </Box>
+  );
+}
+
+type StatCardProps = {
+  label: string;
+  value: number;
+  accent: (typeof DASHBOARD_ACCENTS)[keyof typeof DASHBOARD_ACCENTS];
+  emphasis: "primary" | "secondary";
+  composition?: { value: number; label: string };
+};
+
+function StatCard({ label, value, accent, emphasis, composition }: StatCardProps) {
+  const primary = emphasis === "primary";
+
   return (
     <Box
       sx={{
-        display: "grid",
-        gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" },
-        gap: 2,
+        p: primary ? { xs: 1.75, md: 2 } : { xs: 1.5, md: 1.75 },
+        borderRadius: T.radius.lg,
+        border: `1px solid ${T.color.border}`,
+        bgcolor: primary ? T.color.surface : T.color.surfaceMuted,
+        boxShadow: primary ? T.shadow.card : "none",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        minHeight: primary ? { xs: 118, md: 132 } : { xs: 96, md: 104 },
+        transition: "box-shadow 200ms ease, border-color 200ms ease",
+        "&:hover": {
+          borderColor: alpha(accent.main, 0.35),
+          boxShadow: primary ? T.shadow.cardHover : SHADOW.sm,
+        },
       }}
     >
-      {STAT_CONFIG.map(({ key, label, accent }) => (
-        <Box
-          key={key}
+      <Typography
+        sx={{
+          fontSize: primary ? 11 : 10.5,
+          fontWeight: 600,
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
+          color: T.color.textMuted,
+          lineHeight: 1.2,
+        }}
+      >
+        {label}
+      </Typography>
+
+      <Typography
+        sx={{
+          mt: primary ? 1.25 : 0.85,
+          fontSize: primary ? { xs: 28, md: 34 } : { xs: 22, md: 24 },
+          fontWeight: 800,
+          color: primary ? accent.text : T.color.textPrimary,
+          letterSpacing: "-0.03em",
+          lineHeight: 1,
+        }}
+      >
+        {value.toLocaleString("en-IN")}
+      </Typography>
+
+      {composition ? (
+        <CompositionBar
+          value={composition.value}
+          color={accent.main}
+          label={composition.label}
+        />
+      ) : (
+        <Box sx={{ mt: 1, height: 20 }} />
+      )}
+    </Box>
+  );
+}
+
+function MySellActivityStrip({
+  stats,
+  onViewMyListings,
+}: {
+  stats: MarketplaceStats;
+  onViewMyListings?: () => void;
+}) {
+  const items = [
+    { label: "Listings", value: stats.totalListings },
+    { label: "Active", value: stats.activeListings },
+    { label: "Sold", value: stats.soldVehicles },
+    { label: "Offers", value: stats.totalOffers },
+  ];
+
+  return (
+    <Box
+      sx={{
+        mt: 2,
+        px: { xs: 1.75, md: 2 },
+        py: { xs: 1.5, md: 1.65 },
+        borderRadius: T.radius.lg,
+        border: `1px solid ${T.color.border}`,
+        bgcolor: alpha(PRIMARY, 0.04),
+        display: "flex",
+        flexWrap: "wrap",
+        alignItems: "center",
+        gap: { xs: 1.25, md: 2 },
+      }}
+    >
+      <Typography
+        sx={{
+          fontSize: 12,
+          fontWeight: 700,
+          color: T.color.textSecondary,
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+          mr: { md: 0.5 },
+          flexShrink: 0,
+        }}
+      >
+        Your sell activity
+      </Typography>
+
+      <Box
+        sx={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: { xs: 1.25, sm: 2 },
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
+        {items.map((item, i) => (
+          <Box
+            key={item.label}
+            sx={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: 0.6,
+              ...(i > 0
+                ? {
+                    pl: { sm: 2 },
+                    borderLeft: { sm: `1px solid ${T.color.border}` },
+                  }
+                : {}),
+            }}
+          >
+            <Typography
+              sx={{
+                fontWeight: 800,
+                fontSize: 16,
+                color: T.color.textPrimary,
+                letterSpacing: "-0.02em",
+                lineHeight: 1,
+              }}
+            >
+              {item.value.toLocaleString("en-IN")}
+            </Typography>
+            <Typography sx={{ fontSize: 12, color: T.color.textMuted, fontWeight: 500 }}>
+              {item.label}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+
+      <Button
+        size="small"
+        endIcon={<NorthEastIcon sx={{ fontSize: "14px !important" }} />}
+        onClick={onViewMyListings}
+        href={onViewMyListings ? undefined : userProductRoutes.sellVehicle()}
+        sx={{
+          textTransform: "none",
+          fontWeight: 700,
+          fontSize: 12.5,
+          color: PRIMARY,
+          ml: { xs: 0, md: "auto" },
+          px: 1,
+          minWidth: "auto",
+        }}
+      >
+        My listings
+      </Button>
+    </Box>
+  );
+}
+
+/** Marketplace overview with primary/secondary hierarchy + optional sell strip. */
+export function MarketplaceStatsCards({
+  stats,
+  mySell,
+  updatedAt,
+  onViewMyListings,
+}: MarketplaceStatsProps) {
+  const activeShare = pct(stats.activeListings, stats.totalListings);
+  const soldShare = pct(stats.soldVehicles, stats.totalListings);
+  const offersPerListing =
+    stats.totalListings > 0
+      ? Math.round((stats.totalOffers / stats.totalListings) * 10) / 10
+      : 0;
+
+  return (
+    <Box>
+      <Box
+        sx={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          gap: 1,
+          mb: 0.5,
+        }}
+      >
+        <Typography
           sx={{
-            p: 2.5,
-            borderRadius: T.radius.lg,
-            border: `1px solid ${T.color.border}`,
-            bgcolor: T.color.surface,
-            boxShadow: T.shadow.card,
-            position: "relative",
-            overflow: "hidden",
-            transition: "box-shadow 220ms ease, transform 220ms ease",
-            "&:hover": {
-              boxShadow: T.shadow.cardHover,
-              transform: "translateY(-2px)",
-            },
-            "&::before": {
-              content: '""',
-              position: "absolute",
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: 3,
-              bgcolor: accent.main,
-            },
+            fontWeight: 800,
+            fontSize: { xs: 18, md: 20 },
+            color: T.color.textPrimary,
+            letterSpacing: "-0.02em",
           }}
         >
-          <Typography
-            sx={{
-              fontSize: 12,
-              fontWeight: 600,
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-              color: T.color.textMuted,
+          Marketplace overview
+        </Typography>
+        <Typography
+          sx={{
+            fontSize: 12,
+            fontWeight: 500,
+            color: T.color.textMuted,
+          }}
+        >
+          Last updated {formatUpdatedAt(updatedAt)}
+        </Typography>
+      </Box>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: 13.5 }}>
+        Live inventory signals across the TRUCKS99 marketplace.
+      </Typography>
+
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr 1fr",
+            md: "repeat(12, 1fr)",
+          },
+          gap: 1.5,
+        }}
+      >
+        <Box sx={{ gridColumn: { xs: "span 2", sm: "span 1", md: "span 4" } }}>
+          <StatCard
+            label="Total listings"
+            value={stats.totalListings}
+            accent={DASHBOARD_ACCENTS.blue}
+            emphasis="primary"
+            composition={{
+              value: activeShare,
+              label: `${activeShare}% currently active`,
             }}
-          >
-            {label}
-          </Typography>
-          <Typography
-            sx={{
-              mt: 1,
-              fontSize: { xs: 24, md: 28 },
-              fontWeight: 800,
-              color: accent.text,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            {stats[key].toLocaleString("en-IN")}
-          </Typography>
+          />
         </Box>
-      ))}
+        <Box sx={{ gridColumn: { xs: "span 2", sm: "span 1", md: "span 4" } }}>
+          <StatCard
+            label="Active listings"
+            value={stats.activeListings}
+            accent={DASHBOARD_ACCENTS.green}
+            emphasis="primary"
+            composition={{
+              value: activeShare,
+              label:
+                stats.totalListings > 0
+                  ? `${stats.activeListings.toLocaleString("en-IN")} of ${stats.totalListings.toLocaleString("en-IN")} total`
+                  : "No listings yet",
+            }}
+          />
+        </Box>
+        <Box sx={{ gridColumn: { xs: "span 1", md: "span 2" } }}>
+          <StatCard
+            label="Sold"
+            value={stats.soldVehicles}
+            accent={DASHBOARD_ACCENTS.purple}
+            emphasis="secondary"
+            composition={{
+              value: soldShare,
+              label: `${soldShare}% of inventory`,
+            }}
+          />
+        </Box>
+        <Box sx={{ gridColumn: { xs: "span 1", md: "span 2" } }}>
+          <StatCard
+            label="Offers"
+            value={stats.totalOffers}
+            accent={DASHBOARD_ACCENTS.amber}
+            emphasis="secondary"
+            composition={{
+              value: Math.min(100, offersPerListing * 20),
+              label:
+                stats.totalListings > 0
+                  ? `~${offersPerListing} per listing`
+                  : "No offers yet",
+            }}
+          />
+        </Box>
+      </Box>
+
+      {mySell ? (
+        <MySellActivityStrip stats={mySell} onViewMyListings={onViewMyListings} />
+      ) : null}
     </Box>
   );
 }

@@ -83,6 +83,7 @@ export default function UserProductDashboardPage() {
     BuySellDashboardStatsResponse["data"] | null
   >(null);
   const [statsError, setStatsError] = useState("");
+  const [statsUpdatedAt, setStatsUpdatedAt] = useState<Date | null>(null);
   const [listError, setListError] = useState("");
   const [featuredError, setFeaturedError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -126,6 +127,7 @@ export default function UserProductDashboardPage() {
         seedFavoritesFromProducts([...(explore ?? []), ...featuredResult.data]),
       );
       setDashboardData(dashStats);
+      if (dashStats) setStatsUpdatedAt(new Date());
 
       if ((explore?.length ?? 0) === 0) {
         setListError("No vehicles to show yet. List a vehicle or check back soon.");
@@ -311,47 +313,22 @@ export default function UserProductDashboardPage() {
       </Box>
 
       <Box sx={{ mt: 4 }}>
-        <Typography
-          sx={{
-            fontWeight: 800,
-            fontSize: { xs: 18, md: 20 },
-            mb: 0.75,
-            color: T.color.textPrimary,
-            letterSpacing: "-0.02em",
-          }}
-        >
-          Marketplace overview
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Live inventory signals across the TRUCKS99 marketplace.
-        </Typography>
         {statsError && !loading ? (
           <Alert severity="warning" sx={{ mb: 2 }}>
             {statsError}
           </Alert>
         ) : null}
-        {loading ? <StatsSkeleton /> : <MarketplaceStatsCards stats={marketplaceStats} />}
+        {loading ? (
+          <StatsSkeleton />
+        ) : (
+          <MarketplaceStatsCards
+            stats={marketplaceStats}
+            mySell={mySellStats}
+            updatedAt={statsUpdatedAt}
+            onViewMyListings={() => router.push(userProductRoutes.sellVehicle())}
+          />
+        )}
       </Box>
-
-      {mySellStats ? (
-        <Box sx={{ mt: 4 }}>
-          <Typography
-            sx={{
-              fontWeight: 800,
-              fontSize: { xs: 18, md: 20 },
-              mb: 0.75,
-              color: T.color.textPrimary,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            Your sell activity
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Snapshot of your listings, sales, and offers.
-          </Typography>
-          <MarketplaceStatsCards stats={mySellStats} />
-        </Box>
-      ) : null}
 
       <Box sx={{ mt: 5 }}>
         <Typography
