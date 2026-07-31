@@ -171,6 +171,8 @@ export type BuySellListFilter = {
   category_id?: string;
   subcategory_id?: string;
   status?: string;
+  /** Server-side multi-status filter (e.g. active + pending browse). */
+  statuses?: string[];
   country_id?: string;
   state_id?: string;
   city_id?: string;
@@ -178,10 +180,21 @@ export type BuySellListFilter = {
   usear_type?: "buy" | "sell" | "all" | "";
   min_price?: number;
   max_price?: number;
+  /** When set with limit, server paginates (faster home/list pages). */
+  page?: number;
+  limit?: number;
   filters?: Array<{
     specification_id: string;
     specification_value?: string[] | string;
   }>;
+};
+
+export type BuySellListPage = {
+  items: BuySellProduct[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 };
 
 export type BuySellStatusCounts = {
@@ -410,7 +423,10 @@ export function getBuySellRowId(row: BuySellProduct): string {
   return row.id ?? row._id;
 }
 
-export async function getBuySellList(body: BuySellListFilter = {}): Promise<BuySellProduct[]> {
+export async function getBuySellList(
+  body: BuySellListFilter = {},
+  options?: { signal?: AbortSignal },
+): Promise<BuySellProduct[]> {
   const cacheKey = `buy-sell-list:${JSON.stringify(body)}`;
   try {
     return await cachedRequest(
@@ -419,10 +435,50 @@ export async function getBuySellList(body: BuySellListFilter = {}): Promise<BuyS
         const payload = await api<unknown>("/api/buy-sell/list", {
           method: "POST",
           body: JSON.stringify(body),
+          signal: options?.signal,
         });
         return unwrapBuySellListResponse(payload);
       },
-      15_000,
+      options?.signal ? 0 : 15_000,
+    );
+  } catch (error) {
+    normalizeError(error);
+  }
+}
+
+/** Paginated list — prefers server `total` when page/limit are sent. */
+export async function getBuySellListPage(
+  body: BuySellListFilter & { page: number; limit: number },
+  options?: { signal?: AbortSignal },
+): Promise<BuySellListPage> {
+  const cacheKey = `buy-sell-list-page:${JSON.stringify(body)}`;
+  try {
+    return await cachedRequest(
+      cacheKey,
+      async () => {
+        const payload = await api<unknown>("/api/buy-sell/list", {
+          method: "POST",
+          body: JSON.stringify(body),
+          signal: options?.signal,
+        });
+        const items = unwrapBuySellListResponse(payload);
+        const root =
+          payload && typeof payload === "object"
+            ? (payload as Record<string, unknown>)
+            : {};
+        const total =
+          typeof root.total === "number" ? root.total : items.length;
+        const page =
+          typeof root.page === "number" ? root.page : body.page;
+        const limit =
+          typeof root.limit === "number" ? root.limit : body.limit;
+        const totalPages =
+          typeof root.totalPages === "number"
+            ? root.totalPages
+            : Math.max(1, Math.ceil(total / limit));
+        return { items, total, page, limit, totalPages };
+      },
+      options?.signal ? 0 : 15_000,
     );
   } catch (error) {
     normalizeError(error);

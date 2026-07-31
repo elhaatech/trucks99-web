@@ -15,9 +15,6 @@ import {
   FeaturedVehiclesGrid,
   StatsSkeleton,
   mapDashboardMetricsToMarketplaceStats,
-  sortProducts,
-  paginateProducts,
-  getTotalPages,
   VEHICLE_PAGE_SIZE,
 } from "@/app/common/components/buysell";
 import { userProductRoutes } from "@/lib/userProductRoutes";
@@ -26,7 +23,7 @@ import { toBuySellListPayload } from "@/lib/buySellListUtils";
 import {
   getBuySellDashboardStats,
   getBuySellFeaturedVehicles,
-  getBuySellList,
+  getBuySellListPage,
   getBuySellRowId,
   type BuySellProduct,
   type BuySellDashboardStatsResponse,
@@ -38,6 +35,7 @@ import { ensureLoggedInToViewProduct } from "@/lib/requireMarketplaceLogin";
 import type { MarketplaceStats } from "@/app/common/components/buysell/utils";
 import { EMPTY_FILTERS } from "@/app/admin/portal/buysell/_components/interface/buysell_interface";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
+import { isAbortError } from "@/lib/apiCache";
 
 const EMPTY_STATS: MarketplaceStats = {
   totalListings: 0,
@@ -47,18 +45,6 @@ const EMPTY_STATS: MarketplaceStats = {
 };
 
 const FEATURED_SECTION_LIMIT = 8;
-const BROWSE_STATUSES = new Set(["active", "pending"]);
-
-/** Marketplace explore — every seller via POST /api/buy-sell/list { usear_type: "all" }. */
-async function loadExploreAllVehicles(): Promise<BuySellProduct[]> {
-  const list = await getBuySellList(
-    toBuySellListPayload({ ...EMPTY_FILTERS, usear_type: "all" }),
-  );
-  const browse = (list ?? []).filter((p) =>
-    BROWSE_STATUSES.has((p.status ?? "").toLowerCase()),
-  );
-  return sortProducts(browse, "newest");
-}
 
 function seedFavoritesFromProducts(products: BuySellProduct[]): Set<string> {
   const ids = new Set<string>();
@@ -80,8 +66,9 @@ export default function UserProductDashboardPage() {
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
-  const [allVehicles, setAllVehicles] = useState<BuySellProduct[]>([]);
+  const [exploreVehicles, setExploreVehicles] = useState<BuySellProduct[]>([]);
   const [explorePage, setExplorePage] = useState(1);
+  const [exploreTotalPages, setExploreTotalPages] = useState(1);
   const [featuredVehicles, setFeaturedVehicles] = useState<BuySellProduct[]>([]);
   const [dashboardData, setDashboardData] = useState<
     BuySellDashboardStatsResponse["data"] | null
@@ -91,22 +78,46 @@ export default function UserProductDashboardPage() {
   const [listError, setListError] = useState("");
   const [featuredError, setFeaturedError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [exploreLoading, setExploreLoading] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
 
-  const loadData = useCallback(async () => {
+  const loadExplorePage = useCallback(
+    async (page: number, signal?: AbortSignal) => {
+      const result = await getBuySellListPage(
+        {
+          ...toBuySellListPayload({ ...EMPTY_FILTERS, usear_type: "all" }),
+          statuses: ["active", "pending"],
+          page,
+          limit: VEHICLE_PAGE_SIZE,
+        },
+        { signal },
+      );
+      return result;
+    },
+    [],
+  );
+
+  const loadData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setStatsError("");
     setListError("");
     setFeaturedError("");
     try {
-      const [cats, explore, featuredResult, dashStats] = await Promise.all([
+      const [cats, exploreResult, featuredResult, dashStats] = await Promise.all([
         getCategories({ activeOnly: true }),
-        loadExploreAllVehicles().catch((err) => {
+        loadExplorePage(1, signal).catch((err) => {
+          if (isAbortError(err)) throw err;
           setListError(
             err instanceof Error ? err.message : "Failed to load vehicles",
           );
-          return [] as BuySellProduct[];
+          return {
+            items: [] as BuySellProduct[],
+            total: 0,
+            page: 1,
+            limit: VEHICLE_PAGE_SIZE,
+            totalPages: 1,
+          };
         }),
         getBuySellFeaturedVehicles(FEATURED_SECTION_LIMIT)
           .then((data) => ({ data: data ?? [], error: "" as string }))
@@ -122,39 +133,72 @@ export default function UserProductDashboardPage() {
           return null;
         }),
       ]);
+      if (signal?.aborted) return;
       setCategories(cats ?? []);
-      setAllVehicles(explore ?? []);
-      setExplorePage(1);
+      setExploreVehicles(exploreResult.items ?? []);
+      setExplorePage(exploreResult.page ?? 1);
+      setExploreTotalPages(exploreResult.totalPages ?? 1);
       setFeaturedVehicles(featuredResult.data);
       setFeaturedError(featuredResult.error);
       setFavoriteIds(
-        seedFavoritesFromProducts([...(explore ?? []), ...featuredResult.data]),
+        seedFavoritesFromProducts([
+          ...(exploreResult.items ?? []),
+          ...featuredResult.data,
+        ]),
       );
       setDashboardData(dashStats);
       if (dashStats) setStatsUpdatedAt(new Date());
 
-      if ((explore?.length ?? 0) === 0) {
+      if ((exploreResult.items?.length ?? 0) === 0) {
         setListError("No vehicles to show yet. List a vehicle or check back soon.");
       }
     } catch (err) {
+      if (isAbortError(err) || signal?.aborted) return;
       const message = err instanceof Error ? err.message : "Failed to load dashboard";
       setListError(message);
       notifyRef.current({ type: "error", message });
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  }, []);
+  }, [loadExplorePage]);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      await loadData();
-      if (cancelled) return;
-    })();
+    const controller = new AbortController();
+    void loadData(controller.signal);
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [loadData]);
+
+  const handleExplorePageChange = useCallback(
+    async (page: number) => {
+      setExploreLoading(true);
+      setListError("");
+      try {
+        const result = await loadExplorePage(page);
+        setExploreVehicles(result.items ?? []);
+        setExplorePage(result.page ?? page);
+        setExploreTotalPages(result.totalPages ?? 1);
+        setFavoriteIds((prev) => {
+          const next = new Set(prev);
+          for (const p of result.items ?? []) {
+            if (p.is_favorite) next.add(getBuySellRowId(p));
+          }
+          return next;
+        });
+        if ((result.items?.length ?? 0) === 0) {
+          setListError("No vehicles to show yet. List a vehicle or check back soon.");
+        }
+      } catch (err) {
+        setListError(
+          err instanceof Error ? err.message : "Failed to load vehicles",
+        );
+      } finally {
+        setExploreLoading(false);
+      }
+    },
+    [loadExplorePage],
+  );
 
   const marketplaceStats = useMemo(() => {
     if (dashboardData?.marketplace) {
@@ -169,16 +213,6 @@ export default function UserProductDashboardPage() {
     }
     return null;
   }, [dashboardData]);
-
-  const exploreTotalPages = useMemo(
-    () => getTotalPages(allVehicles.length, VEHICLE_PAGE_SIZE),
-    [allVehicles.length],
-  );
-
-  const pagedExploreVehicles = useMemo(
-    () => paginateProducts(allVehicles, explorePage, VEHICLE_PAGE_SIZE),
-    [allVehicles, explorePage],
-  );
 
   const handleSearch = () => {
     router.push(
@@ -397,26 +431,26 @@ export default function UserProductDashboardPage() {
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Browse every active listing on TRUCKS99
-          {!loading && allVehicles.length > 0
-            ? ` · ${allVehicles.length.toLocaleString("en-IN")} vehicles`
+          {!loading && exploreVehicles.length > 0
+            ? ` · page ${explorePage} of ${exploreTotalPages}`
             : ""}
           .
         </Typography>
-        {listError && !loading && allVehicles.length === 0 ? (
+        {listError && !loading && exploreVehicles.length === 0 ? (
           <Alert severity="info" sx={{ mb: 2 }}>
             {listError}
           </Alert>
         ) : null}
         <VehicleGrid
-          products={pagedExploreVehicles}
-          loading={loading}
+          products={exploreVehicles}
+          loading={loading || exploreLoading}
           favoriteIds={favoriteIds}
           togglingFavoriteIds={togglingIds}
           onFavoriteToggle={handleFavoriteToggle}
           onProductClick={(id) => void handleViewProduct(id)}
           page={explorePage}
           totalPages={exploreTotalPages}
-          onPageChange={setExplorePage}
+          onPageChange={(page) => void handleExplorePageChange(page)}
           emptyDescription="No vehicles to explore yet. Be the first to list on TRUCKS99."
         />
       </Box>

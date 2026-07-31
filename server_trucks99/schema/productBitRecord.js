@@ -32,4 +32,7 @@ const productBitRecordSchema = new Schema({
 
 }, { timestamps: true });
 
+productBitRecordSchema.index({ productId: 1, createdAt: -1 });
+productBitRecordSchema.index({ productId: 1, bit: -1 });
+
 module.exports = mongoose.model('ProductBitRecord', productBitRecordSchema);

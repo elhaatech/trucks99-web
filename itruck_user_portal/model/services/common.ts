@@ -89,7 +89,8 @@ export async function api<T = unknown>(
     return data as T;
   };
 
-  if (typeof window !== "undefined") {
+  // Don't share in-flight promises across different AbortSignals
+  if (typeof window !== "undefined" && !init.signal) {
     let p = inFlightRequests.get(key) as Promise<T> | undefined;
     if (!p) {
       p = run().finally(() => {

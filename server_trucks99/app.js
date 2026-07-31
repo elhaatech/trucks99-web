@@ -3,6 +3,7 @@ require("dotenv").config();
 const path = require("path");
 const express = require("express");
 const cors = require("cors");
+const compression = require("compression");
 const bodyParser = require("body-parser");
 const session = require("express-session");
 const passport = require("passport");
@@ -207,6 +208,14 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
+
+// gzip/brotli when client Accept-Encoding allows — shrinks large list JSON payloads
+app.use(
+  compression({
+    threshold: 1024,
+    level: 6,
+  }),
+);
 
 // Swagger UI at /api-docs (public, before auth middlewares)
 app.use(

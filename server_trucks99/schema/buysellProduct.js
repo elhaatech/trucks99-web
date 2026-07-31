@@ -134,4 +134,22 @@ const buySellSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+/** Hot-path list/filter/sort indexes (marketplace browse + seller dashboards). */
+buySellSchema.index({ status: 1, createdAt: -1 });
+buySellSchema.index({ userid: 1, status: 1, createdAt: -1 });
+buySellSchema.index({ category_id: 1, status: 1, createdAt: -1 });
+buySellSchema.index({ subcategory_id: 1, status: 1, createdAt: -1 });
+buySellSchema.index({ status: 1, price: 1, createdAt: -1 });
+buySellSchema.index({
+  country_id: 1,
+  state_id: 1,
+  city_id: 1,
+  status: 1,
+  createdAt: -1,
+});
+buySellSchema.index({
+  "specifications.specification_id": 1,
+  "specifications.specification_value": 1,
+});
+
 module.exports = mongoose.model("BuySellProduct", buySellSchema);

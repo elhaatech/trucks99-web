@@ -529,11 +529,25 @@ function enrichBitRecordForResponse(record, contactMap) {
   };
 }
 
-function enrichProductListItem(item, contactMap, favoriteSet, bitRecords) {
+function enrichProductListItem(item, contactMap, favoriteSet, bitRecords, bidSummary) {
   const sellerContact = contactFromMap(contactMap, item.userid);
   const sellerName =
     resolvePersonName(sellerContact.name, item.sellerName, item.created_by) ||
     "Seller";
+  const records = Array.isArray(bitRecords) ? bitRecords : [];
+  const bid_count =
+    bidSummary && typeof bidSummary.bid_count === "number"
+      ? bidSummary.bid_count
+      : records.length;
+  const highest_bid =
+    bidSummary && "highest_bid" in bidSummary
+      ? bidSummary.highest_bid
+      : records.length
+        ? records.reduce(
+            (max, r) => (Number(r.bit) > max ? Number(r.bit) : max),
+            0,
+          )
+        : null;
   return {
     ...item,
     bsNumber: formatBsNumberWithDate(item.bsNumber, item.createdAt) || null,
@@ -541,12 +555,63 @@ function enrichProductListItem(item, contactMap, favoriteSet, bitRecords) {
     sellerName,
     created_by: sellerName,
     is_favorite: favoriteSet.has(String(item._id)),
-    bit_records: bitRecords,
-    bid_count: bitRecords.length,
-    highest_bid: bitRecords.length
-      ? bitRecords.reduce((max, r) => (Number(r.bit) > max ? Number(r.bit) : max), 0)
-      : null,
+    bit_records: records,
+    bid_count,
+    highest_bid,
   };
+}
+
+/** Fields needed for marketplace list cards — omit lifecycle/payment noise. */
+const LIST_PRODUCT_SELECT =
+  "id bsNumber category_id subcategory_id userid price description images specifications country_id state_id city_id address pincode user_type status viewCount created_by createdAt updatedAt";
+
+/** Optional page/limit — omit both to keep legacy full-list behavior. */
+function parseListPagination(body = {}) {
+  if (body.page === undefined && body.limit === undefined) return null;
+  const page = Math.max(1, parseInt(String(body.page ?? "1"), 10) || 1);
+  const limit = Math.min(
+    100,
+    Math.max(1, parseInt(String(body.limit ?? "12"), 10) || 12),
+  );
+  return { page, limit, skip: (page - 1) * limit };
+}
+
+function applyListStatusFilter(filter, status, statuses) {
+  if (Array.isArray(statuses) && statuses.length > 0) {
+    const normalised = statuses
+      .map((s) => normaliseStatus(s, null))
+      .filter(Boolean);
+    if (normalised.length === 1) filter.status = normalised[0];
+    else if (normalised.length > 1) filter.status = { $in: normalised };
+    return;
+  }
+  if (status) {
+    const normalised = normaliseStatus(status, null);
+    if (normalised) filter.status = normalised;
+  }
+}
+
+/** Bid counts/max without shipping every offer document on list APIs. */
+async function getBidSummaryByProductIds(productIds) {
+  const map = {};
+  if (!productIds.length) return map;
+  const rows = await ProductBitRecord.aggregate([
+    { $match: { productId: { $in: productIds } } },
+    {
+      $group: {
+        _id: "$productId",
+        bid_count: { $sum: 1 },
+        highest_bid: { $max: "$bit" },
+      },
+    },
+  ]);
+  rows.forEach((row) => {
+    map[String(row._id)] = {
+      bid_count: row.bid_count || 0,
+      highest_bid: row.highest_bid ?? null,
+    };
+  });
+  return map;
 }
 
 // ─── SHARED ENRICHMENT HELPER ──────────────────────────────────────────────────
@@ -763,44 +828,78 @@ async function enrichBuySellProductsWithLocation(items) {
 }
 
 /** Shared list enrichment: favorites, seller mobile/name, and bid summary. */
-async function enrichBuySellListItems(items, actor) {
+async function enrichBuySellListItems(items, actor, options = {}) {
   if (!Array.isArray(items) || items.length === 0) return [];
 
-  let favoriteSet = new Set();
-  if (actor?.id) {
-    const productIds = items.map((item) => String(item._id));
-    const userFavorites = await Favorite.find({
-      entity: "buySell",
-      entityId: { $in: productIds },
-      userId: String(actor.id),
-    }).lean();
-    userFavorites.forEach((fav) => favoriteSet.add(String(fav.entityId)));
+  const includeBitRecords = options.includeBitRecords === true;
+  const allProductIds = items.map((item) => item._id);
+
+  const favoritePromise =
+    actor?.id
+      ? Favorite.find({
+          entity: "buySell",
+          entityId: { $in: allProductIds },
+          userId: String(actor.id),
+        })
+          .select("entityId")
+          .lean()
+      : Promise.resolve([]);
+
+  const bidsPromise = includeBitRecords
+    ? ProductBitRecord.find({ productId: { $in: allProductIds } })
+        .select("productId bit status userId userName createdAt")
+        .sort({ createdAt: -1 })
+        .lean()
+    : getBidSummaryByProductIds(allProductIds);
+
+  const [userFavorites, bidsResult] = await Promise.all([
+    favoritePromise,
+    bidsPromise,
+  ]);
+
+  const favoriteSet = new Set(
+    userFavorites.map((fav) => String(fav.entityId)),
+  );
+
+  let bitRecordsByProductId = {};
+  let bidSummaryByProductId = {};
+
+  if (includeBitRecords) {
+    const allBitRecords = bidsResult;
+    const sellerIds = items.map((item) => item.userid).filter(Boolean);
+    const buyerIds = allBitRecords
+      .map((r) => bitRecordUserId(r))
+      .filter(Boolean);
+    const contactMap = await getUsersContactMap([...sellerIds, ...buyerIds]);
+
+    allBitRecords.forEach((record) => {
+      const key = String(record.productId);
+      if (!bitRecordsByProductId[key]) bitRecordsByProductId[key] = [];
+      bitRecordsByProductId[key].push(
+        enrichBitRecordForResponse(record, contactMap),
+      );
+    });
+
+    return items.map((item) => {
+      const productKey = String(item._id);
+      const bitRecords = bitRecordsByProductId[productKey] || [];
+      return enrichProductListItem(item, contactMap, favoriteSet, bitRecords);
+    });
   }
 
-  const allProductIds = items.map((item) => item._id);
-  const allBitRecords = await ProductBitRecord.find({
-    productId: { $in: allProductIds },
-  })
-    .sort({ createdAt: -1 })
-    .lean();
-
+  bidSummaryByProductId = bidsResult;
   const sellerIds = items.map((item) => item.userid).filter(Boolean);
-  const buyerIds = allBitRecords.map((r) => bitRecordUserId(r)).filter(Boolean);
-  const contactMap = await getUsersContactMap([...sellerIds, ...buyerIds]);
-
-  const bitRecordsByProductId = {};
-  allBitRecords.forEach((record) => {
-    const key = String(record.productId);
-    if (!bitRecordsByProductId[key]) bitRecordsByProductId[key] = [];
-    bitRecordsByProductId[key].push(
-      enrichBitRecordForResponse(record, contactMap),
-    );
-  });
+  const contactMap = await getUsersContactMap(sellerIds);
 
   return items.map((item) => {
     const productKey = String(item._id);
-    const bitRecords = bitRecordsByProductId[productKey] || [];
-    return enrichProductListItem(item, contactMap, favoriteSet, bitRecords);
+    return enrichProductListItem(
+      item,
+      contactMap,
+      favoriteSet,
+      [],
+      bidSummaryByProductId[productKey] || { bid_count: 0, highest_bid: null },
+    );
   });
 }
 
@@ -890,11 +989,13 @@ buySellRouter.put("/bit/accept/:id", async (req, res) => {
 buySellRouter.post("/list", async (req, res) => {
   try {
     const actor = getActor(req);
+    const body = req.body || {};
 
     const {
       category_id,
       subcategory_id,
       status,
+      statuses,
       country_id,
       state_id,
       city_id,
@@ -902,7 +1003,7 @@ buySellRouter.post("/list", async (req, res) => {
       min_price,
       max_price,
       filters = [],
-    } = req.body || {};
+    } = body;
 
     const filter = {};
 
@@ -933,11 +1034,7 @@ buySellRouter.post("/list", async (req, res) => {
       if (id) filter.city_id = id;
     }
 
-    // Normalise status filter so "Active" / "DRAFT" etc. all work
-    if (status) {
-      const normalised = normaliseStatus(status, null);
-      if (normalised) filter.status = normalised;
-    }
+    applyListStatusFilter(filter, status, statuses);
 
     if (min_price !== undefined || max_price !== undefined) {
       filter.price = {};
@@ -977,17 +1074,31 @@ buySellRouter.post("/list", async (req, res) => {
       }
     }
 
-    const list = await BuySellProduct.find(filter)
+    const pagination = parseListPagination(body);
+    const listQuery = BuySellProduct.find(filter)
+      .select(LIST_PRODUCT_SELECT)
       .sort({ createdAt: -1 })
       .populate("category_id", "category_name")
       .populate("subcategory_id", "sub_category_name")
       .lean();
 
+    let list;
+    let total = null;
+    if (pagination) {
+      listQuery.skip(pagination.skip).limit(pagination.limit);
+      [total, list] = await Promise.all([
+        BuySellProduct.countDocuments(filter),
+        listQuery,
+      ]);
+    } else {
+      list = await listQuery;
+    }
+
     const trimmedList = list.map((item) => {
       if (requestedSpecIds.length === 0) return item;
       return {
         ...item,
-        specifications: item.specifications
+        specifications: (item.specifications || [])
           .filter((spec) =>
             requestedSpecIds.includes(String(spec.specification_id)),
           )
@@ -1013,46 +1124,19 @@ buySellRouter.post("/list", async (req, res) => {
       };
     });
 
-    // ─── Favorites ────────────────────────────────────────────────────────────
-    let favoriteSet = new Set();
-    if (actor.id) {
-      const productIds = trimmedList.map((item) => String(item._id));
-      const userFavorites = await Favorite.find({
-        entity: "buySell",
-        entityId: { $in: productIds },
-        userId: String(actor.id),
-      }).lean();
-      userFavorites.forEach((fav) => favoriteSet.add(String(fav.entityId)));
+    const enrichedList = await enrichBuySellListItems(trimmedList, actor);
+
+    // Legacy clients expect a bare array; paginated clients send page/limit.
+    if (pagination) {
+      return res.json({
+        success: true,
+        data: toResponseList(enrichedList),
+        total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.max(1, Math.ceil(total / pagination.limit)),
+      });
     }
-
-    // ─── Bit records (batch — no N+1) ─────────────────────────────────────────
-    const allProductIds = trimmedList.map((item) => item._id);
-    const allBitRecords = await ProductBitRecord.find({
-      productId: { $in: allProductIds },
-    })
-      .sort({ createdAt: -1 })
-      .lean();
-
-    // ─── Contacts (batch — sellers from products + buyers from bit records) ──
-    const sellerIds = trimmedList.map((item) => item.userid).filter(Boolean);
-    const buyerIds = allBitRecords.map((r) => bitRecordUserId(r)).filter(Boolean);
-    const contactMap = await getUsersContactMap([...sellerIds, ...buyerIds]);
-
-    const bitRecordsByProductId = {};
-    allBitRecords.forEach((record) => {
-      const key = String(record.productId);
-      if (!bitRecordsByProductId[key]) bitRecordsByProductId[key] = [];
-      bitRecordsByProductId[key].push(
-        enrichBitRecordForResponse(record, contactMap),
-      );
-    });
-
-    // ─── Merge & respond ──────────────────────────────────────────────────────
-    const enrichedList = trimmedList.map((item) => {
-      const productKey = String(item._id);
-      const bitRecords = bitRecordsByProductId[productKey] || [];
-      return enrichProductListItem(item, contactMap, favoriteSet, bitRecords);
-    });
 
     res.json(toResponseList(enrichedList));
   } catch (error) {
@@ -1064,16 +1148,19 @@ buySellRouter.post("/list", async (req, res) => {
 // GET /api/buy-sell/all  |  GET /api/buysell/all
 buySellRouter.get("/all", async (req, res) => {
   try {
+    const actor = getActor(req);
     const list = await BuySellProduct.find({
       status: { $in: ["active", "pending"] },
     })
+      .select(LIST_PRODUCT_SELECT)
       .sort({ createdAt: -1 })
       .limit(500)
+      .populate("category_id", "category_name")
+      .populate("subcategory_id", "sub_category_name")
       .lean();
 
-    const enriched = await Promise.all(
-      list.map((item) => buildEnrichedResponse(item)),
-    );
+    const withLocation = await enrichBuySellProductsWithLocation(list);
+    const enriched = await enrichBuySellListItems(withLocation, actor);
     res.json(toResponseList(enriched));
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -1256,9 +1343,36 @@ buySellRouter.post(
 
 /** Aggregate listing + offer metrics for a product filter (sell dashboard). */
 async function computeSellMetricsBlock(productFilter) {
-  const agg = await BuySellProduct.aggregate([
-    ...(Object.keys(productFilter).length ? [{ $match: productFilter }] : []),
-    { $group: { _id: "$status", count: { $sum: 1 } } },
+  const matchStage = Object.keys(productFilter).length
+    ? [{ $match: productFilter }]
+    : [];
+  const bitsCollection = ProductBitRecord.collection.name;
+
+  const [agg, offerAgg] = await Promise.all([
+    BuySellProduct.aggregate([
+      ...matchStage,
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ]),
+    BuySellProduct.aggregate([
+      ...matchStage,
+      {
+        $lookup: {
+          from: bitsCollection,
+          localField: "_id",
+          foreignField: "productId",
+          as: "bits",
+          pipeline: [{ $count: "c" }],
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalOffers: {
+            $sum: { $ifNull: [{ $arrayElemAt: ["$bits.c", 0] }, 0] },
+          },
+        },
+      },
+    ]),
   ]);
 
   const map = Object.fromEntries(agg.map(({ _id, count }) => [_id, count]));
@@ -1268,12 +1382,7 @@ async function computeSellMetricsBlock(productFilter) {
   const activeListings = count("active") + count("pending");
   const soldVehicles = count("sold") + count("purchased");
   const totalBooked = count("booking");
-
-  const productIds = await BuySellProduct.find(productFilter).distinct("_id");
-  const totalOffers =
-    productIds.length > 0
-      ? await ProductBitRecord.countDocuments({ productId: { $in: productIds } })
-      : 0;
+  const totalOffers = offerAgg[0]?.totalOffers || 0;
 
   return {
     totalListings,
@@ -1291,11 +1400,24 @@ async function computeSellMetricsBlock(productFilter) {
   };
 }
 
+/** Short TTL cache for public-ish dashboard stats (reduces repeat home-page hits). */
+const dashboardStatsCache = new Map();
+const DASHBOARD_STATS_TTL_MS = 15_000;
+
+function getDashboardStatsCacheKey(actorId) {
+  return `dash-stats:${actorId || "anon"}`;
+}
+
 // ─── DASHBOARD STATS (MARKETPLACE + MY SELL) ───────────────────────────────────
 // GET /api/buy-sell/dashboard-stats
 buySellRouter.get("/dashboard-stats", async (req, res) => {
   try {
     const actor = getActor(req);
+    const cacheKey = getDashboardStatsCacheKey(actor.id);
+    const cached = dashboardStatsCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return res.json(cached.payload);
+    }
 
     const marketplaceFilter = {
       status: { $in: ["active", "pending", "booking", "sold", "purchased", "inactive", "rejected"] },
@@ -1308,13 +1430,19 @@ buySellRouter.get("/dashboard-stats", async (req, res) => {
         : Promise.resolve(null),
     ]);
 
-    res.json({
+    const payload = {
       success: true,
       data: {
         marketplace,
         mySell,
       },
+    };
+    dashboardStatsCache.set(cacheKey, {
+      expiresAt: Date.now() + DASHBOARD_STATS_TTL_MS,
+      payload,
     });
+
+    res.json(payload);
   } catch (error) {
     sendRouteError(res, error, "Error fetching sell dashboard stats");
   }
@@ -2702,10 +2830,11 @@ buySellRouter.post("/purchase-list", async (req, res) => {
 
     const statusValue =
       status !== undefined && status !== null ? String(status).trim() : "";
-    if (statusValue && statusValue.toLowerCase() !== "all") {
-      const normalised = normaliseStatus(statusValue, null);
-      if (normalised) filter.status = normalised;
-    }
+    applyListStatusFilter(
+      filter,
+      statusValue && statusValue.toLowerCase() !== "all" ? statusValue : null,
+      undefined,
+    );
 
     if (min_price !== undefined || max_price !== undefined) {
       filter.price = {};
@@ -2746,6 +2875,7 @@ buySellRouter.post("/purchase-list", async (req, res) => {
     }
 
     const list = await BuySellProduct.find(filter)
+      .select(LIST_PRODUCT_SELECT)
       .sort({ createdAt: -1 })
       .populate("category_id", "category_name")
       .populate("subcategory_id", "sub_category_name")
@@ -2759,7 +2889,7 @@ buySellRouter.post("/purchase-list", async (req, res) => {
       if (requestedSpecIds.length === 0) return item;
       return {
         ...item,
-        specifications: item.specifications
+        specifications: (item.specifications || [])
           .filter((spec) =>
             requestedSpecIds.includes(String(spec.specification_id)),
           )
@@ -2785,57 +2915,16 @@ buySellRouter.post("/purchase-list", async (req, res) => {
       };
     });
 
-    // ─── Favorites ────────────────────────────────────────────────────────────
-    const productIds = trimmedList.map((item) => String(item._id));
-    const userFavorites = await Favorite.find({
-      entity: "buySell",
-      entityId: { $in: productIds },
-      userId: ownerIdStr,
-    }).lean();
-    const favoriteSet = new Set(
-      userFavorites.map((fav) => String(fav.entityId)),
-    );
+    const enrichedList = await enrichBuySellListItems(trimmedList, actor);
 
-    // ─── Bit records (batch — no N+1) ─────────────────────────────────────────
-    const allProductIds = trimmedList.map((item) => item._id);
-    const allBitRecords = await ProductBitRecord.find({
-      productId: { $in: allProductIds },
-    })
-      .sort({ createdAt: -1 })
-      .lean();
-
-    // ─── Contacts (batch — sellers from products + buyers from bit records) ──
-    const sellerIds = trimmedList.map((item) => item.userid).filter(Boolean);
-    const buyerIds = allBitRecords.map((r) => bitRecordUserId(r)).filter(Boolean);
-    const contactMap = await getUsersContactMap([...sellerIds, ...buyerIds]);
-
-    const bitRecordsByProductId = {};
-    allBitRecords.forEach((record) => {
-      const key = String(record.productId);
-      if (!bitRecordsByProductId[key]) bitRecordsByProductId[key] = [];
-      bitRecordsByProductId[key].push(
-        enrichBitRecordForResponse(record, contactMap),
-      );
-    });
-
-    // ─── Merge & split by product status ────────────────────────────────────
     const purchasedProducts = [];
     const nonPurchasedProducts = [];
 
-    trimmedList.forEach((item) => {
-      const productKey = String(item._id);
-      const bitRecords = bitRecordsByProductId[productKey] || [];
-      const enrichedItem = enrichProductListItem(
-        item,
-        contactMap,
-        favoriteSet,
-        bitRecords,
-      );
-
+    enrichedList.forEach((item) => {
       if (item.status === "purchased") {
-        purchasedProducts.push(enrichedItem);
+        purchasedProducts.push(item);
       } else {
-        nonPurchasedProducts.push(enrichedItem);
+        nonPurchasedProducts.push(item);
       }
     });
 

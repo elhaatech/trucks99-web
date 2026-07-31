@@ -119,12 +119,26 @@ favoriteRouter.post('/list', async (req, res) => {
       userId: actor._id,
       entity,
       is_favorite: true,
-    }).lean();
+    })
+      .select("entityId")
+      .lean();
 
     const ids = favorites.map(f => f.entityId);
 
-    // get actual data
-    const items = await Model.find({ _id: { $in: ids } }).lean();
+    // get actual data (list projection for buySell)
+    const listSelect =
+      entity === "buySell"
+        ? "id bsNumber category_id subcategory_id userid price description images specifications country_id state_id city_id address pincode user_type status viewCount created_by createdAt updatedAt"
+        : undefined;
+
+    let query = Model.find({ _id: { $in: ids } });
+    if (listSelect) query = query.select(listSelect);
+    if (entity === "buySell") {
+      query = query
+        .populate("category_id", "category_name")
+        .populate("subcategory_id", "sub_category_name");
+    }
+    const items = await query.lean();
 
     // map result
     const result = items.map(item => ({

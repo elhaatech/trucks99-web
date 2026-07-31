@@ -282,6 +282,7 @@ chatRouter.get("/messages/:roomId", async (req, res) => {
     }
 
     const messages = await ChatMessage.find({ roomId: room._id })
+      .select("id roomId senderId senderName message createdAt")
       .sort({ createdAt: 1 })
       .lean();
 

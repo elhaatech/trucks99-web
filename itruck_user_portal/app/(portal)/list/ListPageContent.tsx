@@ -105,7 +105,9 @@ export default function UserProductListContent() {
     (async () => {
       setLoading(true);
       try {
-        const res = await getBuySellList(toBuySellListPayload(urlFilters));
+        const res = await getBuySellList(toBuySellListPayload(urlFilters), {
+          signal: controller.signal,
+        });
         if (cancelled || controller.signal.aborted) return;
         const items = res ?? [];
         setProducts(items);
