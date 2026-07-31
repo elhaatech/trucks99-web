@@ -18,6 +18,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "TRUCKS99 Marketplace",
   description: "Buy and sell commercial vehicles on TRUCKS99.",
+  icons: {
+    icon: "/images/trucks99-logo.png",
+    apple: "/images/trucks99-logo.png",
+  },
 };
 
 export default function RootLayout({

@@ -3,6 +3,7 @@
 import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import { NEUTRAL, PRIMARY } from "@/lib/theme";
+import { alpha } from "@mui/material/styles";
 
 type Props = {
   items: string[];
@@ -30,7 +31,7 @@ export function SuggestedQuestions({ items, onSelect, disabled }: Props) {
           sx={{
             bgcolor: NEUTRAL[50],
             border: `1px solid ${NEUTRAL[200]}`,
-            "&:hover": { bgcolor: "rgba(92,77,150,0.08)", borderColor: PRIMARY },
+            "&:hover": { bgcolor: alpha(PRIMARY, 0.08), borderColor: PRIMARY },
           }}
         />
       ))}

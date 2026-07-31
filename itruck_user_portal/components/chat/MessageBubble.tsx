@@ -171,7 +171,7 @@ export function MessageBubble({
                                 top: 26,
                                 bottom: -8,
                                 width: 2,
-                                bgcolor: "rgba(92,77,150,0.2)",
+                                bgcolor: "rgba(37,99,235,0.2)",
                               }
                             : undefined,
                       }}

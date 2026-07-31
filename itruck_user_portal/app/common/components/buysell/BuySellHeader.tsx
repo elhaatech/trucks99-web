@@ -18,8 +18,8 @@ import Tooltip from "@mui/material/Tooltip";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import MenuIcon from "@mui/icons-material/Menu";
 import SearchIcon from "@mui/icons-material/Search";
-import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
 import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
@@ -145,32 +145,8 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
           }}
           onClick={() => router.push(userProductRoutes.dashboard())}
         >
-          <Box
-            sx={{
-              width: 36,
-              height: 36,
-              borderRadius: 2,
-              background: GRADIENT,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: SHADOW.primary,
-            }}
-          >
-            <LocalShippingOutlinedIcon sx={{ color: "#fff", fontSize: 20 }} />
-          </Box>
+          <BrandLogo height={40} priority />
           <Box sx={{ display: { xs: "none", sm: "block" } }}>
-            <Typography
-              sx={{
-                fontWeight: 800,
-                fontSize: 17,
-                color: T.color.trustNavyDark,
-                letterSpacing: "-0.03em",
-                lineHeight: 1.1,
-              }}
-            >
-              TRUCKS99
-            </Typography>
             <Typography
               sx={{
                 fontSize: 10,

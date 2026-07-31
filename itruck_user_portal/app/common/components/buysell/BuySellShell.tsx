@@ -28,6 +28,7 @@ import {
 import { BuySellHeader, BUYSELL_NAV_LINKS, MOBILE_EXTRA_LINKS } from "./BuySellHeader";
 import { BuySellFooter } from "./BuySellFooter";
 import { BuySellPageBack } from "./BuySellPageBack";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 import { AssistantFab } from "@/components/chat/AssistantFab";
 
 type BuySellShellProps = {
@@ -106,17 +107,8 @@ export function BuySellShell({ children }: BuySellShellProps) {
         }}
       >
         <Box sx={{ px: 2.5, pt: 3, pb: 2 }}>
-          <Typography
-            sx={{
-              fontWeight: 800,
-              fontSize: 18,
-              letterSpacing: "-0.02em",
-              color: T.color.trustNavyDark,
-            }}
-          >
-            TRUCKS99
-          </Typography>
-          <Typography variant="caption" color="text.secondary" fontWeight={600}>
+          <BrandLogo height={36} />
+          <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: "block", mt: 0.75 }}>
             Marketplace navigation
           </Typography>
         </Box>

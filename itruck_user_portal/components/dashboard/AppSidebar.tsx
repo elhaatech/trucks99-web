@@ -34,6 +34,7 @@ import {
   normalizePathForMatch,
 } from "@/lib/permissions";
 import { routes } from "@/lib/routes";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 
 const SIDEBAR_COLLAPSED = LAYOUT.sidebarCollapsed;
 const SIDEBAR_EXPANDED = LAYOUT.sidebarExpanded;
@@ -592,34 +593,8 @@ export function AppSidebar({
         }}
       >
         {variant === "drawer" ? (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, pl: 1 }}>
-            <Box
-              sx={{
-                width: 32,
-                height: 32,
-                borderRadius: 1.5,
-                bgcolor: primary,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
-                fontWeight: 800,
-                fontSize: 13,
-              }}
-            >
-              iT
-            </Box>
-            <Box
-              component="span"
-              sx={{
-                color: "#f8fafc",
-                fontWeight: 700,
-                fontSize: 17,
-                letterSpacing: -0.3,
-              }}
-            >
-              iTruck
-            </Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, pl: 0.5 }}>
+            <BrandLogo height={32} />
           </Box>
         ) : (
           <IconButton

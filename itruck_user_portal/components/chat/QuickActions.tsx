@@ -3,7 +3,8 @@
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import type { AssistantAction, AssistantQuickReply } from "@/types/assistant";
-import { PRIMARY, NEUTRAL } from "@/lib/theme";
+import { PRIMARY, NEUTRAL, PRIMARY_DARK } from "@/lib/theme";
+import { alpha } from "@mui/material/styles";
 
 type Props = {
   quickReplies?: AssistantQuickReply[];
@@ -36,7 +37,7 @@ export function QuickActions({
             borderRadius: 999,
             background: PRIMARY,
             boxShadow: "none",
-            "&:hover": { boxShadow: "none", bgcolor: "#4a3d7a" },
+            "&:hover": { boxShadow: "none", bgcolor: PRIMARY_DARK },
           }}
         >
           {action.label}
@@ -55,7 +56,7 @@ export function QuickActions({
             borderColor: NEUTRAL[300],
             color: NEUTRAL[800],
             bgcolor: "#fff",
-            "&:hover": { borderColor: PRIMARY, bgcolor: "rgba(92,77,150,0.06)" },
+            "&:hover": { borderColor: PRIMARY, bgcolor: alpha(PRIMARY, 0.06) },
           }}
         >
           {qr.label}

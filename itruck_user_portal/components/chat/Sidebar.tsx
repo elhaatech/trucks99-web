@@ -69,7 +69,7 @@ export function Sidebar({
             bgcolor: PRIMARY,
             boxShadow: "none",
             fontWeight: 600,
-            "&:hover": { bgcolor: "#4a3d7a", boxShadow: "none" },
+            "&:hover": { bgcolor: "#1D4ED8", boxShadow: "none" },
           }}
         >
           New chat
@@ -127,8 +127,8 @@ export function Sidebar({
                     borderRadius: 2,
                     alignItems: "flex-start",
                     "&.Mui-selected": {
-                      bgcolor: "rgba(92,77,150,0.1)",
-                      "&:hover": { bgcolor: "rgba(92,77,150,0.14)" },
+                      bgcolor: "rgba(37,99,235,0.1)",
+                      "&:hover": { bgcolor: "rgba(37,99,235,0.14)" },
                     },
                   }}
                 >

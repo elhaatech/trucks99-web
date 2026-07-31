@@ -3,20 +3,20 @@
  * Single source of truth for MUI theme, shell, and product UI.
  */
 
-/* ── Brand colors (deep marine + signal sky — not purple) ─────────────────── */
-export const PRIMARY = "#0369A1";
-export const PRIMARY_LIGHT = "#0EA5E9";
-export const PRIMARY_DARK = "#0C4A6E";
+/* ── Brand colors (primary blue #2563EB) ──────────────────────────────────── */
+export const PRIMARY = "#2563EB";
+export const PRIMARY_LIGHT = "#3B82F6";
+export const PRIMARY_DARK = "#1D4ED8";
 export const SECONDARY = "#D97706";
 export const SECONDARY_LIGHT = "#F59E0B";
 export const SECONDARY_DARK = "#B45309";
 
 export const GRADIENT =
-  "linear-gradient(135deg, #0C4A6E 0%, #0369A1 48%, #0EA5E9 100%)";
+  "linear-gradient(135deg, #1E40AF 0%, #2563EB 48%, #3B82F6 100%)";
 export const GRADIENT_HOVER =
-  "linear-gradient(135deg, #082F49 0%, #0C4A6E 45%, #0369A1 100%)";
+  "linear-gradient(135deg, #1E3A8A 0%, #1D4ED8 45%, #2563EB 100%)";
 export const GRADIENT_AUTH =
-  "linear-gradient(145deg, #020617 0%, #0C4A6E 42%, #0369A1 78%, #0284C7 100%)";
+  "linear-gradient(145deg, #020617 0%, #1E40AF 42%, #2563EB 78%, #3B82F6 100%)";
 
 /* ── Semantic colors ──────────────────────────────────────────────────────── */
 export const SUCCESS = "#059669";
@@ -28,9 +28,9 @@ export const WARNING_DARK = "#B45309";
 export const ERROR = "#DC2626";
 export const ERROR_LIGHT = "#EF4444";
 export const ERROR_DARK = "#B91C1C";
-export const INFO = "#0284C7";
-export const INFO_LIGHT = "#38BDF8";
-export const INFO_DARK = "#0369A1";
+export const INFO = "#2563EB";
+export const INFO_LIGHT = "#60A5FA";
+export const INFO_DARK = "#1D4ED8";
 
 /* ── Neutrals (slate scale) ───────────────────────────────────────────────── */
 export const NEUTRAL = {
@@ -59,7 +59,7 @@ export const CHART_COLORS = [
 ] as const;
 
 export const DASHBOARD_ACCENTS = {
-  blue: { main: "#0284C7", bg: "rgba(2, 132, 199, 0.10)", text: "#0369A1" },
+  blue: { main: "#2563EB", bg: "rgba(37, 99, 235, 0.10)", text: "#1D4ED8" },
   purple: { main: "#0F766E", bg: "rgba(15, 118, 110, 0.10)", text: "#0F766E" },
   teal: { main: "#0D9488", bg: "rgba(13, 148, 136, 0.10)", text: "#0F766E" },
   amber: { main: "#D97706", bg: "rgba(217, 119, 6, 0.10)", text: "#B45309" },
@@ -101,8 +101,8 @@ export const SHADOW = {
   xl: "0 16px 48px rgba(15, 23, 42, 0.14)",
   card: "0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.05)",
   cardHover: "0 12px 32px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.06)",
-  primary: "0 4px 14px rgba(3, 105, 161, 0.32)",
-  primaryLg: "0 10px 28px rgba(3, 105, 161, 0.38)",
+  primary: "0 4px 14px rgba(37, 99, 235, 0.32)",
+  primaryLg: "0 10px 28px rgba(37, 99, 235, 0.38)",
   modal: "0 24px 64px rgba(2, 6, 23, 0.28)",
   navbar: "0 1px 0 rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.04)",
 } as const;
@@ -171,7 +171,7 @@ export const PRODUCT_THEME = {
     borderStrong: NEUTRAL[300],
     trustNavy: PRIMARY_DARK,
     trustNavyDark: NEUTRAL[900],
-    trustNavySoft: "rgba(3, 105, 161, 0.08)",
+    trustNavySoft: "rgba(37, 99, 235, 0.08)",
     accentGreen: SUCCESS,
     accentGreenDark: SUCCESS_DARK,
     accentGreenSoft: "rgba(5, 150, 105, 0.08)",

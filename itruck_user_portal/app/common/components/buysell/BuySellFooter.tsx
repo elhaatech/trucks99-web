@@ -3,9 +3,9 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Link from "next/link";
-import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
 import { PRODUCT_THEME as T, INFO, LAYOUT } from "@/lib/theme";
 import { userProductRoutes } from "@/lib/userProductRoutes";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 
 const FOOTER_LINKS = {
   company: [
@@ -55,10 +55,7 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
-            <LocalShippingOutlinedIcon sx={{ color: INFO, fontSize: 20, flexShrink: 0 }} />
-            <Typography sx={{ fontWeight: 800, fontSize: 14, color: "#fff", whiteSpace: "nowrap" }}>
-              TRUCKS99
-            </Typography>
+            <BrandLogo height={28} />
             <Typography
               sx={{
                 fontSize: 11,
@@ -144,10 +141,7 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
       >
         <Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
-            <LocalShippingOutlinedIcon sx={{ color: INFO, fontSize: 24 }} />
-            <Typography sx={{ fontWeight: 800, fontSize: 18, color: "#fff" }}>
-              TRUCKS99
-            </Typography>
+            <BrandLogo height={40} />
           </Box>
           <Typography sx={{ fontSize: 13, lineHeight: 1.7, opacity: 0.85, maxWidth: 320 }}>
             India&apos;s trusted commercial vehicle marketplace. Buy, sell, and finance trucks,

@@ -45,7 +45,7 @@ export function FlowStepTimeline({ title, steps }: Props) {
                     top: 26,
                     bottom: -10,
                     width: 2,
-                    bgcolor: "rgba(92,77,150,0.22)",
+                    bgcolor: "rgba(37,99,235,0.22)",
                   }
                 : undefined,
           }}

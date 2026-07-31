@@ -4,8 +4,8 @@ import * as React from "react";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Link from "next/link";
-import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
 import { alpha } from "@mui/material/styles";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 
 export interface WelcomePanelProps {
   title?: string;
@@ -21,40 +21,18 @@ export function WelcomePanel({
   return (
     <>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 8 }}>
-        <Box
+        <BrandLogo height={52} priority />
+        <Typography
           sx={{
-            width: 48,
-            height: 48,
-            borderRadius: "14px",
-            bgcolor: alpha("#fff", 0.12),
-            backdropFilter: "blur(8px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            border: `1px solid ${alpha("#fff", 0.22)}`,
+            color: alpha("#fff", 0.7),
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
           }}
         >
-          <LocalShippingOutlinedIcon sx={{ color: "#fff", fontSize: 26 }} />
-        </Box>
-        <Box>
-          <Typography
-            variant="h6"
-            sx={{ color: "#fff", fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1.1 }}
-          >
-            TRUCKS99
-          </Typography>
-          <Typography
-            sx={{
-              color: alpha("#fff", 0.7),
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-            }}
-          >
-            Vehicle Marketplace
-          </Typography>
-        </Box>
+          Vehicle Marketplace
+        </Typography>
       </Box>
 
       <Typography

@@ -233,7 +233,7 @@ export function openRazorpayCheckout(options: {
       email: options.userEmail || "",
       contact: options.userMobile || "",
     },
-    theme: { color: "#1976d2" },
+    theme: { color: "#2563EB" },
     handler: (response: RazorpaySuccessResponse) => {
       options.onSuccess(response);
     },

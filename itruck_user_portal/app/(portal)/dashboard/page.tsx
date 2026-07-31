@@ -21,7 +21,7 @@ import {
   VEHICLE_PAGE_SIZE,
 } from "@/app/common/components/buysell";
 import { userProductRoutes } from "@/lib/userProductRoutes";
-import { PRODUCT_THEME as T } from "@/lib/theme";
+import { PRODUCT_THEME as T, GRADIENT, PRIMARY_DARK } from "@/lib/theme";
 import { toBuySellListPayload } from "@/lib/buySellListUtils";
 import {
   getBuySellDashboardStats,
@@ -243,14 +243,14 @@ export default function UserProductDashboardPage() {
           mb: 1,
           p: { xs: 2.5, md: 3 },
           borderRadius: 3,
-          background: "linear-gradient(135deg, #0C4A6E 0%, #0369A1 48%, #0EA5E9 100%)",
+          background: GRADIENT,
           color: "#fff",
           display: "flex",
           flexDirection: { xs: "column", sm: "row" },
           alignItems: { sm: "center" },
           justifyContent: "space-between",
           gap: 2,
-          boxShadow: "0 12px 32px rgba(3, 105, 161, 0.28)",
+          boxShadow: "0 12px 32px rgba(37, 99, 235, 0.28)",
           border: "1px solid rgba(255,255,255,0.12)",
         }}
       >
@@ -282,7 +282,7 @@ export default function UserProductDashboardPage() {
               textTransform: "none",
               fontWeight: 700,
               bgcolor: "#fff",
-              color: "#0C4A6E",
+              color: PRIMARY_DARK,
               borderRadius: 2.5,
               px: 2.5,
               boxShadow: "none",

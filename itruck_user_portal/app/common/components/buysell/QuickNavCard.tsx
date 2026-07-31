@@ -46,7 +46,7 @@ export function QuickNavCard({ title, description, icon, onClick }: QuickNavCard
           width: 52,
           height: 52,
           borderRadius: "50%",
-          bgcolor: "rgba(3, 105, 161, 0.1)",
+          bgcolor: "rgba(37, 99, 235, 0.1)",
           color: INFO,
           display: "flex",
           alignItems: "center",

@@ -79,7 +79,7 @@ export function ChatInput({
           color: "#fff",
           width: 44,
           height: 44,
-          "&:hover": { bgcolor: "#4a3d7a" },
+          "&:hover": { bgcolor: "#1D4ED8" },
           "&.Mui-disabled": { bgcolor: NEUTRAL[200], color: NEUTRAL[400] },
         }}
       >

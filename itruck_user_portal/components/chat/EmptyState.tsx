@@ -4,10 +4,11 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import { ModuleFlowCards } from "./ModuleFlowCards";
 import type { ModuleFlow } from "@/types/moduleFlow";
-import { GRADIENT, NEUTRAL, PRIMARY } from "@/lib/theme";
+import { NEUTRAL, PRIMARY } from "@/lib/theme";
+import { BrandLogo } from "@/components/ui/BrandLogo";
+import { alpha } from "@mui/material/styles";
 
 type Props = {
   suggestions: string[];
@@ -30,23 +31,9 @@ export function EmptyState({ suggestions, flows = [], onSelect, disabled }: Prop
         overflowY: "auto",
       }}
     >
-      <Box
-        sx={{
-          width: 56,
-          height: 56,
-          borderRadius: "50%",
-          background: GRADIENT,
-          display: "grid",
-          placeItems: "center",
-          color: "#fff",
-          mb: 1.5,
-          boxShadow: "0 12px 30px rgba(92,77,150,0.35)",
-        }}
-      >
-        <AutoAwesomeRoundedIcon />
-      </Box>
+      <BrandLogo height={56} sx={{ mb: 1.5 }} />
       <Typography variant="h5" fontWeight={800} sx={{ color: NEUTRAL[900], mb: 0.75 }}>
-        TRUCK99 AI Assistant
+        TRUCKS99 AI Assistant
       </Typography>
       <Typography sx={{ color: NEUTRAL[500], maxWidth: 480, mb: 2.5, fontSize: 14 }}>
         Explore how each Buy &amp; Sell flow works, then ask the assistant — or create a
@@ -85,7 +72,7 @@ export function EmptyState({ suggestions, flows = [], onSelect, disabled }: Prop
               color: NEUTRAL[700],
               textTransform: "none",
               borderRadius: 999,
-              "&:hover": { borderColor: PRIMARY, bgcolor: "rgba(92,77,150,0.06)" },
+              "&:hover": { borderColor: PRIMARY, bgcolor: alpha(PRIMARY, 0.06) },
             }}
           >
             {s}

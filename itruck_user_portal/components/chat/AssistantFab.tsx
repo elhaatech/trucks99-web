@@ -31,11 +31,11 @@ export function AssistantFab() {
           width: 56,
           height: 56,
           background: GRADIENT,
-          boxShadow: "0 10px 28px rgba(92,77,150,0.45)",
+          boxShadow: "0 10px 28px rgba(37,99,235,0.45)",
           "&:hover": {
             background: GRADIENT,
             filter: "brightness(1.06)",
-            boxShadow: "0 12px 32px rgba(92,77,150,0.55)",
+            boxShadow: "0 12px 32px rgba(37,99,235,0.55)",
           },
         }}
       >

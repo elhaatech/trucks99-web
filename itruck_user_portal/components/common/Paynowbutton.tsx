@@ -259,7 +259,7 @@ export default function PayNowButton({
       >
         <Box
           sx={{
-            background: "linear-gradient(135deg, #1976d2 0%, #1565c0 100%)",
+            background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
             color: "#fff",
             px: 3,
             py: 2.5,
