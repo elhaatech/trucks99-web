@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack -p 3002",
+    "free:3002": "node scripts/free-port.js 3002",
+    "dev": "node scripts/free-port.js 3002 && next dev --webpack -p 3002",
     "build": "next build",
-    "start": "next start -p 3002",
+    "start": "node scripts/free-port.js 3002 && next start -p 3002",
     "lint": "eslint"
   },
   "dependencies": {
