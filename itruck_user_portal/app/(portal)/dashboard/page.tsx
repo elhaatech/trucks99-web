@@ -15,7 +15,6 @@ import {
   FeaturedVehiclesGrid,
   StatsSkeleton,
   mapDashboardMetricsToMarketplaceStats,
-  VEHICLE_PAGE_SIZE,
 } from "@/app/common/components/buysell";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { PRODUCT_THEME as T, GRADIENT, PRIMARY_DARK } from "@/lib/theme";
@@ -35,6 +34,8 @@ import { ensureLoggedInToViewProduct } from "@/lib/requireMarketplaceLogin";
 import type { MarketplaceStats } from "@/app/common/components/buysell/utils";
 import { EMPTY_FILTERS } from "@/app/admin/portal/buysell/_components/interface/buysell_interface";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
+import { MARKETPLACE } from "@/constants/marketplace";
+import { toErrorMessage } from "@/lib/errors";
 import { isAbortError } from "@/lib/apiCache";
 
 const EMPTY_STATS: MarketplaceStats = {
@@ -43,8 +44,6 @@ const EMPTY_STATS: MarketplaceStats = {
   soldVehicles: 0,
   totalOffers: 0,
 };
-
-const FEATURED_SECTION_LIMIT = 8;
 
 function seedFavoritesFromProducts(products: BuySellProduct[]): Set<string> {
   const ids = new Set<string>();
@@ -81,15 +80,17 @@ export default function UserProductDashboardPage() {
   const [exploreLoading, setExploreLoading] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
+  const favoriteIdsRef = useRef(favoriteIds);
+  favoriteIdsRef.current = favoriteIds;
 
   const loadExplorePage = useCallback(
     async (page: number, signal?: AbortSignal) => {
       const result = await getBuySellListPage(
         {
           ...toBuySellListPayload({ ...EMPTY_FILTERS, usear_type: "all" }),
-          statuses: ["active", "pending"],
+          statuses: [...MARKETPLACE.BROWSE_STATUSES],
           page,
-          limit: VEHICLE_PAGE_SIZE,
+          limit: MARKETPLACE.VEHICLE_PAGE_SIZE,
         },
         { signal },
       );
@@ -109,17 +110,17 @@ export default function UserProductDashboardPage() {
         loadExplorePage(1, signal).catch((err) => {
           if (isAbortError(err)) throw err;
           setListError(
-            err instanceof Error ? err.message : "Failed to load vehicles",
+            toErrorMessage(err, "Failed to load vehicles"),
           );
           return {
             items: [] as BuySellProduct[],
             total: 0,
             page: 1,
-            limit: VEHICLE_PAGE_SIZE,
+            limit: MARKETPLACE.VEHICLE_PAGE_SIZE,
             totalPages: 1,
           };
         }),
-        getBuySellFeaturedVehicles(FEATURED_SECTION_LIMIT)
+        getBuySellFeaturedVehicles(MARKETPLACE.FEATURED_SECTION_LIMIT)
           .then((data) => ({ data: data ?? [], error: "" as string }))
           .catch((err) => ({
             data: [] as BuySellProduct[],
@@ -225,7 +226,7 @@ export default function UserProductDashboardPage() {
 
   const handleFavoriteToggle = useCallback(
     async (productId: string) => {
-      const isFav = favoriteIds.has(productId);
+      const isFav = favoriteIdsRef.current.has(productId);
       setTogglingIds((prev) => new Set(prev).add(productId));
       setFavoriteIds((prev) => {
         const next = new Set(prev);
@@ -247,7 +248,7 @@ export default function UserProductDashboardPage() {
         });
         notify({
           type: "error",
-          message: err instanceof Error ? err.message : "Favorite update failed",
+          message: toErrorMessage(err, "Favorite update failed"),
         });
       } finally {
         setTogglingIds((prev) => {
@@ -257,7 +258,7 @@ export default function UserProductDashboardPage() {
         });
       }
     },
-    [favoriteIds, notify],
+    [notify],
   );
 
   const handleViewProduct = useCallback(

@@ -2,12 +2,13 @@ import {
   persistMarketplaceUserId,
 } from "@/lib/marketplaceUser";
 import { resolveApiBase } from "@/lib/apiBase";
+import { STORAGE_KEYS } from "@/constants/storageKeys";
 
 /** @deprecated Prefer resolveApiBase() — kept for imports; value is resolved at module load */
 export const API_BASE = resolveApiBase();
 export { resolveApiBase };
 
-const TOKEN_KEY = "itruck_token";
+const TOKEN_KEY = STORAGE_KEYS.AUTH_TOKEN; // re-export key via constants
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;

@@ -8,6 +8,8 @@ import type { SxProps, Theme } from "@mui/material/styles";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import dayjs, { type Dayjs } from "dayjs";
 
+import { DatePickerProvider } from "@/providers/DatePickerProvider";
+
 const PICKUP_OPTIONS = ["", "Now", "Today 2 PM", "Today 5 PM", "Schedule Later", "Schedule"] as const;
 
 /** Convert ISO string to datetime-local value (YYYY-MM-DDTHH:mm). */
@@ -150,46 +152,48 @@ export function PickupDateTimePicker({
   };
 
   return (
-    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "stretch", width: "100%", minWidth: 0, ...sx }}>
-      {showPresetSelect && (
-        <TextField
-          size="small"
-          select
-          label={label}
-          value={option}
-          onChange={(e) => handleOptionChange(e.target.value)}
-          sx={{ minWidth }}
-        >
-          <MenuItem value="">— Select —</MenuItem>
-          {options.filter(Boolean).map((opt) => (
-            <MenuItem key={opt} value={opt}>
-              {opt}
-            </MenuItem>
-          ))}
-        </TextField>
-      )}
-      <Box sx={{ flex: 1, minWidth: 0, display: "flex", alignItems: "stretch" }}>
-        <DateTimePicker
-          label="Date & Time"
-          value={scheduleDateTime}
-          onChange={handleDateTimeChange}
-          format="MM/DD/YYYY hh:mm A"
-          slotProps={{
-            textField: {
-              size: "small",
-              fullWidth: true,
-              variant: "outlined",
-              sx: {
-                width: "100%",
-                "& .MuiFormControl-root": { width: "100%" },
-                "& .MuiInputBase-root": { minHeight: 40 },
-                "& .MuiOutlinedInput-root": { minHeight: 40 },
+    <DatePickerProvider>
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "stretch", width: "100%", minWidth: 0, ...sx }}>
+        {showPresetSelect && (
+          <TextField
+            size="small"
+            select
+            label={label}
+            value={option}
+            onChange={(e) => handleOptionChange(e.target.value)}
+            sx={{ minWidth }}
+          >
+            <MenuItem value="">— Select —</MenuItem>
+            {options.filter(Boolean).map((opt) => (
+              <MenuItem key={opt} value={opt}>
+                {opt}
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
+        <Box sx={{ flex: 1, minWidth: 0, display: "flex", alignItems: "stretch" }}>
+          <DateTimePicker
+            label="Date & Time"
+            value={scheduleDateTime}
+            onChange={handleDateTimeChange}
+            format="MM/DD/YYYY hh:mm A"
+            slotProps={{
+              textField: {
+                size: "small",
+                fullWidth: true,
+                variant: "outlined",
+                sx: {
+                  width: "100%",
+                  "& .MuiFormControl-root": { width: "100%" },
+                  "& .MuiInputBase-root": { minHeight: 40 },
+                  "& .MuiOutlinedInput-root": { minHeight: 40 },
+                },
               },
-            },
-          }}
-          minDateTime={dayjs()}
-        />
+            }}
+            minDateTime={dayjs()}
+          />
+        </Box>
       </Box>
-    </Box>
+    </DatePickerProvider>
   );
 }

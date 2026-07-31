@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -14,7 +15,6 @@ import CircularProgress from "@mui/material/CircularProgress";
 import AddIcon from "@mui/icons-material/Add";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { Spinner } from "@/components/ui";
-import BuySellForm from "@/app/admin/portal/buysell/_components/buysellcolumnsForm/buysellForm";
 import { BuySellErrorState, VehicleGrid } from "@/app/common/components/buysell";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { PRODUCT_THEME as T } from "@/lib/theme";
@@ -33,9 +33,30 @@ import {
   PostListingFeaturedFlow,
   type NewListingFeaturedPrompt,
 } from "./_components/PostListingFeaturedFlow";
-import { FeaturedVehiclePlansDialog } from "@/app/(portal)/viewproduct/_components/FeaturedVehiclePlansDialog";
 import { SellVehiclePageHeader } from "./_components/SellVehiclePageHeader";
 import type { BuySellFormSuccessContext } from "@/app/admin/portal/buysell/_components/buysellcolumnsForm/buysellForm";
+import { toErrorMessage } from "@/lib/errors";
+
+const BuySellForm = dynamic(
+  () =>
+    import("@/app/admin/portal/buysell/_components/buysellcolumnsForm/buysellForm"),
+  {
+    ssr: false,
+    loading: () => (
+      <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+        <CircularProgress size={32} />
+      </Box>
+    ),
+  },
+);
+
+const FeaturedVehiclePlansDialog = dynamic(
+  () =>
+    import("@/app/(portal)/viewproduct/_components/FeaturedVehiclePlansDialog").then(
+      (m) => m.FeaturedVehiclePlansDialog,
+    ),
+  { ssr: false },
+);
 
 function SellVehicleContent() {
   const router = useRouter();
@@ -67,7 +88,7 @@ function SellVehicleContent() {
         );
         setProducts(res ?? []);
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to load listings";
+        const message = toErrorMessage(err, "Failed to load listings");
         setListError(message);
         if (!options?.silent) {
           notify({ type: "error", message });

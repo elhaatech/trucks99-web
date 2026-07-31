@@ -6,25 +6,21 @@ Runs on **port 3002** by default; the API server (`server_trucks99`) runs on **p
 
 ## Folder structure
 
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for the enterprise layering guide.
+
 ```
 itruck_user_portal/
-├── app/
-│   ├── (portal)/          # Route group — URLs are /dashboard, /list, … (no prefix)
-│   │   ├── layout.tsx     # Marketplace shell (header, nav, footer)
-│   │   ├── dashboard/
-│   │   ├── list/
-│   │   ├── viewproduct/
-│   │   └── …
-│   ├── common/components/buysell/   # Shared marketplace UI
-│   ├── admin/portal/buysell/        # Listing form + status chips (user flows)
-│   ├── api/places/                  # Google Places proxy
-│   ├── layout.tsx
-│   └── page.tsx           # Redirects to /dashboard
+├── app/                   # Next.js App Router (portal + admin)
+├── features/marketplace/  # Feature barrel (preferred imports)
 ├── components/            # UI, chat, filters, ads
+├── providers/             # Error boundary, date-picker scope
+├── constants/             # Shared constants
+├── types/                 # Shared TypeScript types
+├── services/              # Service barrel → model/services
 ├── hooks/
-├── lib/                   # routes, theme, permissions, navigation
-├── model/                 # API clients (axios)
-└── public/images/         # Hero assets
+├── lib/                   # theme, cache, errors, routes
+├── model/services/        # HTTP API clients
+└── public/images/
 ```
 
 ## Environment

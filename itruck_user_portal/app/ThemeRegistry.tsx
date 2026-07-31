@@ -6,12 +6,15 @@ import { useServerInsertedHTML } from "next/navigation";
 import { CacheProvider } from "@emotion/react";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { ToastProvider } from "@/lib/toast";
-import { AdsenseScript } from "@/components/ads/AdsenseScript";
 import { appTheme } from "@/lib/createAppTheme";
+import { AppErrorBoundary } from "@/providers/AppErrorBoundary";
 
+/**
+ * Root MUI + Emotion + toast providers.
+ * Date pickers use `DatePickerProvider` locally (not global).
+ * AdSense loads on-demand from ad components (admin), not on every marketplace page.
+ */
 export default function ThemeRegistry({
   children,
 }: {
@@ -44,11 +47,10 @@ export default function ThemeRegistry({
   return (
     <CacheProvider value={cache}>
       <ThemeProvider theme={appTheme}>
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <CssBaseline />
-          <AdsenseScript />
+        <CssBaseline />
+        <AppErrorBoundary>
           <ToastProvider>{children}</ToastProvider>
-        </LocalizationProvider>
+        </AppErrorBoundary>
       </ThemeProvider>
     </CacheProvider>
   );

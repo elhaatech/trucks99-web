@@ -10,10 +10,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const input = searchParams.get("input") || "";
 
-    console.log("[places/autocomplete] input =", input, "hasKey =", !!GOOGLE_API_KEY);
-
     if (!GOOGLE_API_KEY || !input.trim()) {
-      console.log("[places/autocomplete] missing key or empty input");
       return NextResponse.json({ status: "ZERO_RESULTS", predictions: [] }, { status: 200 });
     }
 
@@ -21,16 +18,8 @@ export async function GET(req: NextRequest) {
     url.searchParams.set("input", input);
     url.searchParams.set("key", GOOGLE_API_KEY);
 
-    console.log("[places/autocomplete] calling =", url.toString());
     const res = await fetch(url.toString());
-    console.log("[places/autocomplete] status =", res.status);
     const data = await res.json();
-    console.log(
-      "[places/autocomplete] google status =",
-      data?.status,
-      "predictions =",
-      Array.isArray(data?.predictions) ? data.predictions.length : 0
-    );
     return NextResponse.json(data);
   } catch (error) {
     console.error("[places/autocomplete] error", error);
@@ -40,4 +29,3 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-
