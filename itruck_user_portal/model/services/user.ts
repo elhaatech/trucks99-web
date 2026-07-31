@@ -2,6 +2,7 @@ import { api, clearToken, getAuthHeaders, setToken, resolveApiBase } from "./com
 import { persistMarketplaceUserId, clearMarketplaceUserId } from "@/lib/marketplaceUser";
 import { clearMarketplaceGuestKey } from "@/lib/marketplaceGuest";
 import { notifyMarketplaceAuthChanged } from "@/lib/marketplaceAuth";
+import { cachedRequest, invalidateCache } from "@/lib/apiCache";
 import { normalizeRolePermissionsInput, type Role, getRoles as listRolesViaPost } from "./role";
 import {
   getRoleDocumentId,
@@ -131,6 +132,10 @@ export async function registerMarketplaceUser(body: MarketplaceRegisterInput) {
   return createUser({ ...rest, roleId });
 }
 
+export function invalidateCurrentUserCache(): void {
+  invalidateCache("current-user");
+}
+
 export async function logout(): Promise<void> {
   await fetch(`${resolveApiBase()}/api/logout`, {
     method: "DELETE",
@@ -139,6 +144,7 @@ export async function logout(): Promise<void> {
   });
   clearToken();
   clearMarketplaceUserId();
+  invalidateCurrentUserCache();
   notifyMarketplaceAuthChanged();
 }
 
@@ -146,8 +152,14 @@ export async function logout(): Promise<void> {
 
 /** GET /api/user — returns logged-in user with populated role + permissions */
 export async function getCurrentUser() {
-  const user = await api<User>("/api/user");
-  return normalizeUserRoleEmbedded(user);
+  return cachedRequest(
+    "current-user",
+    async () => {
+      const user = await api<User>("/api/user");
+      return normalizeUserRoleEmbedded(user);
+    },
+    15_000,
+  );
 }
 
 // ─── User CRUD ────────────────────────────────────────────────────────────────

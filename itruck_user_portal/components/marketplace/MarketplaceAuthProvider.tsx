@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { getCurrentUser, logout as logoutApi, type User } from "@/model/services/user";
+import { getCurrentUser, logout as logoutApi, type User, invalidateCurrentUserCache } from "@/model/services/user";
 import {
   hasMarketplaceBearerToken,
   MARKETPLACE_AUTH_CHANGED_EVENT,
@@ -34,13 +34,15 @@ export function MarketplaceAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (opts?: { force?: boolean }) => {
     if (!hasMarketplaceBearerToken()) {
+      if (opts?.force) invalidateCurrentUserCache();
       setUser(null);
       setAuthReady(true);
       return;
     }
     try {
+      if (opts?.force) invalidateCurrentUserCache();
       const profile = await getCurrentUser();
       setUser(profile);
       resolveMarketplaceUserIdFromUser(profile);
@@ -58,14 +60,13 @@ export function MarketplaceAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    setAuthReady(false);
     void refresh();
   }, [refresh]);
 
   useEffect(() => {
     const onAuthChanged = () => {
       setAuthReady(false);
-      void refresh();
+      void refresh({ force: true });
     };
     window.addEventListener(MARKETPLACE_AUTH_CHANGED_EVENT, onAuthChanged);
     return () =>

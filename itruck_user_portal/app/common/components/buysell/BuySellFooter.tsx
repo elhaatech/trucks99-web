@@ -81,7 +81,7 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
               ...FOOTER_LINKS.support.slice(0, 2),
               FOOTER_LINKS.legal[0],
             ].map((item) => (
-              <Link key={item.label} href={item.href} style={{ textDecoration: "none" }}>
+              <Link key={item.label} href={item.href} prefetch={false} style={{ textDecoration: "none" }}>
                 <Typography
                   sx={{
                     fontSize: 12,
@@ -179,7 +179,7 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
           <Box key={col.title}>
             <Typography sx={{ fontWeight: 700, color: "#fff", mb: 1.5 }}>{col.title}</Typography>
             {col.items.map((item) => (
-              <Link key={item.label} href={item.href} style={{ textDecoration: "none" }}>
+              <Link key={item.label} href={item.href} prefetch={false} style={{ textDecoration: "none" }}>
                 <Typography
                   sx={{
                     fontSize: 13,

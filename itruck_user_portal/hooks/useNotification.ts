@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { useToast } from "@/lib/toast";
 
 export type NotifyPayload =
@@ -17,27 +17,29 @@ export interface UseNotificationReturn {
 /** Thin wrapper over the global toast context for a consistent API. */
 export function useNotification(): UseNotificationReturn {
   const toast = useToast();
-  const notify = useCallback(
-    (payload: NotifyPayload) => {
-      switch (payload.type) {
-        case "success":
-          toast.success(payload.message);
-          break;
-        case "error":
-          toast.error(payload.message);
-          break;
-        case "info":
-          toast.info(payload.message);
-          break;
-        case "warning":
-          toast.warning(payload.message);
-          break;
-        case "danger":
-          toast.danger(payload.message);
-          break;
-      }
-    },
-    [toast]
-  );
-  return { notify };
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
+
+  const notify = useCallback((payload: NotifyPayload) => {
+    const t = toastRef.current;
+    switch (payload.type) {
+      case "success":
+        t.success(payload.message);
+        break;
+      case "error":
+        t.error(payload.message);
+        break;
+      case "info":
+        t.info(payload.message);
+        break;
+      case "warning":
+        t.warning(payload.message);
+        break;
+      case "danger":
+        t.danger(payload.message);
+        break;
+    }
+  }, []);
+
+  return useMemo(() => ({ notify }), [notify]);
 }

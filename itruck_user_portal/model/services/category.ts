@@ -1,4 +1,5 @@
 import { axiosClient } from "./axiosClient";
+import { cachedRequest } from "@/lib/apiCache";
 
 export type Category = {
   _id: string;
@@ -62,18 +63,26 @@ export type GetCategoriesOptions = {
 export async function getCategories(
   options: GetCategoriesOptions = {},
 ): Promise<Category[]> {
-  try {
-    const params = new URLSearchParams();
-    if (options.status) {
-      params.set("status", options.status);
-    } else if (options.activeOnly) {
-      params.set("status", "active");
-    }
+  const params = new URLSearchParams();
+  if (options.status) {
+    params.set("status", options.status);
+  } else if (options.activeOnly) {
+    params.set("status", "active");
+  }
 
-    const query = params.toString();
-    const url = query ? `/api/category/all?${query}` : "/api/category/all";
-    const res = await axiosClient.get<Category[]>(url);
-    return res.data ?? [];
+  const query = params.toString();
+  const url = query ? `/api/category/all?${query}` : "/api/category/all";
+  const cacheKey = `categories:${query || "all"}`;
+
+  try {
+    return await cachedRequest(
+      cacheKey,
+      async () => {
+        const res = await axiosClient.get<Category[]>(url);
+        return res.data ?? [];
+      },
+      60_000,
+    );
   } catch (error) {
     normalizeError(error);
   }

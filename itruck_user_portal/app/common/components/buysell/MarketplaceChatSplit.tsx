@@ -9,8 +9,7 @@ import Alert from "@mui/material/Alert";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 import { ChatDrawer } from "@/components/common/ChatDrawer";
 import { getChatList, type ChatRoom } from "@/model/services/chatapi";
-import { getCurrentUser } from "@/model/services/user";
-import type { User } from "@/model/services/user";
+import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { formatProductPrice } from "./utils";
 
 const POLL_INTERVAL_MS = 8000;
@@ -26,10 +25,10 @@ function extractId(value: unknown): string | null {
 }
 
 export function MarketplaceChatSplit() {
+  const { user: currentUser } = useMarketplaceAuth();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
 
   const loadRooms = useCallback(async (silent = false) => {
@@ -46,14 +45,13 @@ export function MarketplaceChatSplit() {
   }, []);
 
   useEffect(() => {
-    getCurrentUser()
-      .then(setCurrentUser)
-      .catch(() => setCurrentUser(null));
-  }, []);
-
-  useEffect(() => {
     void loadRooms();
-    const interval = setInterval(() => void loadRooms(true), POLL_INTERVAL_MS);
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
+      void loadRooms(true);
+    }, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [loadRooms]);
 

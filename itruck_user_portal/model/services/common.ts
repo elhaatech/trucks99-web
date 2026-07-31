@@ -43,7 +43,14 @@ export function getAuthHeaders(): Record<string, string> {
 
 export type RequestOptions = RequestInit & { params?: Record<string, string> };
 
-const inFlightGet = new Map<string, Promise<unknown>>();
+/** In-flight dedupe for identical GET/POST (stops React Strict Mode double calls). */
+const inFlightRequests = new Map<string, Promise<unknown>>();
+
+function flightKey(method: string, urlKey: string, body: BodyInit | null | undefined): string {
+  const bodyPart =
+    typeof body === "string" ? body : body == null ? "" : "[non-string-body]";
+  return `${method.toUpperCase()} ${urlKey} ${bodyPart}`;
+}
 
 export async function api<T = unknown>(
   path: string,
@@ -56,7 +63,8 @@ export async function api<T = unknown>(
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   }
   const urlKey = url.toString();
-  const isGet = !init.method || init.method === "GET";
+  const method = (init.method || "GET").toUpperCase();
+  const key = flightKey(method, urlKey, init.body);
 
   const run = async (): Promise<T> => {
     const headers: Record<string, string> = {
@@ -81,13 +89,13 @@ export async function api<T = unknown>(
     return data as T;
   };
 
-  if (isGet && typeof window !== "undefined") {
-    let p = inFlightGet.get(urlKey) as Promise<T> | undefined;
+  if (typeof window !== "undefined") {
+    let p = inFlightRequests.get(key) as Promise<T> | undefined;
     if (!p) {
       p = run().finally(() => {
-        inFlightGet.delete(urlKey);
+        inFlightRequests.delete(key);
       });
-      inFlightGet.set(urlKey, p);
+      inFlightRequests.set(key, p);
     }
     return p;
   }
@@ -107,7 +115,8 @@ export async function publicApi<T = unknown>(
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   }
   const urlKey = url.toString();
-  const isGet = !init.method || init.method === "GET";
+  const method = (init.method || "GET").toUpperCase();
+  const key = `public:${flightKey(method, urlKey, init.body)}`;
 
   const run = async (): Promise<T> => {
     const headers: Record<string, string> = {
@@ -127,11 +136,11 @@ export async function publicApi<T = unknown>(
     return data as T;
   };
 
-  if (isGet && typeof window !== "undefined") {
-    let p = inFlightGet.get(urlKey) as Promise<T> | undefined;
+  if (typeof window !== "undefined") {
+    let p = inFlightRequests.get(key) as Promise<T> | undefined;
     if (!p) {
-      p = run().finally(() => inFlightGet.delete(urlKey));
-      inFlightGet.set(urlKey, p);
+      p = run().finally(() => inFlightRequests.delete(key));
+      inFlightRequests.set(key, p);
     }
     return p;
   }

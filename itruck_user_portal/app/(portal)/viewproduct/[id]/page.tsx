@@ -21,6 +21,7 @@ import { userProductRoutes } from "@/lib/userProductRoutes";
 import { ensureLoggedInToViewProduct } from "@/lib/requireMarketplaceLogin";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
+import dynamic from "next/dynamic";
 import {
   pullSpec,
   getProductTitle,
@@ -28,8 +29,6 @@ import {
   getProductLocation,
   getSellerDisplayName,
   productSpecsToEntries,
-  MakeOfferModal,
-  EmiCalculator,
 } from "@/app/common/components/buysell";
 import { FeaturedVehicleListingPanel } from "../_components/FeaturedVehicleListingPanel";
 import {
@@ -42,7 +41,6 @@ import { ProductLifecycleSection } from "@/app/admin/portal/buysell/view/[id]/_c
 import { UserRelatedProductsSection } from "../_components/UserRelatedProductsSection";
 import { extractId } from "@/app/common/components/buysell/utils";
 import { getBuySellImageUrl } from "@/lib/buysellUtils";
-import { ChatDrawer } from "@/components/common/ChatDrawer";
 import { ProductViewGallery } from "../_components/ProductViewGallery";
 import { ProductViewBreadcrumbs } from "../_components/ProductViewBreadcrumbs";
 import { ProductViewSummary } from "../_components/ProductViewSummary";
@@ -51,9 +49,30 @@ import { ProductSellerInfo } from "../_components/ProductSellerInfo";
 import { ProductViewActionBar } from "../_components/ProductViewActionBar";
 import { ProductEmiSidebarCard } from "../_components/ProductEmiSidebarCard";
 import { UserProductBitRecordsSection, type ProductOfferTab } from "../_components/UserProductBitRecordsSection";
-import { FeaturedVehiclePlansDialog } from "../_components/FeaturedVehiclePlansDialog";
 import { resolveFeaturedListingUi } from "@/lib/featuredVehicleListingStatus";
 import type { SubscriptionItem } from "@/model/services/subscription";
+
+const MakeOfferModal = dynamic(
+  () =>
+    import("@/app/common/components/buysell/MakeOfferModal").then((m) => m.MakeOfferModal),
+  { ssr: false },
+);
+const EmiCalculator = dynamic(
+  () =>
+    import("@/app/common/components/buysell/EmiCalculator").then((m) => m.EmiCalculator),
+  { ssr: false },
+);
+const ChatDrawer = dynamic(
+  () => import("@/components/common/ChatDrawer").then((m) => m.ChatDrawer),
+  { ssr: false },
+);
+const FeaturedVehiclePlansDialog = dynamic(
+  () =>
+    import("../_components/FeaturedVehiclePlansDialog").then(
+      (m) => m.FeaturedVehiclePlansDialog,
+    ),
+  { ssr: false },
+);
 
 const SHOP_BLOCKED_STATUSES = new Set(["sold", "rejected", "inactive", "draft"]);
 
@@ -109,11 +128,13 @@ export default function UserProductViewPage() {
   }, [id]);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !authReady) return;
     let cancelled = false;
     (async () => {
       const allowed = await ensureLoggedInToViewProduct(id, {
         notify,
+        isLoggedIn: Boolean(currentUser || marketplaceUserId),
+        authReady,
         onNeedLogin: (loginPath) => router.replace(loginPath),
       });
       if (cancelled) return;
@@ -126,7 +147,7 @@ export default function UserProductViewPage() {
     return () => {
       cancelled = true;
     };
-  }, [id, loadProduct, notify, router]);
+  }, [id, loadProduct, notify, router, authReady, currentUser, marketplaceUserId]);
 
   useEffect(() => {
     if (!item || !featuredActivated) return;

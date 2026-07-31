@@ -24,8 +24,7 @@ import {
   postBuySellProductsByOwner,
   type BuySellProduct,
 } from "@/model/services/buysellapi";
-import { getCurrentUser } from "@/model/services/user";
-import { extractId } from "@/app/common/components/buysell/utils";
+import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { VehicleGridSkeleton } from "@/app/common/components/buysell/LoadingSkeleton";
 import { getBuySellImageUrl } from "@/lib/buysellUtils";
 
@@ -33,6 +32,7 @@ export default function SellerProfilePage() {
   const params = useParams();
   const router = useRouter();
   const ownerId = typeof params?.ownerId === "string" ? params.ownerId : "";
+  const { userId: marketplaceUserId } = useMarketplaceAuth();
 
   const [products, setProducts] = useState<BuySellProduct[]>([]);
   const [ownerName, setOwnerName] = useState("");
@@ -40,36 +40,31 @@ export default function SellerProfilePage() {
   const [ownerMobile, setOwnerMobile] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  useEffect(() => {
-    getCurrentUser()
-      .then((user) =>
-        setCurrentUserId(
-          extractId(
-            (user as { _id?: unknown; id?: unknown })?._id ??
-              (user as { _id?: unknown; id?: unknown })?.id ??
-              null,
-          ),
-        ),
-      )
-      .catch(() => setCurrentUserId(null));
-  }, []);
+  const currentUserId = marketplaceUserId;
 
   useEffect(() => {
     if (!ownerId) return;
+    let cancelled = false;
     setLoading(true);
     postBuySellProductsByOwner({ ownerId, limit: 48 })
       .then((data) => {
+        if (cancelled) return;
         setProducts(data.products ?? []);
         setOwnerName(data.owner?.name ?? "Seller");
         setOwnerImage(data.owner?.profileImage ?? null);
         setOwnerMobile(data.owner?.mobile ?? null);
       })
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "Failed to load seller profile"),
-      )
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Failed to load seller profile");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [ownerId]);
 
   const stats = useMemo(() => deriveMarketplaceStats(products), [products]);

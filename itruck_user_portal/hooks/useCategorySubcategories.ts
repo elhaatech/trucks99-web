@@ -80,14 +80,18 @@ export function useCategorySubcategories({
     [selectedCategory],
   );
 
-  /** Backend resolves Mongo _id or uuid — do not wait for categories list. */
-  const categoryKeyForApi = selectedCategoryUuid || categoryId;
+  /** Prefer UUID once categories resolve — avoids double subcategory fetch. */
+  const categoryKeyForApi = selectedCategoryUuid || (loadingCategories ? "" : categoryId);
 
   useEffect(() => {
-    if (!categoryId || !categoryKeyForApi) {
+    if (!categoryId) {
       setSubcategories([]);
       setSubcategoriesError("");
       setLoadingSubcategories(false);
+      return;
+    }
+
+    if (loadingCategories || !categoryKeyForApi) {
       return;
     }
 
@@ -120,6 +124,7 @@ export function useCategorySubcategories({
   }, [
     categoryId,
     categoryKeyForApi,
+    loadingCategories,
     activeOnly,
     includeInactiveSubcategories,
   ]);

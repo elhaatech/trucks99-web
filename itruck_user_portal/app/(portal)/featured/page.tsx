@@ -16,8 +16,7 @@ import {
   type SubscriptionItem,
 } from "@/model/services/subscription";
 import { getMySubscriptions } from "@/model/services/Payment";
-import { getCurrentUser } from "@/model/services/user";
-import type { User } from "@/model/services/user";
+import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { FeaturePlanCard, FeaturedVehiclePromoCard } from "@/app/common/components/buysell";
 import { VehicleGridSkeleton } from "@/app/common/components/buysell/LoadingSkeleton";
 import { BuySellErrorState } from "@/app/common/components/buysell/ErrorState";
@@ -27,6 +26,7 @@ type Step = "promo" | "plans" | "activated";
 export default function FeaturedVehiclePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user: currentUser } = useMarketplaceAuth();
   const buySellProductId = useMemo(
     () => searchParams.get("productId")?.trim() || "",
     [searchParams],
@@ -35,7 +35,6 @@ export default function FeaturedVehiclePage() {
   const [plans, setPlans] = useState<SubscriptionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activePlan, setActivePlan] = useState<SubscriptionItem | null>(null);
   const [activatedPlan, setActivatedPlan] = useState<SubscriptionItem | null>(null);
 
@@ -43,13 +42,11 @@ export default function FeaturedVehiclePage() {
     setLoading(true);
     setError("");
     try {
-      const [user, catalogPlans, mySubs] = await Promise.all([
-        getCurrentUser().catch(() => null),
+      const [catalogPlans, mySubs] = await Promise.all([
         getFeaturedVehiclePlans(),
         getMySubscriptions().catch(() => ({ userId: "", activeSubscriptions: [] })),
       ]);
 
-      setCurrentUser(user);
       setPlans(catalogPlans);
 
       const activeFeatured = (mySubs.activeSubscriptions ?? []).find(

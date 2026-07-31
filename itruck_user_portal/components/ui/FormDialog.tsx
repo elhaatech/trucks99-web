@@ -12,7 +12,7 @@ import IconButton from "@mui/material/IconButton";
 import Divider from "@mui/material/Divider";
 import CircularProgress from "@mui/material/CircularProgress";
 import { alpha } from "@mui/material/styles";
-import { CloseRounded as CloseRoundedIcon } from "@mui/icons-material";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 
 export interface FormDialogProps {
   open: boolean;

@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 
@@ -16,18 +22,16 @@ type ToastContextValue = {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
+const FALLBACK_TOAST: ToastContextValue = {
+  success: (msg: string) => console.log("[toast]", msg),
+  error: (msg: string) => console.error("[toast]", msg),
+  info: (msg: string) => console.log("[toast]", msg),
+  warning: (msg: string) => console.warn("[toast]", msg),
+  danger: (msg: string) => console.error("[toast]", msg),
+};
+
 export function useToast() {
-  const ctx = useContext(ToastContext);
-  if (!ctx) {
-    return {
-      success: (msg: string) => console.log("[toast]", msg),
-      error: (msg: string) => console.error("[toast]", msg),
-      info: (msg: string) => console.log("[toast]", msg),
-      warning: (msg: string) => console.warn("[toast]", msg),
-      danger: (msg: string) => console.error("[toast]", msg),
-    };
-  }
-  return ctx;
+  return useContext(ToastContext) ?? FALLBACK_TOAST;
 }
 
 type SnackState = {
@@ -37,6 +41,14 @@ type SnackState = {
   icon?: React.ReactNode;
 };
 
+function DeleteIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+    </svg>
+  );
+}
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [snack, setSnack] = useState<SnackState>({
     open: false,
@@ -44,23 +56,26 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     severity: "success",
   });
 
-  const show = useCallback((message: string, severity: Severity, icon?: React.ReactNode) => {
-    setSnack({ open: true, message, severity, icon });
-  }, []);
-
-  const DeleteIcon = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
-    </svg>
+  const show = useCallback(
+    (message: string, severity: Severity, icon?: React.ReactNode) => {
+      setSnack({ open: true, message, severity, icon });
+    },
+    [],
   );
 
-  const value: ToastContextValue = {
-    success: (message) => show(message, "success"),
-    error: (message) => show(message, "error"),
-    info: (message) => show(message, "info"),
-    warning: (message) => show(message, "warning"),
-    danger: (message) => show(message, "error", <DeleteIcon />),
-  };
+  const success = useCallback((message: string) => show(message, "success"), [show]);
+  const error = useCallback((message: string) => show(message, "error"), [show]);
+  const info = useCallback((message: string) => show(message, "info"), [show]);
+  const warning = useCallback((message: string) => show(message, "warning"), [show]);
+  const danger = useCallback(
+    (message: string) => show(message, "error", <DeleteIcon />),
+    [show],
+  );
+
+  const value = useMemo(
+    (): ToastContextValue => ({ success, error, info, warning, danger }),
+    [success, error, info, warning, danger],
+  );
 
   const handleClose = useCallback(() => {
     setSnack((prev) => ({ ...prev, open: false }));

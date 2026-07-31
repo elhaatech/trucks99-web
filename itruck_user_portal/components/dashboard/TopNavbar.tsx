@@ -20,18 +20,24 @@ import type { User } from "@/model/api";
 import { logout } from "@/model/api";
 import { routes } from "@/lib/routes";
 import { clearNavigationState } from "@/lib/navigation";
-import {
-  CloseRounded as CloseRoundedIcon,
-  LogoutRounded as LogoutRoundedIcon,
-  MarkChatUnreadOutlined as MarkChatUnreadOutlinedIcon,
-  MenuRounded as MenuRoundedIcon,
-  PersonOutlineRounded as PersonOutlineRoundedIcon,
-  SettingsRounded as SettingsRoundedIcon,
-} from "@mui/icons-material";
+import dynamic from "next/dynamic";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import MarkChatUnreadOutlinedIcon from "@mui/icons-material/MarkChatUnreadOutlined";
+import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
+import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
+import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import { NotificationBell } from "./NotificationBell";
-import { ChatDrawer } from "@/components/common/ChatDrawer";
-import ChatInboxPage from "@/components/common/Chatinboxpage";
 import { getChatList } from "@/model/services/chatapi";
+
+const ChatDrawer = dynamic(
+  () => import("@/components/common/ChatDrawer").then((m) => m.ChatDrawer),
+  { ssr: false },
+);
+const ChatInboxPage = dynamic(
+  () => import("@/components/common/Chatinboxpage"),
+  { ssr: false },
+);
 
 export interface TopNavbarProps {
   user?: User | null;
@@ -85,6 +91,9 @@ export function TopNavbar({ user, notificationCount = 0, onMenuClick }: TopNavba
     let cancelled = false;
 
     async function poll() {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
       try {
         const rooms = await getChatList();
         if (cancelled) return;

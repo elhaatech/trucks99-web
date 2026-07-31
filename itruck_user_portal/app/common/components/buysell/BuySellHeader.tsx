@@ -37,6 +37,9 @@ import {
 } from "@/lib/theme";
 import { isSellHubPath, userProductRoutes } from "@/lib/userProductRoutes";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
+import {
+  MARKETPLACE_FAVORITES_CHANGED_EVENT,
+} from "@/lib/marketplaceAuth";
 import { getBuySellFavoriteCount } from "@/model/services/favoriteapi";
 
 const NAV_LINKS = [
@@ -78,7 +81,22 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
 
   useEffect(() => {
     refreshCounts();
-  }, [refreshCounts, pathname]);
+  }, [refreshCounts]);
+
+  useEffect(() => {
+    const onFavoritesChanged = () => {
+      refreshCounts();
+    };
+    window.addEventListener(
+      MARKETPLACE_FAVORITES_CHANGED_EVENT,
+      onFavoritesChanged,
+    );
+    return () =>
+      window.removeEventListener(
+        MARKETPLACE_FAVORITES_CHANGED_EVENT,
+        onFavoritesChanged,
+      );
+  }, [refreshCounts]);
 
   const handleHeaderSearch = () => {
     router.push(

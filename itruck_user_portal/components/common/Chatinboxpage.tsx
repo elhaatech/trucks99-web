@@ -10,8 +10,7 @@ import Alert from "@mui/material/Alert";
 import { PageHeader } from "@/components/ui";
 import { ChatDrawer } from "@/components/common/ChatDrawer";
 import { getChatList, type ChatRoom } from "@/model/services/chatapi";
-import { getCurrentUser } from "@/model/services/user";
-import type { User } from "@/model/services/user";
+import { useMarketplaceAuthOptional } from "@/components/marketplace/MarketplaceAuthProvider";
 
 const POLL_INTERVAL_MS = 8000;
 
@@ -35,17 +34,11 @@ type Props = {
 };
 
 export default function ChatInboxPage({ onSelectRoom }: Props) {
+  const auth = useMarketplaceAuthOptional();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
-
-  useEffect(() => {
-    getCurrentUser()
-      .then((user) => setCurrentUser(user))
-      .catch(() => {});
-  }, []);
 
   const loadRooms = useCallback(async (silent = false) => {
     try {
@@ -60,16 +53,24 @@ export default function ChatInboxPage({ onSelectRoom }: Props) {
   }, []);
 
   useEffect(() => {
-    loadRooms();
-    const interval = setInterval(() => loadRooms(true), POLL_INTERVAL_MS);
+    void loadRooms();
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
+      void loadRooms(true);
+    }, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [loadRooms]);
 
-  const currentUserId = extractId(
-    (currentUser as unknown as { _id?: unknown; id?: unknown })?._id ??
-      (currentUser as unknown as { _id?: unknown; id?: unknown })?.id ??
-      null,
-  );
+  const currentUser = auth?.user ?? null;
+  const currentUserId =
+    auth?.userId ??
+    extractId(
+      (currentUser as unknown as { _id?: unknown; id?: unknown })?._id ??
+        (currentUser as unknown as { _id?: unknown; id?: unknown })?.id ??
+        null,
+    );
 
   return (
     <Box>

@@ -1,5 +1,6 @@
 import { api, publicApi } from "./common";
 import { axiosClient } from "./axiosClient";
+import { cachedRequest } from "@/lib/apiCache";
 
 export type BuySellSpecification = {
   specification_id: string;
@@ -410,12 +411,19 @@ export function getBuySellRowId(row: BuySellProduct): string {
 }
 
 export async function getBuySellList(body: BuySellListFilter = {}): Promise<BuySellProduct[]> {
+  const cacheKey = `buy-sell-list:${JSON.stringify(body)}`;
   try {
-    const payload = await api<unknown>("/api/buy-sell/list", {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
-    return unwrapBuySellListResponse(payload);
+    return await cachedRequest(
+      cacheKey,
+      async () => {
+        const payload = await api<unknown>("/api/buy-sell/list", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        return unwrapBuySellListResponse(payload);
+      },
+      15_000,
+    );
   } catch (error) {
     normalizeError(error);
   }
@@ -439,13 +447,19 @@ export async function getBuySellDashboardStats(): Promise<
   BuySellDashboardStatsResponse["data"]
 > {
   try {
-    const payload = await api<BuySellDashboardStatsResponse>(
-      "/api/buy-sell/dashboard-stats",
+    return await cachedRequest(
+      "buy-sell-dashboard-stats",
+      async () => {
+        const payload = await api<BuySellDashboardStatsResponse>(
+          "/api/buy-sell/dashboard-stats",
+        );
+        if (!payload?.data?.marketplace) {
+          throw new Error("Invalid dashboard stats response");
+        }
+        return payload.data;
+      },
+      20_000,
     );
-    if (!payload?.data?.marketplace) {
-      throw new Error("Invalid dashboard stats response");
-    }
-    return payload.data;
   } catch (error) {
     normalizeError(error);
   }
@@ -565,17 +579,23 @@ export async function removeFeaturedVehicleAdmin(
 export async function getBuySellFeaturedVehicles(limit = 8): Promise<BuySellProduct[]> {
   try {
     const safeLimit = Math.min(Math.max(limit, 1), 24);
-    const payload = await publicApi<BuySellRecentVehiclesResponse>(
-      "/api/buy-sell/featured-vehicles/list",
-      {
-        method: "POST",
-        body: JSON.stringify({ limit: safeLimit }),
+    return await cachedRequest(
+      `buy-sell-featured:${safeLimit}`,
+      async () => {
+        const payload = await publicApi<BuySellRecentVehiclesResponse>(
+          "/api/buy-sell/featured-vehicles/list",
+          {
+            method: "POST",
+            body: JSON.stringify({ limit: safeLimit }),
+          },
+        );
+        if (Array.isArray(payload?.data)) {
+          return normalizeBuySellList(payload.data);
+        }
+        return unwrapBuySellListResponse(payload);
       },
+      20_000,
     );
-    if (Array.isArray(payload?.data)) {
-      return normalizeBuySellList(payload.data);
-    }
-    return unwrapBuySellListResponse(payload);
   } catch (error) {
     normalizeError(error);
   }

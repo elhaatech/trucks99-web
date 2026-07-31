@@ -4,6 +4,8 @@ import {
   getBuySellRowId,
   type BuySellProduct,
 } from "./buysellapi";
+import { cachedRequest, invalidateCache } from "@/lib/apiCache";
+import { notifyMarketplaceFavoritesChanged } from "@/lib/marketplaceAuth";
 
 export type FavoriteEntity = "buySell" | "material" | string;
 
@@ -23,26 +25,47 @@ export type FavoriteListResponse = {
   favorites?: FavoriteItem[];
 };
 
+const FAVORITES_CACHE_KEY = "favorites:buySell";
+
+function invalidateFavoritesCache(): void {
+  invalidateCache(FAVORITES_CACHE_KEY);
+  invalidateCache("favorites:");
+}
+
 export async function addFavorite(entity: FavoriteEntity, entity_id: string) {
-  return api<{ message: string }>("/api/favorite/add", {
+  const result = await api<{ message: string }>("/api/favorite/add", {
     method: "POST",
     body: JSON.stringify({ entity, entity_id }),
   });
+  invalidateFavoritesCache();
+  notifyMarketplaceFavoritesChanged();
+  return result;
 }
 
 export async function removeFavorite(entity: FavoriteEntity, entity_id: string) {
-  return api<{ message: string }>("/api/favorite/remove", {
+  const result = await api<{ message: string }>("/api/favorite/remove", {
     method: "DELETE",
     body: JSON.stringify({ entity, entity_id }),
+  });
+  invalidateFavoritesCache();
+  notifyMarketplaceFavoritesChanged();
+  return result;
+}
+
+async function fetchBuySellFavoriteList(): Promise<FavoriteListResponse> {
+  return api<FavoriteListResponse>("/api/favorite/list", {
+    method: "POST",
+    body: JSON.stringify({ entity: "buySell" }),
   });
 }
 
 /** Full buy-sell products saved as favourites (API `data` array). */
 export async function listBuySellFavoriteProducts(): Promise<BuySellProduct[]> {
-  const res = await api<FavoriteListResponse>("/api/favorite/list", {
-    method: "POST",
-    body: JSON.stringify({ entity: "buySell" }),
-  });
+  const res = await cachedRequest(
+    FAVORITES_CACHE_KEY,
+    fetchBuySellFavoriteList,
+    20_000,
+  );
 
   if (Array.isArray(res?.data)) {
     return res.data.map((item) => normalizeBuySellProduct(item));
@@ -72,10 +95,11 @@ export async function listFavorites(entity?: FavoriteEntity): Promise<FavoriteIt
 
 export async function getBuySellFavoriteCount(): Promise<number> {
   try {
-    const res = await api<FavoriteListResponse>("/api/favorite/list", {
-      method: "POST",
-      body: JSON.stringify({ entity: "buySell" }),
-    });
+    const res = await cachedRequest(
+      FAVORITES_CACHE_KEY,
+      fetchBuySellFavoriteList,
+      20_000,
+    );
     if (typeof res?.count === "number") return res.count;
     if (Array.isArray(res?.data)) return res.data.length;
     return 0;

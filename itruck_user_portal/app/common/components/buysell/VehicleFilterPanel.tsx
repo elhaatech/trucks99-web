@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
@@ -11,7 +10,6 @@ import IconButton from "@mui/material/IconButton";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import CloseIcon from "@mui/icons-material/Close";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
-import { getCategories, type Category } from "@/model/services/category";
 import { useCategorySubcategories } from "@/hooks/useCategorySubcategories";
 import {
   EMPTY_FILTERS,
@@ -45,16 +43,9 @@ function FilterFields({
   onApply,
   onClear,
 }: Omit<VehicleFilterPanelProps, "mobileOpen" | "onMobileClose">) {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const { subcategories } = useCategorySubcategories({
+  const { categoryOptions, subcategoryOptions } = useCategorySubcategories({
     categoryId: values.category_id || "",
   });
-
-  useEffect(() => {
-    getCategories({ activeOnly: true })
-      .then(setCategories)
-      .catch(() => setCategories([]));
-  }, []);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -72,9 +63,9 @@ function FilterFields({
         }
       >
         <MenuItem value="">All categories</MenuItem>
-        {categories.map((c) => (
-          <MenuItem key={c._id} value={c._id}>
-            {c.category_name}
+        {categoryOptions.map((c) => (
+          <MenuItem key={c.value} value={c.value}>
+            {c.label}
           </MenuItem>
         ))}
       </TextField>
@@ -88,9 +79,9 @@ function FilterFields({
         onChange={(e) => onChange({ subcategory_id: e.target.value })}
       >
         <MenuItem value="">All subcategories</MenuItem>
-        {subcategories.map((s) => (
-          <MenuItem key={s._id} value={s._id}>
-            {s.sub_category_name}
+        {subcategoryOptions.map((s) => (
+          <MenuItem key={s.value} value={s.value}>
+            {s.label}
           </MenuItem>
         ))}
       </TextField>
@@ -163,11 +154,13 @@ export function VehicleFilterPanel(props: VehicleFilterPanelProps) {
         <FilterFields {...fieldProps} />
       </Box>
 
+      {/* Keep drawer mounted but only mount FilterFields when open to avoid duplicate category fetches */}
       <Drawer
         anchor="left"
         open={!!mobileOpen}
         onClose={onMobileClose}
         sx={{ display: { lg: "none" } }}
+        keepMounted={false}
       >
         <Box sx={{ width: 300, p: 2.5 }}>
           <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
@@ -176,7 +169,7 @@ export function VehicleFilterPanel(props: VehicleFilterPanelProps) {
               <CloseIcon />
             </IconButton>
           </Box>
-          <FilterFields {...fieldProps} />
+          {mobileOpen ? <FilterFields {...fieldProps} /> : null}
         </Box>
       </Drawer>
     </>

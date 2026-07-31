@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Box from "@mui/material/Box";
 import ToggleButton from "@mui/material/ToggleButton";
@@ -32,8 +32,9 @@ import {
   getBuySellList,
   type BuySellProduct,
 } from "@/model/services/buysellapi";
-import { getCurrentUser } from "@/model/services/user";
+import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { useNotification } from "@/hooks/useNotification";
+import { isAbortError } from "@/lib/apiCache";
 
 function filtersFromSearchParams(searchParams: URLSearchParams): VehicleFilterValues {
   return {
@@ -59,72 +60,83 @@ function filtersToQuery(filters: VehicleFilterValues): Record<string, string> {
   return query;
 }
 
+function serializeFilters(filters: VehicleFilterValues): string {
+  return JSON.stringify(filtersToQuery(filters));
+}
+
 export default function UserProductListContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { notify } = useNotification();
+  const { isLoggedIn, authReady } = useMarketplaceAuth();
 
-  const initialFilters = useMemo(
+  const urlFilters = useMemo(
     () => filtersFromSearchParams(searchParams),
     [searchParams],
   );
+  const urlKey = useMemo(() => serializeFilters(urlFilters), [urlFilters]);
 
-  const [filters, setFilters] = useState<VehicleFilterValues>(initialFilters);
-  const [appliedFilters, setAppliedFilters] = useState(initialFilters);
+  const [filters, setFilters] = useState<VehicleFilterValues>(urlFilters);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [layout, setLayout] = useState<"grid" | "list">("list");
   const [page, setPage] = useState(1);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [products, setProducts] = useState<BuySellProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loggedIn, setLoggedIn] = useState(false);
+  const lastFetchedKey = useRef<string | null>(null);
 
-  const { favoriteIds, togglingIds, syncFromProductsAndApi, toggleFavorite } =
+  const { favoriteIds, togglingIds, syncFromProducts, syncFromProductsAndApi, toggleFavorite } =
     useBuySellFavorites(notify);
 
   useEffect(() => {
-    getCurrentUser()
-      .then((user) => setLoggedIn(Boolean(user?.id || (user as { _id?: string })?._id)))
-      .catch(() => setLoggedIn(false));
-  }, []);
+    setFilters(urlFilters);
+    setPage(1);
+  }, [urlKey]); // eslint-disable-line react-hooks/exhaustive-deps -- sync when URL filter key changes
 
   useEffect(() => {
-    const next = filtersFromSearchParams(searchParams);
-    setFilters(next);
-    setAppliedFilters(next);
-    setPage(1);
-  }, [searchParams]);
+    const controller = new AbortController();
+    let cancelled = false;
 
-  const loadProducts = useCallback(
-    async (applied: VehicleFilterValues) => {
+    if (lastFetchedKey.current === urlKey) {
+      // Still allow first paint after remount with same key
+    }
+    lastFetchedKey.current = urlKey;
+
+    (async () => {
       setLoading(true);
       try {
-        const res = await getBuySellList(toBuySellListPayload(applied));
+        const res = await getBuySellList(toBuySellListPayload(urlFilters));
+        if (cancelled || controller.signal.aborted) return;
         const items = res ?? [];
         setProducts(items);
-        await syncFromProductsAndApi(items);
+        if (isLoggedIn) {
+          await syncFromProductsAndApi(items);
+        } else {
+          syncFromProducts(items);
+        }
       } catch (err) {
+        if (cancelled || isAbortError(err)) return;
         notify({
           type: "error",
           message: err instanceof Error ? err.message : "Failed to load vehicles",
         });
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    },
-    [notify, syncFromProductsAndApi],
-  );
+    })();
 
-  useEffect(() => {
-    void loadProducts(appliedFilters);
-  }, [appliedFilters, loadProducts]);
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [urlKey, urlFilters, isLoggedIn, notify, syncFromProducts, syncFromProductsAndApi]);
 
   const displayProducts = useMemo(() => {
-    const fromApi = appliedFilters.search.trim()
-      ? filterBuySellBySearch(products, appliedFilters.search)
+    const fromApi = urlFilters.search.trim()
+      ? filterBuySellBySearch(products, urlFilters.search)
       : products;
     return sortProducts(fromApi, sortBy);
-  }, [products, appliedFilters.search, sortBy]);
+  }, [products, urlFilters.search, sortBy]);
 
   const pagedProducts = useMemo(
     () => paginateProducts(displayProducts, page, VEHICLE_PAGE_SIZE),
@@ -134,16 +146,14 @@ export default function UserProductListContent() {
 
   const handleApplyFilters = () => {
     const next = { ...filters, usear_type: "buy" as const };
-    setAppliedFilters(next);
-    setPage(1);
     setMobileFiltersOpen(false);
+    setPage(1);
     router.replace(userProductRoutes.list(filtersToQuery(next)), { scroll: false });
   };
 
   const handleClearFilters = () => {
     const cleared = { ...EMPTY_VEHICLE_FILTERS, usear_type: "buy" as const };
     setFilters(cleared);
-    setAppliedFilters(cleared);
     setPage(1);
     setMobileFiltersOpen(false);
     router.replace(userProductRoutes.list(), { scroll: false });
@@ -151,20 +161,22 @@ export default function UserProductListContent() {
 
   const handleFavoriteToggle = useCallback(
     (productId: string) => {
-      void toggleFavorite(productId, { requireLogin: !loggedIn });
+      void toggleFavorite(productId, { requireLogin: !isLoggedIn });
     },
-    [loggedIn, toggleFavorite],
+    [isLoggedIn, toggleFavorite],
   );
 
   const handleViewProduct = useCallback(
     async (productId: string) => {
       const allowed = await ensureLoggedInToViewProduct(productId, {
         notify,
+        isLoggedIn,
+        authReady,
         onNeedLogin: (loginPath) => router.push(loginPath),
       });
       if (allowed) router.push(userProductRoutes.view(productId));
     },
-    [notify, router],
+    [notify, router, isLoggedIn, authReady],
   );
 
   return (

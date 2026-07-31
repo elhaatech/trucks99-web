@@ -12,44 +12,48 @@ import { PageContainer, Spinner, ResultPage, ResultActionButton } from "@/compon
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { canEditBuySellProduct } from "@/lib/buySellPermissions";
 import { BuySellProduct, getBuySellProduct } from "@/model/services/buysellapi";
-import { getCurrentUser } from "@/model/services/user";
-import type { User } from "@/model/services/user";
+import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 
 export default function UserProductEditPage() {
   const params = useParams();
   const router = useRouter();
   const id = typeof params?.id === "string" ? params.id : "";
+  const {
+    user: currentUser,
+    authReady,
+    isLoggedIn,
+  } = useMarketplaceAuth();
 
   const [product, setProduct] = useState<BuySellProduct | null>(null);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loadingProduct, setLoadingProduct] = useState(true);
-  const [loadingUser, setLoadingUser] = useState(true);
   const [productError, setProductError] = useState("");
-  const [userError, setUserError] = useState("");
+  const userError =
+    authReady && !isLoggedIn ? "Please log in again." : "";
+  const loadingUser = !authReady;
 
   useEffect(() => {
     if (!id) {
       router.replace(userProductRoutes.list());
       return;
     }
+    let cancelled = false;
     setLoadingProduct(true);
     getBuySellProduct(id)
-      .then(setProduct)
-      .catch((err) =>
-        setProductError(err instanceof Error ? err.message : "Failed to load listing"),
-      )
-      .finally(() => setLoadingProduct(false));
+      .then((p) => {
+        if (!cancelled) setProduct(p);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setProductError(err instanceof Error ? err.message : "Failed to load listing");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingProduct(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [id, router]);
-
-  useEffect(() => {
-    setLoadingUser(true);
-    getCurrentUser()
-      .then(setCurrentUser)
-      .catch((err) =>
-        setUserError(err instanceof Error ? err.message : "Please log in again."),
-      )
-      .finally(() => setLoadingUser(false));
-  }, []);
 
   if (!id) return null;
 

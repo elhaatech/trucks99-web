@@ -6,6 +6,8 @@ import {
 } from "@/lib/marketplaceUser";
 
 export const MARKETPLACE_AUTH_CHANGED_EVENT = "itruck-marketplace-auth-changed";
+export const MARKETPLACE_FAVORITES_CHANGED_EVENT =
+  "itruck-marketplace-favorites-changed";
 
 export function hasMarketplaceBearerToken(): boolean {
   return Boolean(getAuthHeaders().Authorization);
@@ -15,6 +17,12 @@ export function hasMarketplaceBearerToken(): boolean {
 export function notifyMarketplaceAuthChanged(): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(MARKETPLACE_AUTH_CHANGED_EVENT));
+}
+
+/** Notify header badge (and listeners) after favorite add/remove. */
+export function notifyMarketplaceFavoritesChanged(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(MARKETPLACE_FAVORITES_CHANGED_EVENT));
 }
 
 export function resolveMarketplaceUserIdFromUser(

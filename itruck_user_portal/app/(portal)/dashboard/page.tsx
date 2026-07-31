@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -37,6 +37,7 @@ import { useNotification } from "@/hooks/useNotification";
 import { ensureLoggedInToViewProduct } from "@/lib/requireMarketplaceLogin";
 import type { MarketplaceStats } from "@/app/common/components/buysell/utils";
 import { EMPTY_FILTERS } from "@/app/admin/portal/buysell/_components/interface/buysell_interface";
+import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 
 const EMPTY_STATS: MarketplaceStats = {
   totalListings: 0,
@@ -72,6 +73,9 @@ function seedFavoritesFromProducts(products: BuySellProduct[]): Set<string> {
 export default function UserProductDashboardPage() {
   const router = useRouter();
   const { notify } = useNotification();
+  const notifyRef = useRef(notify);
+  notifyRef.current = notify;
+  const { isLoggedIn, authReady } = useMarketplaceAuth();
 
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -135,14 +139,21 @@ export default function UserProductDashboardPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load dashboard";
       setListError(message);
-      notify({ type: "error", message });
+      notifyRef.current({ type: "error", message });
     } finally {
       setLoading(false);
     }
-  }, [notify]);
+  }, []);
 
   useEffect(() => {
-    void loadData();
+    let cancelled = false;
+    (async () => {
+      await loadData();
+      if (cancelled) return;
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [loadData]);
 
   const marketplaceStats = useMemo(() => {
@@ -219,11 +230,13 @@ export default function UserProductDashboardPage() {
     async (productId: string) => {
       const allowed = await ensureLoggedInToViewProduct(productId, {
         notify,
+        isLoggedIn,
+        authReady,
         onNeedLogin: (loginPath) => router.push(loginPath),
       });
       if (allowed) router.push(userProductRoutes.view(productId));
     },
-    [notify, router],
+    [notify, router, isLoggedIn, authReady],
   );
 
   return (

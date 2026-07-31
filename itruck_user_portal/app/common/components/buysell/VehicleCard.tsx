@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from "react";
+import Image from "next/image";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
@@ -51,7 +53,7 @@ type VehicleCardProps = {
   onFeaturePayNow?: (productId: string) => void;
 };
 
-export function VehicleCard({
+export const VehicleCard = memo(function VehicleCard({
   product,
   isFavorite = false,
   favoriteLoading = false,
@@ -156,11 +158,23 @@ export function VehicleCard({
           minHeight: isList ? { sm: 140 } : undefined,
           flexShrink: 0,
           bgcolor: alpha(INFO, 0.06),
-          backgroundImage: imageUrl ? `url(${imageUrl})` : undefined,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
+          overflow: "hidden",
         }}
       >
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt={title}
+            fill
+            sizes={
+              isList
+                ? "(max-width:600px) 100vw, 220px"
+                : "(max-width:600px) 100vw, (max-width:1200px) 50vw, 25vw"
+            }
+            style={{ objectFit: "cover" }}
+            unoptimized
+          />
+        ) : null}
         <Box sx={{ position: "absolute", top: 10, left: 10, display: "flex", flexDirection: "column", gap: 0.75, alignItems: "flex-start" }}>
           <ProductStatusChip status={product.status} />
           {featuredStatus === "active" ? (
@@ -372,4 +386,4 @@ export function VehicleCard({
       </Box>
     </Box>
   );
-}
+});

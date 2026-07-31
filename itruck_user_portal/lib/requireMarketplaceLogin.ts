@@ -1,7 +1,7 @@
 import { getAuthHeaders } from "@/model/services/common";
-import { getCurrentUser } from "@/model/services/user";
 import { setReturnUrl } from "@/lib/navigation/navigation";
 import { userProductRoutes } from "@/lib/userProductRoutes";
+import { hasMarketplaceBearerToken } from "@/lib/marketplaceAuth";
 
 export function getMarketplaceLoginPath(returnTo?: string): string {
   const fromEnv =
@@ -17,30 +17,42 @@ export function getMarketplaceLoginPath(returnTo?: string): string {
   return userProductRoutes.login(returnTo);
 }
 
+/**
+ * Fast sync check — token present. Prefer MarketplaceAuthProvider for full user.
+ * Avoids an extra GET /api/user on every product click when shell already authenticated.
+ */
+export function isMarketplaceTokenPresent(): boolean {
+  return hasMarketplaceBearerToken() || Boolean(getAuthHeaders().Authorization);
+}
+
 export async function isMarketplaceUserLoggedIn(): Promise<boolean> {
-  if (!getAuthHeaders().Authorization) return false;
-  try {
-    const user = await getCurrentUser();
-    return Boolean(user?.id || user?._id);
-  } catch {
-    return false;
-  }
+  return isMarketplaceTokenPresent();
 }
 
 type EnsureLoginActions = {
   notify?: (payload: { type: "error"; message: string }) => void;
   onNeedLogin?: (loginPath: string) => void;
+  /** When provided by a page inside MarketplaceAuthProvider, skip network. */
+  isLoggedIn?: boolean;
+  authReady?: boolean;
 };
 
 /**
  * Returns true when the user may open a vehicle detail page.
  * Sets return URL so the app can send them back after login.
+ *
+ * When `authReady` is false, returns false without redirecting (caller should wait).
  */
 export async function ensureLoggedInToViewProduct(
   productId: string,
   actions: EnsureLoginActions = {},
 ): Promise<boolean> {
-  if (await isMarketplaceUserLoggedIn()) return true;
+  if (typeof actions.isLoggedIn === "boolean") {
+    if (actions.authReady === false) return false;
+    if (actions.isLoggedIn) return true;
+  } else if (isMarketplaceTokenPresent()) {
+    return true;
+  }
 
   const returnPath = userProductRoutes.view(productId);
   if (typeof window !== "undefined") {

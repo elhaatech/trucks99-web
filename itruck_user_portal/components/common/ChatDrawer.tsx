@@ -109,14 +109,19 @@ export function ChatDrawer({ open, onClose, embedded = false, productId, roomId,
   }, [open, productId, roomId, loadMessages]);
 
   // Poll for new messages while open (placeholder until Socket.IO is wired up).
+  const activePollRoomId = room?.roomId ?? room?._id ?? null;
   useEffect(() => {
-    if (!open || !room) return;
-    const activeRoomId = room.roomId ?? room._id;
-    pollRef.current = setInterval(() => loadMessages(activeRoomId, true), POLL_INTERVAL_MS);
+    if (!open || !activePollRoomId) return;
+    pollRef.current = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
+      void loadMessages(activePollRoomId, true);
+    }, POLL_INTERVAL_MS);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [open, room, loadMessages]);
+  }, [open, activePollRoomId, loadMessages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

@@ -28,27 +28,21 @@ import { useNotification } from "@/hooks/useNotification";
 import { useBuySellFavorites } from "@/lib/useBuySellFavorites";
 import { listBuySellFavoriteProducts } from "@/model/services/favoriteapi";
 import { getBuySellRowId, type BuySellProduct } from "@/model/services/buysellapi";
-import { getCurrentUser } from "@/model/services/user";
+import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { PRODUCT_THEME as T } from "@/lib/theme";
 
 export default function UserProductFavoritesPage() {
   const router = useRouter();
   const { notify } = useNotification();
+  const { isLoggedIn } = useMarketplaceAuth();
   const [products, setProducts] = useState<BuySellProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loggedIn, setLoggedIn] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [layout, setLayout] = useState<"grid" | "list">("list");
   const [page, setPage] = useState(1);
 
   const { favoriteIds, togglingIds, syncFromProducts, toggleFavorite } =
     useBuySellFavorites(notify);
-
-  useEffect(() => {
-    getCurrentUser()
-      .then((user) => setLoggedIn(Boolean(user?.id || (user as { _id?: string })?._id)))
-      .catch(() => setLoggedIn(false));
-  }, []);
 
   const loadFavorites = useCallback(async () => {
     setLoading(true);
@@ -73,7 +67,7 @@ export default function UserProductFavoritesPage() {
 
   const handleFavoriteToggle = useCallback(
     async (productId: string) => {
-      if (!loggedIn) {
+      if (!isLoggedIn) {
         notify({ type: "error", message: "Please log in to manage favourites." });
         return;
       }
@@ -87,7 +81,7 @@ export default function UserProductFavoritesPage() {
         void loadFavorites();
       }
     },
-    [loggedIn, favoriteIds, toggleFavorite, loadFavorites, notify],
+    [isLoggedIn, favoriteIds, toggleFavorite, loadFavorites, notify],
   );
 
   const displayProducts = useMemo(() => sortProducts(products, sortBy), [products, sortBy]);

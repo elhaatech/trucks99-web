@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from "react";
+import Image from "next/image";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
@@ -38,7 +40,10 @@ function formatExpiry(iso?: string | null): string {
   });
 }
 
-export function FeaturedVehicleCard({ product, onViewDetails }: FeaturedVehicleCardProps) {
+export const FeaturedVehicleCard = memo(function FeaturedVehicleCard({
+  product,
+  onViewDetails,
+}: FeaturedVehicleCardProps) {
   const productId = getBuySellRowId(product);
   const imageUrl = getBuySellImageUrl(product.images?.[0]);
   const title = getListingCardTitle(product);
@@ -74,11 +79,19 @@ export function FeaturedVehicleCard({ product, onViewDetails }: FeaturedVehicleC
           position: "relative",
           height: 200,
           bgcolor: alpha(INFO, 0.06),
-          backgroundImage: imageUrl ? `url(${imageUrl})` : undefined,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
+          overflow: "hidden",
         }}
       >
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt={title}
+            fill
+            sizes="(max-width:600px) 100vw, (max-width:1200px) 50vw, 25vw"
+            style={{ objectFit: "cover" }}
+            unoptimized
+          />
+        ) : null}
         <Chip
           icon={<StarIcon sx={{ fontSize: 16 }} />}
           label="Featured"
@@ -87,6 +100,7 @@ export function FeaturedVehicleCard({ product, onViewDetails }: FeaturedVehicleC
             position: "absolute",
             top: 12,
             left: 12,
+            zIndex: 1,
             fontWeight: 700,
             bgcolor: alpha(WARNING, 0.95),
             color: "#1a1a1a",
@@ -150,4 +164,4 @@ export function FeaturedVehicleCard({ product, onViewDetails }: FeaturedVehicleC
       </Box>
     </Box>
   );
-}
+});
