@@ -14,12 +14,17 @@ export type UploadResponse = {
  */
 export async function uploadFile(file: File, key: string): Promise<string> {
   const formData = new FormData();
-  formData.append("file", file);
+  // Text fields MUST come before the file so multer can read `key` in destination().
   formData.append("key", key);
+  formData.append("file", file);
 
-  const res = await axiosClient.post<UploadResponse>("/api/upload", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const res = await axiosClient.post<UploadResponse>(
+    `/api/upload?key=${encodeURIComponent(key)}`,
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    },
+  );
 
   return res.data.url || res.data.path;
 }

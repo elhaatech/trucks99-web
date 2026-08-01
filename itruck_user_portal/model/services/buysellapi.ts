@@ -244,6 +244,8 @@ export type BuySellCreatePayload = {
   price: number | string;
   description: string;
   images: string[];
+  /** Legacy edit alias — same URL list as `images`. */
+  existing_images?: string[];
   specifications: Array<{ specification_id: string; specification_value: string }>;
   country_id: string;
   state_id: string;

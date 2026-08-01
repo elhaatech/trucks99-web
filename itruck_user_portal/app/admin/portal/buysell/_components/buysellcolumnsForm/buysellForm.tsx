@@ -43,6 +43,7 @@ import { useForm } from "@/hooks/useForm";
 import { useNotification } from "@/hooks/useNotification";
 import {
   BuySellProduct,
+  BuySellCreatePayload,
   createBuySellProduct,
   getBuySellRowId,
   updateBuySellProduct,
@@ -101,11 +102,31 @@ type ImageEntry =
 
 /** Normalise any string coming from the API into a valid BuySellStatus. */
 function toStatus(raw: string | undefined | null): BuySellStatus {
-  const lower = (raw ?? "").toLowerCase().trim();
-  if (lower === "draft") return "draft";
-  if (lower === "active") return "active";
-  if (lower === "inactive") return "inactive";
-  return "active";
+  const lower = (raw ?? "").toLowerCase().trim() as BuySellStatus;
+  const allowed: BuySellStatus[] = [
+    "active",
+    "inactive",
+    "pending",
+    "draft",
+    "rejected",
+    "booking",
+    "purchased",
+    "sold",
+  ];
+  return allowed.includes(lower) ? lower : "active";
+}
+
+function toRelativeUploadPath(url: string): string {
+  const trimmed = String(url || "").trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("/uploads/")) return trimmed;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.pathname.startsWith("/uploads/")) return parsed.pathname;
+  } catch {
+    /* keep as-is */
+  }
+  return trimmed;
 }
 
 /** A specification counts as "Brand" if its name contains the word brand. */
@@ -433,15 +454,22 @@ export function BuySellForm({
     setFieldValue("address", product.address ?? "");
     setFieldValue("pincode", product.pincode ?? "");
 
-    // Seed the LocationSelector with whatever ids the product has — it will
-    // resolve the matching country/state/city and their display names once
-    // its option lists have loaded.
+    // Seed location from product ids (ObjectId, populated object, or string).
+    const extractId = (raw: unknown): string => {
+      if (raw == null || raw === "") return "";
+      if (typeof raw === "object") {
+        const obj = raw as { id?: unknown; _id?: unknown };
+        return String(obj.id ?? obj._id ?? "");
+      }
+      return String(raw);
+    };
+
     setLocation({
-      countryId: String(product.country_id ?? ""),
+      countryId: extractId(product.country_id),
       country: "",
-      stateId: String(product.state_id ?? ""),
+      stateId: extractId(product.state_id),
       state: "",
-      cityId: String(product.city_id ?? ""),
+      cityId: extractId(product.city_id),
       city: "",
     });
 
@@ -576,15 +604,21 @@ export function BuySellForm({
 
       for (const entry of imageEntries) {
         if (entry.kind === "existing") {
-          finalImages.push(entry.url);
+          const path = toRelativeUploadPath(entry.url);
+          if (path) finalImages.push(path);
         } else {
           const url = await uploadFile(entry.file, "buy_sell_doc");
-          finalImages.push(url);
+          const path = toRelativeUploadPath(url);
+          if (path) finalImages.push(path);
         }
       }
       setUploadingImages(false);
 
-      const payload = {
+      const originalStatus = String(product?.status ?? "").toLowerCase();
+      const canTogglePublish =
+        !isEdit || originalStatus === "draft" || originalStatus === "active" || originalStatus === "inactive";
+
+      const payload: BuySellCreatePayload = {
         category_id: values.category_id,
         subcategory_id: values.subcategory_id,
         price: Number(values.price),
@@ -594,12 +628,17 @@ export function BuySellForm({
         city_id: location.cityId,
         address: values.address,
         pincode: values.pincode,
-        status: values.status,
         specifications: values.specifications.filter(
           (s) => s.specification_id && s.specification_value,
         ),
+        // Backend accepts `images` (preferred) and `existing_images` (legacy).
         images: finalImages,
+        existing_images: finalImages,
       };
+
+      if (!isEdit || canTogglePublish) {
+        payload.status = values.status;
+      }
 
       let successContext: BuySellFormSuccessContext | undefined;
 
@@ -911,6 +950,12 @@ export function BuySellForm({
                         <img
                           src={src}
                           alt={`Image ${idx + 1}`}
+                          onError={(e) => {
+                            const img = e.currentTarget;
+                            img.style.display = "none";
+                            const fallback = img.nextElementSibling as HTMLElement | null;
+                            if (fallback) fallback.style.display = "flex";
+                          }}
                           style={{
                             width: "100%",
                             height: "100%",
@@ -918,6 +963,24 @@ export function BuySellForm({
                             display: "block",
                           }}
                         />
+                        <Box
+                          sx={{
+                            display: "none",
+                            position: "absolute",
+                            inset: 0,
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexDirection: "column",
+                            gap: 0.5,
+                            bgcolor: "grey.100",
+                            px: 1,
+                            textAlign: "center",
+                          }}
+                        >
+                          <Typography variant="caption" color="text.secondary">
+                            Image missing — re-upload
+                          </Typography>
+                        </Box>
                         {isNew && (
                           <Box
                             sx={{
@@ -980,6 +1043,12 @@ export function BuySellForm({
 
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: !isEdit ? 1.5 : 0 }}>
                 {STATUS_OPTIONS.map((s) => {
+                  const originalStatus = String(product?.status ?? "").toLowerCase();
+                  const statusLocked =
+                    isEdit &&
+                    originalStatus !== "draft" &&
+                    originalStatus !== "active" &&
+                    originalStatus !== "inactive";
                   const isSelected = values.status === s.value;
                   return (
                     <Chip
@@ -987,23 +1056,33 @@ export function BuySellForm({
                       label={s.label}
                       color={s.color}
                       variant={isSelected ? "filled" : "outlined"}
+                      disabled={statusLocked || submitting}
                       onClick={() => {
+                        if (statusLocked) return;
                         setFieldValue("status", s.value);
                         setIsDraft(s.value === "draft");
                       }}
                       sx={{
-                        cursor: "pointer",
+                        cursor: statusLocked ? "not-allowed" : "pointer",
                         fontWeight: isSelected ? 600 : 400,
                         fontSize: 13,
                         borderRadius: 5,
                         px: 0.5,
                         transition: "all 0.15s",
-                        "&:hover": { opacity: 0.85 },
+                        "&:hover": { opacity: statusLocked ? 1 : 0.85 },
                       }}
                     />
                   );
                 })}
               </Box>
+
+              {isEdit &&
+              !["draft", "active", "inactive"].includes(String(product?.status ?? "").toLowerCase()) ? (
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+                  Current status: <strong>{String(product?.status)}</strong> (managed by system —
+                  details can still be updated).
+                </Typography>
+              ) : null}
 
               {!isEdit && (
                 <Box

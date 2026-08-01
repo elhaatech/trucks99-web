@@ -80,10 +80,11 @@ const VALID_STATUSES = [
 
 /** Allowed status transitions for the product purchase lifecycle. */
 const STATUS_TRANSITIONS = {
-  draft: ["pending"],
+  // draft → active mirrors create (sellers publish without admin approval)
+  draft: ["pending", "active"],
   pending: ["active", "rejected"],
-  active: ["booking", "inactive"],
-  inactive: ["active"],
+  active: ["booking", "inactive", "draft"],
+  inactive: ["active", "draft"],
   booking: ["purchased"],
   purchased: ["sold"],
   rejected: [],
@@ -130,10 +131,54 @@ function buildImageUrl(filename) {
 function toObjectId(value) {
   if (!value || value === "") return null;
   if (value instanceof mongoose.Types.ObjectId) return value;
-  if (mongoose.Types.ObjectId.isValid(value)) {
-    return new mongoose.Types.ObjectId(String(value));
+  const str = String(value).trim();
+  // Strict 24-hex check — avoids mongoose isValid("101") false positives
+  if (/^[a-fA-F0-9]{24}$/.test(str)) {
+    return new mongoose.Types.ObjectId(str);
   }
   return null;
+}
+
+/**
+ * Resolve LocationCountry/State/City input (mongo _id, uuid `id`, or numeric externalId)
+ * to a Mongo ObjectId suitable for BuySellProduct refs.
+ */
+async function resolveLocationMongoId(Model, raw) {
+  if (raw == null || raw === "") return null;
+  if (raw instanceof mongoose.Types.ObjectId) return raw;
+
+  const str = String(raw).trim();
+  if (!str) return null;
+
+  if (/^[a-fA-F0-9]{24}$/.test(str)) {
+    const byMongo = await Model.findById(str).select("_id").lean();
+    if (byMongo?._id) return byMongo._id;
+  }
+
+  const byUuid = await Model.findOne({
+    $or: [{ id: str }, { uuid: str }],
+  })
+    .select("_id")
+    .lean();
+  if (byUuid?._id) return byUuid._id;
+
+  if (/^\d+$/.test(str)) {
+    const byExt = await Model.findOne({ externalId: Number(str) })
+      .select("_id")
+      .lean();
+    if (byExt?._id) return byExt._id;
+  }
+
+  return null;
+}
+
+async function resolveDefaultIndiaCountryId() {
+  const india = await LocationCountry.findOne({
+    name: { $regex: /^india$/i },
+  })
+    .select("_id")
+    .lean();
+  return india?._id || null;
 }
 
 function getActor(req) {
@@ -721,9 +766,9 @@ async function buildEnrichedResponse(data) {
     price: data.price,
     description: data.description || "",
     images: data.images || [],
-    country_id: data.country_id || "",
-    state_id: data.state_id || "",
-    city_id: data.city_id || "",
+    country_id: data.country_id ? String(data.country_id) : "",
+    state_id: data.state_id ? String(data.state_id) : "",
+    city_id: data.city_id ? String(data.city_id) : "",
     country_info: countryDoc
       ? { _id: countryDoc._id, name: countryDoc.name }
       : {},
@@ -2781,6 +2826,25 @@ buySellRouter.post("/add", upload.array("images", 10), async (req, res) => {
       }
     }
 
+    // Location refs must be Mongo ObjectIds. Clients may send externalId / uuid / _id.
+    let resolvedCountryId = await resolveLocationMongoId(LocationCountry, country_id);
+    if (!resolvedCountryId) {
+      resolvedCountryId = await resolveDefaultIndiaCountryId();
+    }
+    const resolvedStateId = await resolveLocationMongoId(LocationState, state_id);
+    const resolvedCityId = await resolveLocationMongoId(LocationCity, city_id);
+
+    if (!resolvedCountryId) {
+      return res.status(400).json({
+        message: "Country is required. Default India could not be resolved.",
+      });
+    }
+    if (!resolvedStateId || !resolvedCityId) {
+      return res.status(400).json({
+        message: "State and city are required.",
+      });
+    }
+
     const item = await BuySellProduct.create({
       category_id: toObjectId(category_id),
       subcategory_id: toObjectId(subcategory_id),
@@ -2788,9 +2852,9 @@ buySellRouter.post("/add", upload.array("images", 10), async (req, res) => {
       price: numericPrice,
       description: description || "",
       images: allImages,
-      country_id: toObjectId(country_id),
-      state_id: toObjectId(state_id),
-      city_id: toObjectId(city_id),
+      country_id: resolvedCountryId,
+      state_id: resolvedStateId,
+      city_id: resolvedCityId,
       address: address || "",
       pincode: pincode || "",
       specifications: Array.isArray(parsedSpecs) ? parsedSpecs : [],
@@ -2844,12 +2908,33 @@ buySellRouter.put("/edit/:id", upload.array("images", 10), async (req, res) => {
       return res.status(403).json({ message: "You do not have permission to edit this product." });
     }
 
-    let existingImages = [];
-    if (req.body.existing_images) {
+    let bodyImages = null;
+    if (req.body.images !== undefined && req.body.images !== null && req.body.images !== "") {
       try {
-        existingImages = Array.isArray(req.body.existing_images)
+        const parsed = Array.isArray(req.body.images)
+          ? req.body.images
+          : JSON.parse(req.body.images);
+        bodyImages = Array.isArray(parsed)
+          ? parsed.map((u) => String(u || "").trim()).filter(Boolean)
+          : [];
+      } catch {
+        bodyImages = [];
+      }
+    }
+
+    let existingImages = null;
+    if (
+      req.body.existing_images !== undefined &&
+      req.body.existing_images !== null &&
+      req.body.existing_images !== ""
+    ) {
+      try {
+        const parsed = Array.isArray(req.body.existing_images)
           ? req.body.existing_images
           : JSON.parse(req.body.existing_images);
+        existingImages = Array.isArray(parsed)
+          ? parsed.map((u) => String(u || "").trim()).filter(Boolean)
+          : [];
       } catch {
         existingImages = [];
       }
@@ -2858,7 +2943,23 @@ buySellRouter.put("/edit/:id", upload.array("images", 10), async (req, res) => {
     const uploadedImages = (req.files || []).map((f) =>
       buildImageUrl(f.filename),
     );
-    const mergedImages = [...existingImages, ...uploadedImages];
+
+    // Prefer `images` (frontend URL list from /api/upload), then `existing_images`,
+    // then keep DB images when only multipart files are added.
+    const hasImageUpdate =
+      bodyImages !== null || existingImages !== null || uploadedImages.length > 0;
+    let mergedImages;
+    if (hasImageUpdate) {
+      const base =
+        bodyImages !== null
+          ? bodyImages
+          : existingImages !== null
+            ? existingImages
+            : Array.isArray(existing.images)
+              ? existing.images
+              : [];
+      mergedImages = [...base, ...uploadedImages];
+    }
 
     let parsedSpecs;
     if (req.body.specifications) {
@@ -2875,10 +2976,52 @@ buySellRouter.put("/edit/:id", upload.array("images", 10), async (req, res) => {
     const updatePayload = {
       ...req.body,
       updated_by: actor.name,
-      images: mergedImages,
     };
 
     delete updatePayload.existing_images;
+    delete updatePayload.images;
+    delete updatePayload._id;
+    delete updatePayload.id;
+    delete updatePayload.userid;
+    delete updatePayload.created_by;
+    delete updatePayload.createdAt;
+    delete updatePayload.updatedAt;
+    delete updatePayload.__v;
+    delete updatePayload.bsNumber;
+
+    if (hasImageUpdate) {
+      updatePayload.images = mergedImages;
+    }
+
+    if (req.body.category_id !== undefined) {
+      updatePayload.category_id = toObjectId(req.body.category_id);
+    }
+    if (req.body.subcategory_id !== undefined) {
+      updatePayload.subcategory_id = toObjectId(req.body.subcategory_id);
+    }
+    // Never wipe location with empty strings from a partially hydrated form.
+    if (req.body.country_id !== undefined) {
+      const id = await resolveLocationMongoId(LocationCountry, req.body.country_id);
+      if (id) updatePayload.country_id = id;
+      else delete updatePayload.country_id;
+    }
+    if (req.body.state_id !== undefined) {
+      const id = await resolveLocationMongoId(LocationState, req.body.state_id);
+      if (id) updatePayload.state_id = id;
+      else delete updatePayload.state_id;
+    }
+    if (req.body.city_id !== undefined) {
+      const id = await resolveLocationMongoId(LocationCity, req.body.city_id);
+      if (id) updatePayload.city_id = id;
+      else delete updatePayload.city_id;
+    }
+    if (req.body.price !== undefined) {
+      const numericPrice = Number(req.body.price);
+      if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
+        return res.status(400).json({ message: "A valid price greater than zero is required." });
+      }
+      updatePayload.price = numericPrice;
+    }
 
     if (parsedSpecs !== undefined) updatePayload.specifications = parsedSpecs;
 
@@ -2907,10 +3050,18 @@ buySellRouter.put("/edit/:id", upload.array("images", 10), async (req, res) => {
         });
       }
 
+      // Sellers may keep status, or publish a draft (draft → active|pending).
       if (
         !isAdminActor(actor) &&
         nextStatus !== existing.status &&
-        !(existing.status === "draft" && nextStatus === "pending")
+        !(
+          existing.status === "draft" &&
+          (nextStatus === "pending" || nextStatus === "active")
+        ) &&
+        !(
+          (existing.status === "active" || existing.status === "inactive") &&
+          (nextStatus === "draft" || nextStatus === "active" || nextStatus === "inactive")
+        )
       ) {
         return res.status(403).json({
           message: "Only an admin can change product status via edit.",

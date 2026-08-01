@@ -129,6 +129,9 @@ export default function UserProductEditPage() {
       <BuySellForm
         product={product}
         mode="edit"
+        presentation="marketplace"
+        cancelHref={userProductRoutes.sellVehicle()}
+        backLabel="Back to my listings"
         onSuccess={() => router.push(userProductRoutes.view(id))}
       />
     </Box>

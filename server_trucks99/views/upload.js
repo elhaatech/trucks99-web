@@ -23,7 +23,9 @@ const allowedFolders = [
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const rawKey = req.body?.key?.trim();
+    // Prefer body key; fall back to query (FormData text fields can arrive after the file).
+    const rawKey = String(req.body?.key || req.query?.key || "")
+      .trim();
 
     // ✅ validate folder name
     const safeKey = allowedFolders.includes(rawKey) ? rawKey : null;

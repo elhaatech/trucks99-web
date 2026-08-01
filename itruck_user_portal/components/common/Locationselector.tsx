@@ -60,8 +60,12 @@ function normalizeOption(raw: any): LocationOption {
   const _id = raw?._id ? String(raw._id) : "";
   const id = raw?.id ? String(raw.id) : "";
   const uuid = raw?.uuid ? String(raw.uuid) : "";
-  const externalId = raw?.externalId ? String(raw.externalId) : "";
-  const canonical = externalId || id || uuid || _id || "";
+  const externalId =
+    raw?.externalId != null && raw?.externalId !== ""
+      ? String(raw.externalId)
+      : "";
+  // Prefer Mongo _id — BuySellProduct.country_id/state_id/city_id are ObjectId refs.
+  const canonical = _id || id || uuid || externalId || "";
   const aliases = [_id, id, uuid, externalId].filter(Boolean);
   return { id: canonical, name: String(raw?.name ?? ""), aliases };
 }
@@ -92,6 +96,8 @@ export function LocationSelector({
 
   const loadedCountryIdRef = useRef<string>("");
   const loadedStateIdRef = useRef<string>("");
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
   // ── Load countries once ────────────────────────────────────────────────
   useEffect(() => {
@@ -108,10 +114,6 @@ export function LocationSelector({
             (o) => o.name.trim().toLowerCase() === onlyCountry.trim().toLowerCase(),
           );
           opts = target ? [target] : [];
-
-          if (target && !value.countryId) {
-            onChange({ ...value, countryId: target.id, country: target.name });
-          }
         }
 
         setCountries(opts);
@@ -126,8 +128,26 @@ export function LocationSelector({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onlyCountry]);
+
+  // Keep locked country selected even after parent resets location (edit hydrate).
+  useEffect(() => {
+    if (!onlyCountry || countriesLoading || countries.length === 0) return;
+    if (value.countryId) {
+      const match = findOption(countries, value.countryId);
+      if (match) return;
+    }
+    const target = countries[0];
+    if (!target) return;
+    if (value.countryId === target.id && value.country === target.name) return;
+    onChangeRef.current({
+      ...value,
+      countryId: target.id,
+      country: target.name,
+    });
+    // Intentionally depend on countryId/country only — avoid loops on state/city edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onlyCountry, countries, countriesLoading, value.countryId, value.country]);
 
   // ── Resolve + load states whenever the (resolved) country changes ──────
   useEffect(() => {
@@ -145,7 +165,7 @@ export function LocationSelector({
 
     // Normalize the stored value to the canonical id/name once resolved.
     if (value.countryId !== match.id || value.country !== match.name) {
-      onChange({ ...value, countryId: match.id, country: match.name });
+      onChangeRef.current({ ...value, countryId: match.id, country: match.name });
       return; // effect will re-run with the normalized id
     }
 
@@ -189,7 +209,7 @@ export function LocationSelector({
     if (!match) return;
 
     if (value.stateId !== match.id || value.state !== match.name) {
-      onChange({ ...value, stateId: match.id, state: match.name });
+      onChangeRef.current({ ...value, stateId: match.id, state: match.name });
       return;
     }
 
@@ -223,7 +243,7 @@ export function LocationSelector({
     if (citiesLoading || !value.cityId) return;
     const match = findOption(cities, value.cityId);
     if (match && (value.cityId !== match.id || value.city !== match.name)) {
-      onChange({ ...value, cityId: match.id, city: match.name });
+      onChangeRef.current({ ...value, cityId: match.id, city: match.name });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cities, citiesLoading, value.cityId]);
