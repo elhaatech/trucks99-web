@@ -488,8 +488,14 @@ export function HeroSearchSection({
   const [activeSlide, setActiveSlide] = useState(0);
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
+    const tick = () => {
       setActiveSlide((prev) => (prev + 1) % HERO_TRUCK_IMAGES.length);
+    };
+    const timer = window.setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
+      tick();
     }, 5500);
     return () => window.clearInterval(timer);
   }, []);

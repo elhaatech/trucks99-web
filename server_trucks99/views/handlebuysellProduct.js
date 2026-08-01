@@ -565,6 +565,10 @@ function enrichProductListItem(item, contactMap, favoriteSet, bitRecords, bidSum
 const LIST_PRODUCT_SELECT =
   "id bsNumber category_id subcategory_id userid price description images specifications country_id state_id city_id address pincode user_type status viewCount created_by createdAt updatedAt";
 
+/** Even leaner for paginated browse (no embedded specs payload). */
+const LIST_PRODUCT_SELECT_LITE =
+  "id bsNumber category_id subcategory_id userid price description images country_id state_id city_id address pincode user_type status viewCount created_by createdAt updatedAt";
+
 /** Optional page/limit — omit both to keep legacy full-list behavior. */
 function parseListPagination(body = {}) {
   if (body.page === undefined && body.limit === undefined) return null;
@@ -574,6 +578,39 @@ function parseListPagination(body = {}) {
     Math.max(1, parseInt(String(body.limit ?? "12"), 10) || 12),
   );
   return { page, limit, skip: (page - 1) * limit };
+}
+
+function parseListSort(sort) {
+  switch (String(sort || "newest").toLowerCase()) {
+    case "price_asc":
+      return { price: 1 };
+    case "price_desc":
+      return { price: -1 };
+    case "views":
+      return { viewCount: -1, createdAt: -1 };
+    case "newest":
+    default:
+      return { createdAt: -1 };
+  }
+}
+
+/** Text matches description / address / bsNumber / pincode (same as portal client filter). */
+function applyListSearchFilter(filter, search) {
+  const q = String(search ?? "").trim();
+  if (!q) return;
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(escaped, "i");
+  filter.$and = [
+    ...(filter.$and || []),
+    {
+      $or: [
+        { description: regex },
+        { address: regex },
+        { bsNumber: regex },
+        { pincode: regex },
+      ],
+    },
+  ];
 }
 
 function applyListStatusFilter(filter, status, statuses) {
@@ -832,6 +869,8 @@ async function enrichBuySellListItems(items, actor, options = {}) {
   if (!Array.isArray(items) || items.length === 0) return [];
 
   const includeBitRecords = options.includeBitRecords === true;
+  /** Marketplace cards: skip bids + user lookups (biggest list latency). */
+  const lite = options.lite === true;
   const allProductIds = items.map((item) => item._id);
 
   const favoritePromise =
@@ -844,6 +883,20 @@ async function enrichBuySellListItems(items, actor, options = {}) {
           .select("entityId")
           .lean()
       : Promise.resolve([]);
+
+  if (lite) {
+    const userFavorites = await favoritePromise;
+    const favoriteSet = new Set(
+      userFavorites.map((fav) => String(fav.entityId)),
+    );
+    const emptyContact = {};
+    return items.map((item) =>
+      enrichProductListItem(item, emptyContact, favoriteSet, [], {
+        bid_count: 0,
+        highest_bid: null,
+      }),
+    );
+  }
 
   const bidsPromise = includeBitRecords
     ? ProductBitRecord.find({ productId: { $in: allProductIds } })
@@ -1002,6 +1055,9 @@ buySellRouter.post("/list", async (req, res) => {
       usear_type,
       min_price,
       max_price,
+      search,
+      q,
+      sort,
       filters = [],
     } = body;
 
@@ -1035,6 +1091,7 @@ buySellRouter.post("/list", async (req, res) => {
     }
 
     applyListStatusFilter(filter, status, statuses);
+    applyListSearchFilter(filter, search ?? q);
 
     if (min_price !== undefined || max_price !== undefined) {
       filter.price = {};
@@ -1075,9 +1132,10 @@ buySellRouter.post("/list", async (req, res) => {
     }
 
     const pagination = parseListPagination(body);
+    const sortSpec = parseListSort(sort);
     const listQuery = BuySellProduct.find(filter)
-      .select(LIST_PRODUCT_SELECT)
-      .sort({ createdAt: -1 })
+      .select(pagination ? LIST_PRODUCT_SELECT_LITE : LIST_PRODUCT_SELECT)
+      .sort(sortSpec)
       .populate("category_id", "category_name")
       .populate("subcategory_id", "sub_category_name")
       .lean();
@@ -1124,7 +1182,10 @@ buySellRouter.post("/list", async (req, res) => {
       };
     });
 
-    const enrichedList = await enrichBuySellListItems(trimmedList, actor);
+    const enrichedList = await enrichBuySellListItems(trimmedList, actor, {
+      // Paginated browse — skip bid aggregation + seller User lookups
+      lite: Boolean(pagination),
+    });
 
     // Legacy clients expect a bare array; paginated clients send page/limit.
     if (pagination) {
@@ -1464,6 +1525,7 @@ function buildDashboardMarketplaceFilter() {
 
 async function fetchDashboardMarketplaceVehicles(actor, limit, sort) {
   const list = await BuySellProduct.find(buildDashboardMarketplaceFilter())
+    .select(LIST_PRODUCT_SELECT)
     .sort(sort)
     .limit(limit)
     .populate("category_id", "category_name")
@@ -1496,12 +1558,45 @@ buySellRouter.post("/recent-vehicles", async (req, res) => {
   }
 });
 
-// POST /api/buy-sell/featured-vehicles/list   body: { limit?: number }
+/** Short TTL cache for public featured strip / featured page. */
+const featuredListCache = new Map();
+const FEATURED_LIST_TTL_MS = 15_000;
+
+function getFeaturedListCacheKey(body) {
+  return JSON.stringify({
+    page: body.page ?? 1,
+    limit: body.limit ?? 12,
+    search: String(body.search ?? body.q ?? "").trim().toLowerCase(),
+    sort: String(body.sort || "newest").toLowerCase(),
+    actor: body.__actorKey || "anon",
+  });
+}
+
+// POST /api/buy-sell/featured-vehicles/list
+// body: { limit?: number, page?: number, search?: string, sort?: string }
 buySellRouter.post("/featured-vehicles/list", async (req, res) => {
   try {
     const actor = getActor(req);
-    const limit = parseDashboardVehicleLimit(req.body?.limit);
-    await expireStaleFeaturedRecords();
+    const body = { ...(req.body || {}), __actorKey: actor.id ? String(actor.id) : "anon" };
+    const cacheKey = getFeaturedListCacheKey(body);
+    const cached = featuredListCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return res.json(cached.payload);
+    }
+
+    // Query already filters expiresAt > now — expire stale rows in background.
+    void expireStaleFeaturedRecords().catch(() => {});
+
+    const page = Math.max(1, parseInt(String(body.page ?? "1"), 10) || 1);
+    const rawLimit = body.limit !== undefined ? body.limit : 12;
+    const limit = Math.min(
+      48,
+      Math.max(1, parseInt(String(rawLimit), 10) || 12),
+    );
+    const sortKey = String(body.sort || "newest").toLowerCase();
+    const searchQ = String(body.search ?? body.q ?? "")
+      .trim()
+      .toLowerCase();
 
     const now = new Date();
     const placements = await BuySellFeaturedVehicle.find({
@@ -1509,30 +1604,37 @@ buySellRouter.post("/featured-vehicles/list", async (req, res) => {
       expiresAt: { $gt: now },
     })
       .sort({ createdAt: -1 })
-      .limit(limit)
       .lean();
 
     const productIds = placements.map((p) => p.productId).filter(Boolean);
     if (productIds.length === 0) {
-      return res.json({
+      const emptyPayload = {
         success: true,
         data: [],
         total: 0,
         limit,
+        sort: sortKey,
+        pagination: { page, limit, total: 0, totalPages: 1 },
+      };
+      featuredListCache.set(cacheKey, {
+        expiresAt: Date.now() + FEATURED_LIST_TTL_MS,
+        payload: emptyPayload,
       });
+      return res.json(emptyPayload);
     }
 
     const products = await BuySellProduct.find({
       _id: { $in: productIds },
       status: { $in: ["active", "pending"] },
     })
+      .select(LIST_PRODUCT_SELECT_LITE)
       .populate("category_id", "category_name")
       .populate("subcategory_id", "sub_category_name")
       .lean();
 
     const productById = new Map(products.map((p) => [String(p._id), p]));
-    const orderedProducts = [];
     const featuredMetaByProductId = new Map();
+    let orderedProducts = [];
 
     for (const placement of placements) {
       const product = productById.get(String(placement.productId));
@@ -1553,10 +1655,72 @@ buySellRouter.post("/featured-vehicles/list", async (req, res) => {
       });
     }
 
-    const enrichedList = await enrichBuySellListItems(
-      await enrichBuySellProductsWithLocation(orderedProducts),
-      actor,
+    if (searchQ) {
+      orderedProducts = orderedProducts.filter((item) => {
+        const cat =
+          item.category_id && typeof item.category_id === "object"
+            ? String(item.category_id.category_name || "")
+            : "";
+        const sub =
+          item.subcategory_id && typeof item.subcategory_id === "object"
+            ? String(item.subcategory_id.sub_category_name || "")
+            : "";
+        const hay = [
+          item.description,
+          item.address,
+          item.bsNumber,
+          item.pincode,
+          item.created_by,
+          cat,
+          sub,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(searchQ);
+      });
+    }
+
+    orderedProducts.sort((a, b) => {
+      const metaA = featuredMetaByProductId.get(String(a._id));
+      const metaB = featuredMetaByProductId.get(String(b._id));
+      switch (sortKey) {
+        case "oldest":
+          return (
+            new Date(a.createdAt || 0).getTime() -
+            new Date(b.createdAt || 0).getTime()
+          );
+        case "price_asc":
+          return Number(a.price) - Number(b.price);
+        case "price_desc":
+          return Number(b.price) - Number(a.price);
+        case "expiry_soon":
+          return (
+            new Date(metaA?.expiresAt || 0).getTime() -
+            new Date(metaB?.expiresAt || 0).getTime()
+          );
+        case "newest":
+        default:
+          return (
+            new Date(metaB?.featuredAt || b.createdAt || 0).getTime() -
+            new Date(metaA?.featuredAt || a.createdAt || 0).getTime()
+          );
+      }
+    });
+
+    const total = orderedProducts.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const safePage = Math.min(page, totalPages);
+    const slice = orderedProducts.slice(
+      (safePage - 1) * limit,
+      safePage * limit,
     );
+
+    // Lite enrich — skip bid agg, seller User lookups, and location lookups
+    // (cards fall back to address/pincode for location).
+    const enrichedList = await enrichBuySellListItems(slice, actor, {
+      lite: true,
+    });
 
     const data = toResponseList(enrichedList).map((item) => {
       const key = item._id || item.id;
@@ -1566,12 +1730,25 @@ buySellRouter.post("/featured-vehicles/list", async (req, res) => {
       return meta ? { ...item, featured: meta } : item;
     });
 
-    res.json({
+    const payload = {
       success: true,
       data,
-      total: data.length,
+      total,
       limit,
+      sort: sortKey,
+      pagination: {
+        page: safePage,
+        limit,
+        total,
+        totalPages,
+      },
+    };
+    featuredListCache.set(cacheKey, {
+      expiresAt: Date.now() + FEATURED_LIST_TTL_MS,
+      payload,
     });
+
+    res.json(payload);
   } catch (error) {
     sendRouteError(res, error, "Error fetching featured vehicles");
   }

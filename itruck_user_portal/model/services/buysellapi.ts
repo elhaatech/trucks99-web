@@ -183,6 +183,11 @@ export type BuySellListFilter = {
   /** When set with limit, server paginates (faster home/list pages). */
   page?: number;
   limit?: number;
+  /** Server-side text search (description, address, bsNumber, pincode). */
+  search?: string;
+  q?: string;
+  /** Server-side sort: newest | price_asc | price_desc | views */
+  sort?: "newest" | "price_asc" | "price_desc" | "views";
   filters?: Array<{
     specification_id: string;
     specification_value?: string[] | string;
@@ -556,30 +561,43 @@ export async function getBuySellRecentVehicles(limit = 8): Promise<BuySellProduc
 export async function fetchFeaturedVehicles(
   params: FeaturedVehiclesListParams = {},
 ): Promise<FeaturedVehiclesListResponse> {
+  const body = {
+    page: params.page ?? 1,
+    limit: params.limit ?? 12,
+    search: params.search?.trim() || "",
+    sort: params.sort ?? "newest",
+  };
+  const cacheKey = `featured-vehicles:${JSON.stringify(body)}`;
   try {
-    const payload = await publicApi<FeaturedVehiclesListResponse>(
-      "/api/buy-sell/featured-vehicles/list",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          page: params.page ?? 1,
-          limit: params.limit ?? 12,
-          search: params.search?.trim() || "",
-          sort: params.sort ?? "newest",
-        }),
+    return await cachedRequest(
+      cacheKey,
+      async () => {
+        const payload = await publicApi<FeaturedVehiclesListResponse>(
+          "/api/buy-sell/featured-vehicles/list",
+          {
+            method: "POST",
+            body: JSON.stringify(body),
+          },
+        );
+        return {
+          ...payload,
+          data: normalizeBuySellList(payload.data ?? []),
+          pagination: payload.pagination ?? {
+            page: body.page,
+            limit: body.limit,
+            total: payload.total ?? payload.data?.length ?? 0,
+            totalPages: Math.max(
+              1,
+              Math.ceil(
+                (payload.total ?? payload.data?.length ?? 0) / body.limit,
+              ),
+            ),
+          },
+          sort: payload.sort ?? body.sort,
+        };
       },
+      15_000,
     );
-    return {
-      ...payload,
-      data: normalizeBuySellList(payload.data ?? []),
-      pagination: payload.pagination ?? {
-        page: params.page ?? 1,
-        limit: params.limit ?? 12,
-        total: payload.total ?? payload.data?.length ?? 0,
-        totalPages: 1,
-      },
-      sort: payload.sort ?? params.sort ?? "newest",
-    };
   } catch (error) {
     normalizeError(error);
   }

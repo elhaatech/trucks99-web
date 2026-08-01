@@ -174,7 +174,32 @@ export const VehicleCard = memo(function VehicleCard({
             style={{ objectFit: "cover" }}
             unoptimized
           />
-        ) : null}
+        ) : (
+          <Box
+            aria-hidden
+            sx={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              bgcolor: alpha(INFO, 0.08),
+              backgroundImage: `linear-gradient(135deg, ${alpha(INFO, 0.12)} 0%, ${alpha(INFO, 0.04)} 100%)`,
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                color: alpha(INFO, 0.55),
+              }}
+            >
+              No photo
+            </Typography>
+          </Box>
+        )}
         <Box sx={{ position: "absolute", top: 10, left: 10, display: "flex", flexDirection: "column", gap: 0.75, alignItems: "flex-start" }}>
           <ProductStatusChip status={product.status} />
           {featuredStatus === "active" ? (

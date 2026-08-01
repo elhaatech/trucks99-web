@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Box from "@mui/material/Box";
 import ToggleButton from "@mui/material/ToggleButton";
@@ -14,27 +14,23 @@ import {
   VehicleGrid,
   VehicleListHeader,
   EMPTY_VEHICLE_FILTERS,
-  paginateProducts,
-  getTotalPages,
   VEHICLE_PAGE_SIZE,
-  sortProducts,
   type SortOption,
   type VehicleFilterValues,
 } from "@/app/common/components/buysell";
 import { userProductRoutes } from "@/lib/userProductRoutes";
-import {
-  filterBuySellBySearch,
-  toBuySellListPayload,
-} from "@/lib/buySellListUtils";
+import { toBuySellListPayload } from "@/lib/buySellListUtils";
 import { useBuySellFavorites } from "@/lib/useBuySellFavorites";
 import { ensureLoggedInToViewProduct } from "@/lib/requireMarketplaceLogin";
 import {
-  getBuySellList,
+  getBuySellListPage,
   type BuySellProduct,
 } from "@/model/services/buysellapi";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { useNotification } from "@/hooks/useNotification";
 import { isAbortError } from "@/lib/apiCache";
+import { MARKETPLACE } from "@/constants/marketplace";
+import { toErrorMessage } from "@/lib/errors";
 
 function filtersFromSearchParams(searchParams: URLSearchParams): VehicleFilterValues {
   return {
@@ -80,12 +76,13 @@ export default function UserProductListContent() {
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [layout, setLayout] = useState<"grid" | "list">("list");
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [products, setProducts] = useState<BuySellProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const lastFetchedKey = useRef<string | null>(null);
 
-  const { favoriteIds, togglingIds, syncFromProducts, syncFromProductsAndApi, toggleFavorite } =
+  const { favoriteIds, togglingIds, syncFromProducts, toggleFavorite } =
     useBuySellFavorites(notify);
 
   useEffect(() => {
@@ -97,30 +94,34 @@ export default function UserProductListContent() {
     const controller = new AbortController();
     let cancelled = false;
 
-    if (lastFetchedKey.current === urlKey) {
-      // Still allow first paint after remount with same key
-    }
-    lastFetchedKey.current = urlKey;
-
     (async () => {
       setLoading(true);
       try {
-        const res = await getBuySellList(toBuySellListPayload(urlFilters), {
+        const payload = {
+          ...toBuySellListPayload(urlFilters),
+          // Marketplace browse: active + pending unless user picked a status
+          ...(urlFilters.status
+            ? {}
+            : { statuses: [...MARKETPLACE.BROWSE_STATUSES] }),
+          search: urlFilters.search.trim() || undefined,
+          sort: sortBy,
+          page,
+          limit: VEHICLE_PAGE_SIZE,
+        };
+        const result = await getBuySellListPage(payload, {
           signal: controller.signal,
         });
         if (cancelled || controller.signal.aborted) return;
-        const items = res ?? [];
+        const items = result.items ?? [];
         setProducts(items);
-        if (isLoggedIn) {
-          await syncFromProductsAndApi(items);
-        } else {
-          syncFromProducts(items);
-        }
+        setTotal(result.total ?? items.length);
+        setTotalPages(result.totalPages ?? 1);
+        syncFromProducts(items);
       } catch (err) {
         if (cancelled || isAbortError(err)) return;
         notify({
           type: "error",
-          message: err instanceof Error ? err.message : "Failed to load vehicles",
+          message: toErrorMessage(err, "Failed to load vehicles"),
         });
       } finally {
         if (!cancelled) setLoading(false);
@@ -131,20 +132,7 @@ export default function UserProductListContent() {
       cancelled = true;
       controller.abort();
     };
-  }, [urlKey, urlFilters, isLoggedIn, notify, syncFromProducts, syncFromProductsAndApi]);
-
-  const displayProducts = useMemo(() => {
-    const fromApi = urlFilters.search.trim()
-      ? filterBuySellBySearch(products, urlFilters.search)
-      : products;
-    return sortProducts(fromApi, sortBy);
-  }, [products, urlFilters.search, sortBy]);
-
-  const pagedProducts = useMemo(
-    () => paginateProducts(displayProducts, page, VEHICLE_PAGE_SIZE),
-    [displayProducts, page],
-  );
-  const totalPages = getTotalPages(displayProducts.length, VEHICLE_PAGE_SIZE);
+  }, [urlKey, urlFilters, sortBy, page, notify, syncFromProducts]);
 
   const handleApplyFilters = () => {
     const next = { ...filters, usear_type: "buy" as const };
@@ -181,6 +169,11 @@ export default function UserProductListContent() {
     [notify, router, isLoggedIn, authReady],
   );
 
+  const handleSortChange = useCallback((v: SortOption) => {
+    setSortBy(v);
+    setPage(1);
+  }, []);
+
   return (
     <Box sx={{ width: "100%" }}>
       <Box
@@ -193,16 +186,10 @@ export default function UserProductListContent() {
           mb: 3,
         }}
       >
-        <VehicleListHeader count={displayProducts.length} title="All Vehicles" />
+        <VehicleListHeader count={total} title="All Vehicles" loading={loading} />
 
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, alignItems: "center" }}>
-          <SortDropdown
-            value={sortBy}
-            onChange={(v) => {
-              setSortBy(v);
-              setPage(1);
-            }}
-          />
+          <SortDropdown value={sortBy} onChange={handleSortChange} />
           <ToggleButtonGroup
             size="small"
             exclusive
@@ -238,7 +225,7 @@ export default function UserProductListContent() {
         />
 
         <VehicleGrid
-          products={pagedProducts}
+          products={products}
           loading={loading}
           layout={layout}
           favoriteIds={favoriteIds}

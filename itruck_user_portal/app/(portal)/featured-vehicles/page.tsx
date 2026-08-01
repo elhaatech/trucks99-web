@@ -17,6 +17,20 @@ import {
   BuySellErrorState,
   VehicleGridSkeleton,
 } from "@/app/common/components/buysell";
+import { FeaturedVehicleCard } from "@/app/common/components/buysell/FeaturedVehicleCard";
+import { EmptyState } from "@/components/ui/EmptyState";
+import SearchOffOutlinedIcon from "@mui/icons-material/SearchOffOutlined";
+import {
+  fetchFeaturedVehicles,
+  type BuySellProduct,
+} from "@/model/services/buysellapi";
+import { useNotification } from "@/hooks/useNotification";
+import { ensureLoggedInToViewProduct } from "@/lib/requireMarketplaceLogin";
+import { isAbortError } from "@/lib/apiCache";
+import { toErrorMessage } from "@/lib/errors";
+import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
+
+const PAGE_SIZE = 12;
 
 const FEATURED_SORT_OPTIONS = [
   "newest",
@@ -31,24 +45,12 @@ type FeaturedSortOption = (typeof FEATURED_SORT_OPTIONS)[number];
 function isFeaturedSort(value: string): value is FeaturedSortOption {
   return (FEATURED_SORT_OPTIONS as readonly string[]).includes(value);
 }
-import { FeaturedVehicleCard } from "@/app/common/components/buysell/FeaturedVehicleCard";
-import { EmptyState } from "@/components/ui/EmptyState";
-import SearchOffOutlinedIcon from "@mui/icons-material/SearchOffOutlined";
-import {
-  fetchFeaturedVehicles,
-  type BuySellProduct,
-} from "@/model/services/buysellapi";
-import { useNotification } from "@/hooks/useNotification";
-import {
-  ensureLoggedInToViewProduct,
-} from "@/lib/requireMarketplaceLogin";
-
-const PAGE_SIZE = 12;
 
 export default function FeaturedVehiclesMarketplacePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { notify } = useNotification();
+  const { isLoggedIn, authReady } = useMarketplaceAuth();
 
   const initialSearch = useMemo(
     () => searchParams.get("q")?.trim() || "",
@@ -87,31 +89,38 @@ export default function FeaturedVehiclesMarketplacePage() {
     [router],
   );
 
-  const loadFeatured = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetchFeaturedVehicles({
-        page,
-        limit: PAGE_SIZE,
-        search,
-        sort: sortBy,
-      });
-      setProducts(res.data ?? []);
-      setTotalPages(res.pagination?.totalPages ?? 1);
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to load featured vehicles";
-      setError(message);
-      notify({ type: "error", message });
-    } finally {
-      setLoading(false);
-    }
-  }, [notify, page, search, sortBy]);
-
   useEffect(() => {
-    void loadFeatured();
-  }, [loadFeatured]);
+    const controller = new AbortController();
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await fetchFeaturedVehicles({
+          page,
+          limit: PAGE_SIZE,
+          search,
+          sort: sortBy,
+        });
+        if (cancelled || controller.signal.aborted) return;
+        setProducts(res.data ?? []);
+        setTotalPages(res.pagination?.totalPages ?? 1);
+      } catch (err) {
+        if (cancelled || isAbortError(err)) return;
+        const message = toErrorMessage(err, "Failed to load featured vehicles");
+        setError(message);
+        notify({ type: "error", message });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [notify, page, search, sortBy]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,16 +147,29 @@ export default function FeaturedVehiclesMarketplacePage() {
     async (productId: string) => {
       const allowed = await ensureLoggedInToViewProduct(productId, {
         notify,
+        isLoggedIn,
+        authReady,
         onNeedLogin: (loginPath) => router.push(loginPath),
       });
       if (allowed) router.push(userProductRoutes.view(productId));
     },
-    [notify, router],
+    [notify, router, isLoggedIn, authReady],
   );
+
+  const handleRetry = useCallback(() => {
+    setPage((p) => p);
+    setSearch((s) => s);
+    setSortBy((s) => s);
+  }, []);
 
   return (
     <Box sx={{ width: "100%" }}>
-      <Typography variant="h4" fontWeight={800} sx={{ mb: 0.5, color: T.color.textPrimary }}>
+      <Typography
+        component="h1"
+        variant="h4"
+        fontWeight={800}
+        sx={{ mb: 0.5, color: T.color.textPrimary }}
+      >
         Featured Vehicles
       </Typography>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
@@ -187,23 +209,47 @@ export default function FeaturedVehiclesMarketplacePage() {
       </Box>
 
       {error && !loading ? (
-        <BuySellErrorState message={error} onRetry={() => void loadFeatured()} />
+        <BuySellErrorState
+          message={error}
+          onRetry={() => {
+            handleRetry();
+            setLoading(true);
+            void fetchFeaturedVehicles({
+              page,
+              limit: PAGE_SIZE,
+              search,
+              sort: sortBy,
+            })
+              .then((res) => {
+                setProducts(res.data ?? []);
+                setTotalPages(res.pagination?.totalPages ?? 1);
+                setError("");
+              })
+              .catch((err) =>
+                setError(toErrorMessage(err, "Failed to load featured vehicles")),
+              )
+              .finally(() => setLoading(false));
+          }}
+        />
       ) : null}
 
       {loading ? (
         <VehicleGridSkeleton count={6} />
-      ) : products.length === 0 ? (
+      ) : products.length === 0 && !error ? (
         <EmptyState
           title="No featured vehicles"
           description="There are no active featured listings right now. Check back soon or browse all vehicles."
           icon={<SearchOffOutlinedIcon sx={{ fontSize: 36 }} />}
           action={
-            <Button variant="contained" onClick={() => router.push(userProductRoutes.list())}>
+            <Button
+              variant="contained"
+              onClick={() => router.push(userProductRoutes.list())}
+            >
               Browse all vehicles
             </Button>
           }
         />
-      ) : (
+      ) : !error ? (
         <>
           <Box
             sx={{
@@ -238,7 +284,7 @@ export default function FeaturedVehiclesMarketplacePage() {
             </Box>
           ) : null}
         </>
-      )}
+      ) : null}
     </Box>
   );
 }

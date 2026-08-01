@@ -77,6 +77,8 @@ export default function UserProductDashboardPage() {
   const [listError, setListError] = useState("");
   const [featuredError, setFeaturedError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
   const [exploreLoading, setExploreLoading] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
@@ -99,77 +101,86 @@ export default function UserProductDashboardPage() {
     [],
   );
 
-  const loadData = useCallback(async (signal?: AbortSignal) => {
+  /** Critical path first (explore), then stats/featured/categories — don't block first paint. */
+  useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
+
     setLoading(true);
+    setStatsLoading(true);
+    setFeaturedLoading(true);
     setStatsError("");
     setListError("");
     setFeaturedError("");
-    try {
-      const [cats, exploreResult, featuredResult, dashStats] = await Promise.all([
-        getCategories({ activeOnly: true }),
-        loadExplorePage(1, signal).catch((err) => {
-          if (isAbortError(err)) throw err;
-          setListError(
-            toErrorMessage(err, "Failed to load vehicles"),
-          );
-          return {
-            items: [] as BuySellProduct[],
-            total: 0,
-            page: 1,
-            limit: MARKETPLACE.VEHICLE_PAGE_SIZE,
-            totalPages: 1,
-          };
-        }),
-        getBuySellFeaturedVehicles(MARKETPLACE.FEATURED_SECTION_LIMIT)
-          .then((data) => ({ data: data ?? [], error: "" as string }))
-          .catch((err) => ({
-            data: [] as BuySellProduct[],
-            error:
-              err instanceof Error ? err.message : "Failed to load featured vehicles",
-          })),
-        getBuySellDashboardStats().catch((err) => {
-          setStatsError(
-            err instanceof Error ? err.message : "Failed to load statistics",
-          );
-          return null;
-        }),
-      ]);
-      if (signal?.aborted) return;
-      setCategories(cats ?? []);
-      setExploreVehicles(exploreResult.items ?? []);
-      setExplorePage(exploreResult.page ?? 1);
-      setExploreTotalPages(exploreResult.totalPages ?? 1);
-      setFeaturedVehicles(featuredResult.data);
-      setFeaturedError(featuredResult.error);
-      setFavoriteIds(
-        seedFavoritesFromProducts([
-          ...(exploreResult.items ?? []),
-          ...featuredResult.data,
-        ]),
-      );
-      setDashboardData(dashStats);
-      if (dashStats) setStatsUpdatedAt(new Date());
 
-      if ((exploreResult.items?.length ?? 0) === 0) {
-        setListError("No vehicles to show yet. List a vehicle or check back soon.");
+    void (async () => {
+      try {
+        const exploreResult = await loadExplorePage(1, signal);
+        if (signal.aborted) return;
+        setExploreVehicles(exploreResult.items ?? []);
+        setExplorePage(exploreResult.page ?? 1);
+        setExploreTotalPages(exploreResult.totalPages ?? 1);
+        setFavoriteIds(seedFavoritesFromProducts(exploreResult.items ?? []));
+        if ((exploreResult.items?.length ?? 0) === 0) {
+          setListError("No vehicles to show yet. List a vehicle or check back soon.");
+        }
+      } catch (err) {
+        if (isAbortError(err) || signal.aborted) return;
+        const message = toErrorMessage(err, "Failed to load vehicles");
+        setListError(message);
+        notifyRef.current({ type: "error", message });
+      } finally {
+        if (!signal.aborted) setLoading(false);
       }
-    } catch (err) {
-      if (isAbortError(err) || signal?.aborted) return;
-      const message = err instanceof Error ? err.message : "Failed to load dashboard";
-      setListError(message);
-      notifyRef.current({ type: "error", message });
-    } finally {
-      if (!signal?.aborted) setLoading(false);
-    }
-  }, [loadExplorePage]);
+    })();
 
-  useEffect(() => {
-    const controller = new AbortController();
-    void loadData(controller.signal);
+    void getCategories({ activeOnly: true })
+      .then((cats) => {
+        if (!signal.aborted) setCategories(cats ?? []);
+      })
+      .catch(() => {
+        /* categories are non-critical for first paint */
+      });
+
+    void getBuySellDashboardStats()
+      .then((dashStats) => {
+        if (signal.aborted) return;
+        setDashboardData(dashStats);
+        if (dashStats) setStatsUpdatedAt(new Date());
+      })
+      .catch((err) => {
+        if (signal.aborted) return;
+        setStatsError(toErrorMessage(err, "Failed to load statistics"));
+      })
+      .finally(() => {
+        if (!signal.aborted) setStatsLoading(false);
+      });
+
+    void getBuySellFeaturedVehicles(MARKETPLACE.FEATURED_SECTION_LIMIT)
+      .then((data) => {
+        if (signal.aborted) return;
+        const items = data ?? [];
+        setFeaturedVehicles(items);
+        setFavoriteIds((prev) => {
+          const next = new Set(prev);
+          for (const p of items) {
+            if (p.is_favorite) next.add(getBuySellRowId(p));
+          }
+          return next;
+        });
+      })
+      .catch((err) => {
+        if (signal.aborted) return;
+        setFeaturedError(toErrorMessage(err, "Failed to load featured vehicles"));
+      })
+      .finally(() => {
+        if (!signal.aborted) setFeaturedLoading(false);
+      });
+
     return () => {
       controller.abort();
     };
-  }, [loadData]);
+  }, [loadExplorePage]);
 
   const handleExplorePageChange = useCallback(
     async (page: number) => {
@@ -361,12 +372,12 @@ export default function UserProductDashboardPage() {
       </Box>
 
       <Box sx={{ mt: 4 }}>
-        {statsError && !loading ? (
+        {statsError && !statsLoading ? (
           <Alert severity="warning" sx={{ mb: 2 }}>
             {statsError}
           </Alert>
         ) : null}
-        {loading ? (
+        {statsLoading ? (
           <StatsSkeleton />
         ) : (
           <MarketplaceStatsCards
@@ -488,9 +499,20 @@ export default function UserProductDashboardPage() {
         </Typography>
         <FeaturedVehiclesGrid
           products={featuredVehicles}
-          loading={loading}
+          loading={featuredLoading}
           error={featuredError}
-          onRetry={() => void loadData()}
+          onRetry={() => {
+            setFeaturedLoading(true);
+            setFeaturedError("");
+            void getBuySellFeaturedVehicles(MARKETPLACE.FEATURED_SECTION_LIMIT)
+              .then((data) => setFeaturedVehicles(data ?? []))
+              .catch((err) =>
+                setFeaturedError(
+                  toErrorMessage(err, "Failed to load featured vehicles"),
+                ),
+              )
+              .finally(() => setFeaturedLoading(false));
+          }}
           onViewDetails={(id) => void handleViewProduct(id)}
           onBrowseAll={() => router.push(userProductRoutes.list())}
           emptyDescription="No featured listings yet. Browse all vehicles or feature yours from your listing page."

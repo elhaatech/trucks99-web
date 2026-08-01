@@ -117,20 +117,32 @@ export function VehicleGrid({
 export function VehicleListHeader({
   count,
   title,
+  loading = false,
 }: {
   count: number;
   title?: string;
+  /** When true, hide the count line so LCP can paint the title immediately. */
+  loading?: boolean;
 }) {
   return (
     <Box sx={{ mb: 2 }}>
       {title ? (
-        <Typography sx={{ fontWeight: 800, fontSize: 22, color: T.color.textPrimary, mb: 0.5 }}>
+        <Typography
+          component="h1"
+          sx={{ fontWeight: 800, fontSize: 22, color: T.color.textPrimary, mb: 0.5 }}
+        >
           {title}
         </Typography>
       ) : null}
-      <Typography sx={{ color: T.color.textSecondary, fontSize: 14 }}>
-        {count.toLocaleString("en-IN")} vehicle{count !== 1 ? "s" : ""} found
-      </Typography>
+      {loading ? (
+        <Typography sx={{ color: T.color.textSecondary, fontSize: 14 }}>
+          Loading vehicles…
+        </Typography>
+      ) : (
+        <Typography sx={{ color: T.color.textSecondary, fontSize: 14 }}>
+          {count.toLocaleString("en-IN")} vehicle{count !== 1 ? "s" : ""} found
+        </Typography>
+      )}
     </Box>
   );
 }

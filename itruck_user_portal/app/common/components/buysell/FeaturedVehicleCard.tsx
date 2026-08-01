@@ -91,7 +91,31 @@ export const FeaturedVehicleCard = memo(function FeaturedVehicleCard({
             style={{ objectFit: "cover" }}
             unoptimized
           />
-        ) : null}
+        ) : (
+          <Box
+            aria-hidden
+            sx={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundImage: `linear-gradient(135deg, ${alpha(INFO, 0.12)} 0%, ${alpha(INFO, 0.04)} 100%)`,
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                color: alpha(INFO, 0.55),
+              }}
+            >
+              No photo
+            </Typography>
+          </Box>
+        )}
         <Chip
           icon={<StarIcon sx={{ fontSize: 16 }} />}
           label="Featured"
