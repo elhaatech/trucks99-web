@@ -7,6 +7,8 @@ export const MARKETPLACE = {
   VEHICLE_PAGE_SIZE: 12,
   /** Featured strip size on dashboard. */
   FEATURED_SECTION_LIMIT: 8,
+  /** Recent vehicles strip size on dashboard. */
+  RECENT_SECTION_LIMIT: 8,
   /** Browseable listing statuses on the public marketplace. */
   BROWSE_STATUSES: ["active", "pending"] as const,
   /** Client TTL hints (ms) — mirrors lib/apiCache usage. */

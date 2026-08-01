@@ -23,6 +23,7 @@ import {
   getBuySellDashboardStats,
   getBuySellFeaturedVehicles,
   getBuySellListPage,
+  getBuySellRecentVehicles,
   getBuySellRowId,
   type BuySellProduct,
   type BuySellDashboardStatsResponse,
@@ -69,6 +70,7 @@ export default function UserProductDashboardPage() {
   const [explorePage, setExplorePage] = useState(1);
   const [exploreTotalPages, setExploreTotalPages] = useState(1);
   const [featuredVehicles, setFeaturedVehicles] = useState<BuySellProduct[]>([]);
+  const [recentVehicles, setRecentVehicles] = useState<BuySellProduct[]>([]);
   const [dashboardData, setDashboardData] = useState<
     BuySellDashboardStatsResponse["data"] | null
   >(null);
@@ -76,9 +78,11 @@ export default function UserProductDashboardPage() {
   const [statsUpdatedAt, setStatsUpdatedAt] = useState<Date | null>(null);
   const [listError, setListError] = useState("");
   const [featuredError, setFeaturedError] = useState("");
+  const [recentVehiclesError, setRecentVehiclesError] = useState("");
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const [featuredLoading, setFeaturedLoading] = useState(true);
+  const [recentVehiclesLoading, setRecentVehiclesLoading] = useState(true);
   const [exploreLoading, setExploreLoading] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
@@ -109,9 +113,11 @@ export default function UserProductDashboardPage() {
     setLoading(true);
     setStatsLoading(true);
     setFeaturedLoading(true);
+    setRecentVehiclesLoading(true);
     setStatsError("");
     setListError("");
     setFeaturedError("");
+    setRecentVehiclesError("");
 
     void (async () => {
       try {
@@ -175,6 +181,27 @@ export default function UserProductDashboardPage() {
       })
       .finally(() => {
         if (!signal.aborted) setFeaturedLoading(false);
+      });
+
+    void getBuySellRecentVehicles(MARKETPLACE.RECENT_SECTION_LIMIT)
+      .then((data) => {
+        if (signal.aborted) return;
+        const items = data ?? [];
+        setRecentVehicles(items);
+        setFavoriteIds((prev) => {
+          const next = new Set(prev);
+          for (const p of items) {
+            if (p.is_favorite) next.add(getBuySellRowId(p));
+          }
+          return next;
+        });
+      })
+      .catch((err) => {
+        if (signal.aborted) return;
+        setRecentVehiclesError(toErrorMessage(err, "Failed to load recent vehicles"));
+      })
+      .finally(() => {
+        if (!signal.aborted) setRecentVehiclesLoading(false);
       });
 
     return () => {
@@ -389,6 +416,51 @@ export default function UserProductDashboardPage() {
           onViewDetails={(id) => void handleViewProduct(id)}
           onBrowseAll={() => router.push(userProductRoutes.list())}
           emptyDescription="No featured listings yet. Browse all vehicles or feature yours from your listing page."
+        />
+      </Box>
+      <Box sx={{ mt: 5 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 1,
+            gap: 2,
+          }}
+        >
+          <Typography
+            sx={{
+              fontWeight: 800,
+              fontSize: { xs: 18, md: 20 },
+              color: T.color.textPrimary,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Recently added vehicles
+          </Typography>
+          <Button
+            onClick={() => router.push(userProductRoutes.list())}
+            sx={{ textTransform: "none", fontWeight: 700, color: "primary.main" }}
+          >
+            View all →
+          </Button>
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Fresh listings posted recently on TRUCKS99.
+        </Typography>
+        {recentVehiclesError && !recentVehiclesLoading ? (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            {recentVehiclesError}
+          </Alert>
+        ) : null}
+        <VehicleGrid
+          products={recentVehicles}
+          loading={recentVehiclesLoading}
+          favoriteIds={favoriteIds}
+          togglingFavoriteIds={togglingIds}
+          onFavoriteToggle={handleFavoriteToggle}
+          onProductClick={(id) => void handleViewProduct(id)}
+          emptyDescription="No recent vehicles yet. Check back soon for newly listed trucks."
         />
       </Box>
       <Box sx={{ mt: 5 }}>
