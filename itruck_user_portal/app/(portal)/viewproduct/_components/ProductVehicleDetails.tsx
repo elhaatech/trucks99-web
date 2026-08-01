@@ -19,7 +19,7 @@ export function ProductVehicleDetails({
 }: ProductVehicleDetailsProps) {
   const rows = [
     ...specs,
-    listingId ? { label: "Listing ID", value: listingId } : null,
+    // listingId ? { label: "Listing ID", value: listingId } : null,
     address ? { label: "Location", value: address } : null,
   ].filter(Boolean) as Array<{ label: string; value: string }>;
 

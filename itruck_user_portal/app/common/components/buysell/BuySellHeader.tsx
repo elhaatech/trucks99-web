@@ -239,41 +239,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
           })}
         </Box>
 
-        <Box
-          component="form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleHeaderSearch();
-          }}
-          sx={{
-            display: { xs: "none", md: "flex" },
-            alignItems: "center",
-            flex: 1,
-            maxWidth: 380,
-            mx: "auto",
-            px: 1.75,
-            py: 0.85,
-            borderRadius: 2.5,
-            border: `1px solid ${T.color.border}`,
-            bgcolor: T.color.surfaceMuted,
-            transition: `all ${TRANSITION.fast}`,
-            "&:focus-within": {
-              borderColor: PRIMARY,
-              bgcolor: "#fff",
-              boxShadow: `0 0 0 3px ${alpha(PRIMARY, 0.12)}`,
-            },
-          }}
-        >
-          <SearchIcon sx={{ color: T.color.textMuted, fontSize: 20, mr: 0.75 }} />
-          <InputBase
-            placeholder="Search trucks, tippers, trailers…"
-            value={headerSearch}
-            onChange={(e) => setHeaderSearch(e.target.value)}
-            inputProps={{ "aria-label": "Search vehicles" }}
-            sx={{ flex: 1, fontSize: 14, fontWeight: 500 }}
-          />
-        </Box>
-
+     
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: "auto" }}>
           <Tooltip title="AI Assistant">
             <Button

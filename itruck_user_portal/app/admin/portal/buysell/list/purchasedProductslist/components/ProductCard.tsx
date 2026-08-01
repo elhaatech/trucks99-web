@@ -14,14 +14,6 @@ import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
 import type { BuySellProduct } from "@/model/services/buysellapi";
 import { getBuySellImageUrl } from "@/lib/buysellUtils";
 
-const STATUS_COLOR: Record<string, "success" | "warning" | "default" | "info"> =
-  {
-    active: "success",
-    pending: "warning",
-    draft: "default",
-    inactive: "default",
-  };
-
 export type ProductCardProps = {
   product: BuySellProduct;
   onClick?: (product: BuySellProduct) => void;
@@ -43,7 +35,6 @@ export function ProductCard({
   badgeColor = "success",
 }: ProductCardProps) {
   const image = product.images?.[0];
-  const statusColor = STATUS_COLOR[product.status] ?? "default";
 
   const locationLabel = [product.city_info?.name, product.state_info?.name]
     .filter(Boolean)
@@ -137,24 +128,9 @@ export function ProductCard({
           gap: 0.75,
         }}
       >
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: 1,
-          }}
-        >
-          <Typography variant="subtitle2" color="text.secondary" noWrap>
-            {product.bsNumber || "—"}
-          </Typography>
-          <Chip
-            label={product.status}
-            color={statusColor}
-            size="small"
-            sx={{ textTransform: "capitalize" }}
-          />
-        </Box>
+        <Typography variant="subtitle2" color="text.secondary" noWrap>
+          {product.bsNumber || "—"}
+        </Typography>
 
         <Typography
           variant="h6"

@@ -74,6 +74,8 @@ export const VehicleCard = memo(function VehicleCard({
     showOwnerFeaturedControls ? resolveFeaturedListingUi(product) : null;
   const isFavorited =
     Boolean(isFavorite) || Boolean(product.is_favorite);
+  /** Public "Featured" badge — shown for any listing marked featured, regardless of viewer. */
+  const isFeaturedListing = Boolean(product.isFeatured) || featuredStatus === "active";
   /** Pay Now only for own listings that are not favorited and not actively featured. */
   const showFeaturePayNow =
     showOwnerFeaturedControls &&
@@ -132,8 +134,7 @@ export const VehicleCard = memo(function VehicleCard({
       }}
       sx={{
         display: "flex",
-        flexDirection: isList ? { xs: "column", sm: "row" } : "column",
-        alignItems: isList ? { sm: "stretch" } : undefined,
+        flexDirection: "column",
         bgcolor: T.color.surface,
         border: `1px solid ${T.color.border}`,
         borderRadius: T.radius.lg,
@@ -152,262 +153,285 @@ export const VehicleCard = memo(function VehicleCard({
     >
       <Box
         sx={{
-          position: "relative",
-          width: isList ? { xs: "100%", sm: 200, md: 220 } : "100%",
-          height: isList ? { xs: 180, sm: "auto" } : 180,
-          minHeight: isList ? { sm: 140 } : undefined,
-          flexShrink: 0,
-          bgcolor: alpha(INFO, 0.06),
-          overflow: "hidden",
-        }}
-      >
-        {imageUrl ? (
-          <Image
-            src={imageUrl}
-            alt={title}
-            fill
-            sizes={
-              isList
-                ? "(max-width:600px) 100vw, 220px"
-                : "(max-width:600px) 100vw, (max-width:1200px) 50vw, 25vw"
-            }
-            style={{ objectFit: "cover" }}
-            unoptimized
-          />
-        ) : (
-          <Box
-            aria-hidden
-            sx={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              bgcolor: alpha(INFO, 0.08),
-              backgroundImage: `linear-gradient(135deg, ${alpha(INFO, 0.12)} 0%, ${alpha(INFO, 0.04)} 100%)`,
-            }}
-          >
-            <Typography
-              sx={{
-                fontSize: 12,
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                color: alpha(INFO, 0.55),
-              }}
-            >
-              No photo
-            </Typography>
-          </Box>
-        )}
-        <Box sx={{ position: "absolute", top: 10, left: 10, display: "flex", flexDirection: "column", gap: 0.75, alignItems: "flex-start" }}>
-          <ProductStatusChip status={product.status} />
-          {featuredStatus === "active" ? (
-            <Chip
-              icon={<StarIcon sx={{ fontSize: "14px !important" }} />}
-              label="Featured"
-              size="small"
-              sx={{
-                fontWeight: 700,
-                bgcolor: alpha(WARNING, 0.95),
-                color: "#1a1a1a",
-              }}
-            />
-          ) : null}
-          {featuredStatus === "expired" ? (
-            <Chip label="Expired" size="small" color="default" sx={{ fontWeight: 600 }} />
-          ) : null}
-        </Box>
-        {onFavoriteToggle ? (
-          <IconButton
-            size="small"
-            aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-            disabled={favoriteLoading}
-            onClick={handleFavorite}
-            sx={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              bgcolor: "rgba(255,255,255,0.92)",
-              "&:hover": { bgcolor: "#fff" },
-            }}
-          >
-            {isFavorite ? (
-              <FavoriteIcon fontSize="small" sx={{ color: T.color.danger }} />
-            ) : (
-              <FavoriteBorderIcon fontSize="small" />
-            )}
-          </IconButton>
-        ) : null}
-      </Box>
-
-      <Box
-        sx={{
-          flex: 1,
-          p: 2,
           display: "flex",
           flexDirection: isList ? { xs: "column", sm: "row" } : "column",
-          alignItems: isList ? { sm: "center" } : undefined,
-          gap: isList ? { sm: 2 } : 0.75,
-          minWidth: 0,
+          alignItems: isList ? { sm: "stretch" } : undefined,
         }}
       >
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography
-            sx={{
-              fontWeight: 800,
-              fontSize: isList ? 17 : 15,
-              color: T.color.textPrimary,
-              lineHeight: 1.3,
-              letterSpacing: "0.01em",
-              textTransform: "uppercase",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}
-          >
-            {title}
-          </Typography>
-          {categoryLabel ? (
-            <Typography
+        <Box
+          sx={{
+            position: "relative",
+            width: isList ? { xs: "100%", sm: 200, md: 220 } : "100%",
+            height: isList ? { xs: 180, sm: "auto" } : 180,
+            minHeight: isList ? { sm: 140 } : undefined,
+            flexShrink: 0,
+            bgcolor: alpha(INFO, 0.06),
+            overflow: "hidden",
+          }}
+        >
+          {imageUrl ? (
+            <Image
+              src={imageUrl}
+              alt={title}
+              fill
+              sizes={
+                isList
+                  ? "(max-width:600px) 100vw, 220px"
+                  : "(max-width:600px) 100vw, (max-width:1200px) 50vw, 25vw"
+              }
+              style={{ objectFit: "cover" }}
+              unoptimized
+            />
+          ) : (
+            <Box
+              aria-hidden
               sx={{
-                fontSize: 12.5,
-                fontWeight: 600,
-                color: T.color.textMuted,
-                mt: 0.35,
-                letterSpacing: "0.04em",
-                textTransform: "uppercase",
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                bgcolor: alpha(INFO, 0.08),
+                backgroundImage: `linear-gradient(135deg, ${alpha(INFO, 0.12)} 0%, ${alpha(INFO, 0.04)} 100%)`,
               }}
             >
-              {categoryLabel}
-            </Typography>
-          ) : null}
-          <VehicleSpecChips product={product} dense={isList} />
-          {location ? (
-            <MetaIconLine
-              icon={<LocationOnOutlinedIcon />}
-              dense
-              sx={{ mt: 0.85, color: T.color.textMuted }}
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  color: alpha(INFO, 0.55),
+                }}
+              >
+                No photo
+              </Typography>
+            </Box>
+          )}
+          <Box sx={{ position: "absolute", top: 10, left: 10, display: "flex", flexDirection: "column", gap: 0.75, alignItems: "flex-start" }}>
+            <ProductStatusChip status={product.status} />
+            {featuredStatus === "expired" ? (
+              <Chip label="Expired" size="small" color="default" sx={{ fontWeight: 600 }} />
+            ) : null}
+          </Box>
+          {onFavoriteToggle ? (
+            <IconButton
+              size="small"
+              aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+              disabled={favoriteLoading}
+              onClick={handleFavorite}
+              sx={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                bgcolor: "rgba(255,255,255,0.92)",
+                "&:hover": { bgcolor: "#fff" },
+              }}
             >
-              {location}
-            </MetaIconLine>
+              {isFavorite ? (
+                <FavoriteIcon fontSize="small" sx={{ color: T.color.danger }} />
+              ) : (
+                <FavoriteBorderIcon fontSize="small" />
+              )}
+            </IconButton>
           ) : null}
-          <MetaIconLine
-            icon={<PersonOutlineIcon />}
-            dense
-            sx={{ mt: 0.75 }}
-          >
-            <>
-              Seller:{" "}
-              <Box component="span" sx={{ fontWeight: 700, color: T.color.textPrimary }}>
-                {sellerName}
-              </Box>
-            </>
-          </MetaIconLine>
-          <PhoneMetaLine
-            icon={<PhoneOutlinedIcon />}
-            mobile={sellerMobile}
-            dense
-            sx={{ mt: 0.35 }}
-          />
         </Box>
 
         <Box
           sx={{
+            flex: 1,
+            p: 2,
             display: "flex",
-            flexDirection: "column",
-            alignItems: isList ? { sm: "flex-end" } : "stretch",
-            gap: 1,
-            flexShrink: 0,
-            mt: isList ? { xs: 1, sm: 0 } : 0,
-            minWidth: isList ? 140 : undefined,
+            flexDirection: isList ? { xs: "column", sm: "row" } : "column",
+            alignItems: isList ? { sm: "center" } : undefined,
+            gap: isList ? { sm: 2 } : 0.75,
+            minWidth: 0,
           }}
         >
-          <Typography
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography
+              sx={{
+                fontWeight: 800,
+                fontSize: isList ? 17 : 15,
+                color: T.color.textPrimary,
+                lineHeight: 1.3,
+                letterSpacing: "0.01em",
+                textTransform: "uppercase",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              {title}
+            </Typography>
+            {categoryLabel ? (
+              <Typography
+                sx={{
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  color: T.color.textMuted,
+                  mt: 0.35,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {categoryLabel}
+              </Typography>
+            ) : null}
+            <VehicleSpecChips product={product} dense={isList} />
+            <PhoneMetaLine
+              icon={<PhoneOutlinedIcon />}
+              mobile={sellerMobile}
+              dense
+              sx={{ mt: 0.75 }}
+            />
+          </Box>
+
+          <Box
             sx={{
-              fontWeight: 800,
-              fontSize: isList ? 20 : 18,
-              color: isList ? SUCCESS : INFO,
-              pt: isList ? 0 : 1,
-              textAlign: isList ? { sm: "right" } : "left",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: isList ? { sm: "flex-end" } : "stretch",
+              gap: 1,
+              flexShrink: 0,
+              mt: isList ? { xs: 1, sm: 0 } : 0,
+              minWidth: isList ? 140 : undefined,
             }}
           >
-            {formatProductPrice(product.price)}
-          </Typography>
-
-          {/* Hide Pay Now when is_favorite / isFeatured / actively featured. */}
-          {showFeaturePayNow ? (
-            <Button
-              size="small"
-              variant="contained"
-              onClick={handleFeaturePayNow}
+            <Typography
               sx={{
-                textTransform: "none",
-                fontWeight: 700,
-                fontSize: 13,
-                bgcolor: "#f97316",
-                boxShadow: "none",
-                width: isList ? "auto" : "100%",
-                "&:hover": { bgcolor: "#ea580c", boxShadow: "none" },
+                fontWeight: 800,
+                fontSize: isList ? 20 : 18,
+                color: isList ? SUCCESS : INFO,
+                pt: isList ? 0 : 1,
+                textAlign: isList ? { sm: "right" } : "left",
               }}
             >
-              {featuredUi?.payNowLabel || "Pay Now"}
-            </Button>
-          ) : null}
+              {formatProductPrice(product.price)}
+            </Typography>
 
-          {onClick && showViewAction ? (
-            <Button
-              size="small"
-              variant={isList ? "outlined" : "contained"}
-              startIcon={<VisibilityOutlinedIcon sx={{ fontSize: 18 }} />}
-              onClick={handleView}
-              sx={{
-                textTransform: "none",
-                fontWeight: 600,
-                fontSize: 13,
-                ...(isList
-                  ? { borderColor: T.color.border, color: INFO, whiteSpace: "nowrap" }
-                  : { bgcolor: INFO, boxShadow: "none", width: "100%" }),
-              }}
-            >
-              {viewLabel}
-            </Button>
-          ) : null}
+            {/* Hide Pay Now when is_favorite / isFeatured / actively featured. */}
+            {showFeaturePayNow ? (
+              <Button
+                size="small"
+                variant="contained"
+                onClick={handleFeaturePayNow}
+                sx={{
+                  textTransform: "none",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  bgcolor: "#f97316",
+                  boxShadow: "none",
+                  width: isList ? "auto" : "100%",
+                  "&:hover": { bgcolor: "#ea580c", boxShadow: "none" },
+                }}
+              >
+                {featuredUi?.payNowLabel || "Feature Now"}
+              </Button>
+            ) : null}
 
-          {onEdit || onDelete ? (
-            <Box
-              sx={{
-                display: "flex",
-                gap: 1,
-                justifyContent: isList ? "flex-end" : "center",
-                width: "100%",
-              }}
-            >
-              {onEdit ? (
-                <IconButton
-                  size="small"
-                  aria-label="Edit listing"
-                  onClick={handleEdit}
-                  sx={iconBtnSx}
-                >
-                  <EditOutlinedIcon fontSize="small" sx={{ color: INFO }} />
-                </IconButton>
-              ) : null}
-              {onDelete ? (
-                <IconButton
-                  size="small"
-                  aria-label="Delete listing"
-                  disabled={deleteLoading}
-                  onClick={handleDelete}
-                  sx={{ ...iconBtnSx, borderColor: "rgba(239,68,68,0.35)" }}
-                >
-                  <DeleteOutlineIcon fontSize="small" sx={{ color: T.color.danger }} />
-                </IconButton>
-              ) : null}
-            </Box>
-          ) : null}
+            {onClick && showViewAction ? (
+              <Button
+                size="small"
+                variant={isList ? "outlined" : "contained"}
+                startIcon={<VisibilityOutlinedIcon sx={{ fontSize: 18 }} />}
+                onClick={handleView}
+                sx={{
+                  textTransform: "none",
+                  fontWeight: 600,
+                  fontSize: 13,
+                  ...(isList
+                    ? { borderColor: T.color.border, color: INFO, whiteSpace: "nowrap" }
+                    : { bgcolor: INFO, boxShadow: "none", width: "100%" }),
+                }}
+              >
+                {viewLabel}
+              </Button>
+            ) : null}
+
+            {onEdit || onDelete ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 1,
+                  justifyContent: isList ? "flex-end" : "center",
+                  width: "100%",
+                }}
+              >
+                {onEdit ? (
+                  <IconButton
+                    size="small"
+                    aria-label="Edit listing"
+                    onClick={handleEdit}
+                    sx={iconBtnSx}
+                  >
+                    <EditOutlinedIcon fontSize="small" sx={{ color: INFO }} />
+                  </IconButton>
+                ) : null}
+                {onDelete ? (
+                  <IconButton
+                    size="small"
+                    aria-label="Delete listing"
+                    disabled={deleteLoading}
+                    onClick={handleDelete}
+                    sx={{ ...iconBtnSx, borderColor: "rgba(239,68,68,0.35)" }}
+                  >
+                    <DeleteOutlineIcon fontSize="small" sx={{ color: T.color.danger }} />
+                  </IconButton>
+                ) : null}
+              </Box>
+            ) : null}
+          </Box>
         </Box>
+      </Box>
+
+      {/* Footer: location, seller name, and Featured status — always pinned to the bottom of the card */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          rowGap: 0.5,
+          columnGap: 1.5,
+          px: 2,
+          py: 1,
+          borderTop: `1px solid ${T.color.border}`,
+          bgcolor: T.color.surfaceMuted,
+        }}
+      >
+        {location ? (
+          <MetaIconLine
+            icon={<LocationOnOutlinedIcon />}
+            dense
+            sx={{ color: T.color.textMuted }}
+          >
+            {location}
+          </MetaIconLine>
+        ) : null}
+
+        <MetaIconLine icon={<PersonOutlineIcon />} dense>
+          <>
+            Seller:{" "}
+            <Box component="span" sx={{ fontWeight: 700, color: T.color.textPrimary }}>
+              {sellerName}
+            </Box>
+          </>
+        </MetaIconLine>
+
+        {isFeaturedListing ? (
+          <Chip
+            icon={<StarIcon sx={{ fontSize: "14px !important" }} />}
+            label="Featured"
+            size="small"
+            sx={{
+              ml: "auto",
+              fontWeight: 700,
+              bgcolor: alpha(WARNING, 0.95),
+              color: "#1a1a1a",
+            }}
+          />
+        ) : null}
       </Box>
     </Box>
   );

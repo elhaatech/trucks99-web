@@ -193,13 +193,13 @@ export function getListingSpecChips(product: BuySellProduct): ListingSpecChip[] 
       label: formatOwnersLabel(owners),
     });
   }
-  if (listingId) {
-    chips.push({
-      key: "listingId",
-      caption: "Listing ID",
-      label: listingId,
-    });
-  }
+  // if (listingId) {
+  //   chips.push({
+  //     key: "listingId",
+  //     caption: "Listing ID",
+  //     label: listingId,
+  //   });
+  // }
   return chips;
 }
 

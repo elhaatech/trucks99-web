@@ -296,80 +296,7 @@ export default function UserProductDashboardPage() {
         onSearch={handleSearch}
       />
 
-      <Box
-        sx={{
-          mt: 3,
-          mb: 1,
-          p: { xs: 2.5, md: 3 },
-          borderRadius: 3,
-          background: GRADIENT,
-          color: "#fff",
-          display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          alignItems: { sm: "center" },
-          justifyContent: "space-between",
-          gap: 2,
-          boxShadow: "0 12px 32px rgba(37, 99, 235, 0.28)",
-          border: "1px solid rgba(255,255,255,0.12)",
-        }}
-      >
-        <Box>
-          <Typography
-            sx={{
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              opacity: 0.85,
-              mb: 0.75,
-            }}
-          >
-            Quick actions
-          </Typography>
-          <Typography sx={{ fontWeight: 800, fontSize: { xs: 18, md: 22 }, mb: 0.5, letterSpacing: "-0.02em" }}>
-            AI Assistant
-          </Typography>
-          <Typography sx={{ opacity: 0.92, fontSize: 14, maxWidth: 560, lineHeight: 1.55 }}>
-            Create listings by chatting, check inventory status, and search your vehicles — no forms needed.
-          </Typography>
-        </Box>
-        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-          <Button
-            variant="contained"
-            onClick={() => router.push(userProductRoutes.assistant())}
-            sx={{
-              textTransform: "none",
-              fontWeight: 700,
-              bgcolor: "#fff",
-              color: PRIMARY_DARK,
-              borderRadius: 2.5,
-              px: 2.5,
-              boxShadow: "none",
-              "&:hover": { bgcolor: "rgba(255,255,255,0.92)", boxShadow: "none" },
-            }}
-          >
-            Open Assistant
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() =>
-              router.push(
-                `${userProductRoutes.assistant()}?q=${encodeURIComponent("I want to sell my truck")}`,
-              )
-            }
-            sx={{
-              textTransform: "none",
-              fontWeight: 600,
-              color: "#fff",
-              borderColor: "rgba(255,255,255,0.55)",
-              borderRadius: 2.5,
-              "&:hover": { borderColor: "#fff", bgcolor: "rgba(255,255,255,0.08)" },
-            }}
-          >
-            Sell with AI
-          </Button>
-        </Box>
-      </Box>
+  
 
       <Box sx={{ mt: 4 }}>
         {statsError && !statsLoading ? (
@@ -413,7 +340,57 @@ export default function UserProductDashboardPage() {
           ))}
         </CategoryScroller>
       </Box>
-
+      <Box sx={{ mt: 5 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 1,
+            gap: 2,
+          }}
+        >
+          <Typography
+            sx={{
+              fontWeight: 800,
+              fontSize: { xs: 18, md: 20 },
+              color: T.color.textPrimary,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Featured vehicles
+          </Typography>
+          <Button
+            onClick={() => router.push(userProductRoutes.featuredVehicles())}
+            sx={{ textTransform: "none", fontWeight: 700, color: "primary.main" }}
+          >
+            View all →
+          </Button>
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Premium listings with paid featured visibility on TRUCKS99.
+        </Typography>
+        <FeaturedVehiclesGrid
+          products={featuredVehicles}
+          loading={featuredLoading}
+          error={featuredError}
+          onRetry={() => {
+            setFeaturedLoading(true);
+            setFeaturedError("");
+            void getBuySellFeaturedVehicles(MARKETPLACE.FEATURED_SECTION_LIMIT)
+              .then((data) => setFeaturedVehicles(data ?? []))
+              .catch((err) =>
+                setFeaturedError(
+                  toErrorMessage(err, "Failed to load featured vehicles"),
+                ),
+              )
+              .finally(() => setFeaturedLoading(false));
+          }}
+          onViewDetails={(id) => void handleViewProduct(id)}
+          onBrowseAll={() => router.push(userProductRoutes.list())}
+          emptyDescription="No featured listings yet. Browse all vehicles or feature yours from your listing page."
+        />
+      </Box>
       <Box sx={{ mt: 5 }}>
         <Box
           sx={{
@@ -467,57 +444,7 @@ export default function UserProductDashboardPage() {
         />
       </Box>
 
-      <Box sx={{ mt: 5 }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 1,
-            gap: 2,
-          }}
-        >
-          <Typography
-            sx={{
-              fontWeight: 800,
-              fontSize: { xs: 18, md: 20 },
-              color: T.color.textPrimary,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            Featured vehicles
-          </Typography>
-          <Button
-            onClick={() => router.push(userProductRoutes.featuredVehicles())}
-            sx={{ textTransform: "none", fontWeight: 700, color: "primary.main" }}
-          >
-            View all →
-          </Button>
-        </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Premium listings with paid featured visibility on TRUCKS99.
-        </Typography>
-        <FeaturedVehiclesGrid
-          products={featuredVehicles}
-          loading={featuredLoading}
-          error={featuredError}
-          onRetry={() => {
-            setFeaturedLoading(true);
-            setFeaturedError("");
-            void getBuySellFeaturedVehicles(MARKETPLACE.FEATURED_SECTION_LIMIT)
-              .then((data) => setFeaturedVehicles(data ?? []))
-              .catch((err) =>
-                setFeaturedError(
-                  toErrorMessage(err, "Failed to load featured vehicles"),
-                ),
-              )
-              .finally(() => setFeaturedLoading(false));
-          }}
-          onViewDetails={(id) => void handleViewProduct(id)}
-          onBrowseAll={() => router.push(userProductRoutes.list())}
-          emptyDescription="No featured listings yet. Browse all vehicles or feature yours from your listing page."
-        />
-      </Box>
+
     </Box>
   );
 }
