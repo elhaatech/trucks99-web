@@ -418,6 +418,12 @@ function assertProductAvailableForSold(product) {
 }
 
 function sendRouteError(res, error, fallbackMessage) {
+  // Log full error for server-side debugging
+  try {
+    console.error("[buysell route error]", error && error.stack ? error.stack : error);
+  } catch (e) {
+    // ignore logging errors
+  }
   const statusCode = error.statusCode || 500;
   return res.status(statusCode).json({
     success: false,
@@ -426,32 +432,59 @@ function sendRouteError(res, error, fallbackMessage) {
   });
 }
 
-/** Generate next human-friendly BS number like "29-06-2026 - BS001", "29-06-2026 - BS002"… */
+/** Generate next human-friendly BS number like "29-06-2026 - BS001" using an atomic counter to avoid duplicates. */
 async function generateNextBsNumber() {
-  const last = await BuySellProduct.findOne(
-    { bsNumber: { $exists: true, $ne: null } },
-    { bsNumber: 1 },
-    { sort: { createdAt: -1 } },
-  ).lean();
+  // Use a dedicated counters collection for atomic increments
+  const coll = mongoose.connection.collection("counters");
+  const res = await coll.findOneAndUpdate(
+    { _id: "buysell_bs" },
+    { $inc: { seq: 1 } },
+    { upsert: true, returnDocument: "after" },
+  );
 
-  let nextNum = 1;
-  if (last?.bsNumber) {
-    // Extract numeric part from bsNumber (handles both old "BS001" and new "DD-MM-YYYY - BS001" formats)
-    const match = last.bsNumber.match(/BS(\d+)/);
-    if (match) {
-      nextNum = parseInt(match[1], 10) + 1;
+  let seq = res && res.value && typeof res.value.seq === "number" ? res.value.seq : 1;
+
+  // Ensure counter is at least above any existing bsNumber numeric suffix to avoid duplicates.
+  // Be tolerant of legacy or malformed bsNumber values while still preserving uniqueness.
+  try {
+    const allBsNumberDocs = await BuySellProduct.find(
+      { bsNumber: { $exists: true, $ne: null } },
+      { bsNumber: 1 },
+    ).lean();
+
+    let maxExisting = 0;
+    for (const doc of allBsNumberDocs) {
+      const match = String(doc.bsNumber).match(/BS(\d+)/);
+      if (!match) continue;
+      const num = Number(match[1]);
+      if (Number.isFinite(num) && num > maxExisting) {
+        maxExisting = num;
+      }
     }
+
+    if (seq <= maxExisting) {
+      const newSeq = maxExisting + 1;
+      const updated = await coll.findOneAndUpdate(
+        { _id: "buysell_bs" },
+        { $max: { seq: newSeq } },
+        { returnDocument: "after" },
+      );
+      seq = updated && updated.value && typeof updated.value.seq === "number" ? updated.value.seq : newSeq;
+    }
+  } catch (e) {
+    // If aggregation or lookup fails, fall back to current seq — log for debugging
+    console.error("[generateNextBsNumber] failed to compute max existing bsNumber:", e && e.stack ? e.stack : e);
   }
 
-  // Get today's date in DD-MM-YYYY format
   const today = new Date();
   const day = String(today.getDate()).padStart(2, "0");
   const month = String(today.getMonth() + 1).padStart(2, "0");
   const year = today.getFullYear();
   const dateStr = `${day}-${month}-${year}`;
 
-  return `${dateStr} - BS${String(nextNum).padStart(3, "0")}`;
+  return `${dateStr} - BS${String(seq).padStart(3, "0")}`;
 }
+
 
 /** Format bsNumber with creation date for response (converts old format to new format) */
 function formatBsNumberWithDate(bsNumber, createdAt) {
@@ -610,9 +643,9 @@ function enrichProductListItem(item, contactMap, favoriteSet, bitRecords, bidSum
 const LIST_PRODUCT_SELECT =
   "id bsNumber category_id subcategory_id userid price description images specifications country_id state_id city_id address pincode user_type status viewCount created_by createdAt updatedAt";
 
-/** Even leaner for paginated browse (no embedded specs payload). */
+/** Even leaner for paginated browse while keeping full specs payload for UI cards. */
 const LIST_PRODUCT_SELECT_LITE =
-  "id bsNumber category_id subcategory_id userid price description images country_id state_id city_id address pincode user_type status viewCount created_by createdAt updatedAt";
+  "id bsNumber category_id subcategory_id userid price description images specifications country_id state_id city_id address pincode user_type status viewCount created_by createdAt updatedAt";
 
 /** Optional page/limit — omit both to keep legacy full-list behavior. */
 function parseListPagination(body = {}) {
@@ -916,6 +949,80 @@ async function enrichBuySellProductsWithLocation(items) {
     country_info: countryMap[toIdStr(item.country_id)] || {},
     state_info: stateMap[toIdStr(item.state_id)] || {},
     city_info: cityMap[toIdStr(item.city_id)] || {},
+  }));
+}
+
+async function enrichBuySellSpecifications(items) {
+  if (!Array.isArray(items) || items.length === 0) return items;
+
+  const specIds = new Set();
+  const valueIds = new Set();
+
+  items.forEach((item) => {
+    (item.specifications || []).forEach((spec) => {
+      if (spec?.specification_id) {
+        specIds.add(String(spec.specification_id));
+      }
+      if (
+        spec?.specification_value &&
+        mongoose.Types.ObjectId.isValid(String(spec.specification_value))
+      ) {
+        valueIds.add(String(spec.specification_value));
+      }
+    });
+  });
+
+  const [specDocs, valueDocs] = await Promise.all([
+    specIds.size
+      ? Specification.find({ _id: { $in: [...specIds].map((id) => new mongoose.Types.ObjectId(id)) } })
+          .select("specification_name type is_required")
+          .lean()
+      : [],
+    valueIds.size
+      ? SpecificationValue.find({ _id: { $in: [...valueIds].map((id) => new mongoose.Types.ObjectId(id)) } })
+          .select("specification_value_name")
+          .lean()
+      : [],
+  ]);
+
+  const specMap = {};
+  specDocs.forEach((doc) => {
+    if (doc?._id) {
+      specMap[String(doc._id)] = doc;
+    }
+  });
+
+  const valueMap = {};
+  valueDocs.forEach((doc) => {
+    if (doc?._id) {
+      valueMap[String(doc._id)] = doc;
+    }
+  });
+
+  return items.map((item) => ({
+    ...item,
+    specifications: (item.specifications || []).map((spec) => {
+      const specId = String(spec?.specification_id || "");
+      const specInfoDoc = specMap[specId] || null;
+      const specValueId = String(spec?.specification_value || "");
+      const specValueInfo =
+        specInfoDoc?.type === "selectable" && valueMap[specValueId]
+          ? { specification_value_name: valueMap[specValueId].specification_value_name }
+          : null;
+
+      return {
+        specification_id: spec?.specification_id,
+        specification_value: spec?.specification_value,
+        specification_info: specInfoDoc
+          ? {
+              specification_name: specInfoDoc.specification_name,
+              type: specInfoDoc.type,
+              is_required: specInfoDoc.is_required,
+            }
+          : null,
+        specification_value_info: specValueInfo,
+      };
+    }),
   }));
 }
 
@@ -1261,7 +1368,9 @@ buySellRouter.post("/list", async (req, res) => {
       };
     });
 
-    const enrichedList = await enrichBuySellListItems(trimmedList, actor, {
+    const withLocation = await enrichBuySellProductsWithLocation(trimmedList);
+    const withSpecifications = await enrichBuySellSpecifications(withLocation);
+    const enrichedList = await enrichBuySellListItems(withSpecifications, actor, {
       // Paginated browse — skip bid aggregation + seller User lookups
       lite: Boolean(pagination),
     });
@@ -2886,25 +2995,50 @@ buySellRouter.post("/add", upload.array("images", 10), async (req, res) => {
       });
     }
 
-    const item = await BuySellProduct.create({
-      category_id: toObjectId(category_id),
-      subcategory_id: toObjectId(subcategory_id),
-      bsNumber: await generateNextBsNumber(),
-      price: numericPrice,
-      description: description || "",
-      images: allImages,
-      country_id: resolvedCountryId,
-      state_id: resolvedStateId,
-      city_id: resolvedCityId,
-      address: address || "",
-      pincode: pincode || "",
-      specifications: Array.isArray(parsedSpecs) ? parsedSpecs : [],
-      userid: actor.id,
-      created_by: actor.name,
-      updated_by: actor.name,
-      // ── Honour client's draft/pending choice; fall back to "pending" ──────
-      status: resolveCreateStatus(status, isAdminActor(actor)),
-    });
+    let item;
+    let lastError;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        item = await BuySellProduct.create({
+          category_id: toObjectId(category_id),
+          subcategory_id: toObjectId(subcategory_id),
+          bsNumber: await generateNextBsNumber(),
+          price: numericPrice,
+          description: description || "",
+          images: allImages,
+          country_id: resolvedCountryId,
+          state_id: resolvedStateId,
+          city_id: resolvedCityId,
+          address: address || "",
+          pincode: pincode || "",
+          specifications: Array.isArray(parsedSpecs) ? parsedSpecs : [],
+          userid: actor.id,
+          created_by: actor.name,
+          updated_by: actor.name,
+          // ── Honour client's draft/pending choice; fall back to "pending" ──────
+          status: resolveCreateStatus(status, isAdminActor(actor)),
+        });
+        lastError = null;
+        break;
+      } catch (err) {
+        lastError = err;
+        const message = String((err && err.message) || "");
+        if (
+          attempt < 2 &&
+          err &&
+          (err.code === 11000 || String(err.code) === "11000") &&
+          message.includes("bsNumber_1")
+        ) {
+          console.warn("[buy-sell add] duplicate bsNumber detected, retrying create", message);
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    if (!item) {
+      throw lastError || new Error("Failed to create BuySell product after retrying bsNumber generation.");
+    }
 
     await Log.create({
       name: actor.name,

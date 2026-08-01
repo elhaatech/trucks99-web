@@ -7,15 +7,12 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import Chip from "@mui/material/Chip";
-import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
 import StarIcon from "@mui/icons-material/Star";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
-import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
 import { alpha } from "@mui/material/styles";
 import { PRODUCT_THEME as T, INFO, SUCCESS, WARNING } from "@/lib/theme";
 import { getBuySellImageUrl } from "@/lib/buysellUtils";
@@ -24,12 +21,9 @@ import {
   formatProductPrice,
   getListingCardCategory,
   getListingCardTitle,
-  getListingSpecChips,
-  getProductLocation,
-  getSellerDisplayName,
-  getSellerMobile,
+  getVehicleInfoValues,
 } from "./utils";
-import { MetaIconLine, PhoneMetaLine } from "./MetaIconLine";
+import { VehicleInfo } from "./VehicleInfo";
 import {
   getFeaturedStatus,
   resolveFeaturedListingUi,
@@ -74,8 +68,6 @@ export const VehicleCard = memo(function VehicleCard({
     showOwnerFeaturedControls ? resolveFeaturedListingUi(product) : null;
   const isFavorited =
     Boolean(isFavorite) || Boolean(product.is_favorite);
-  /** Public "Featured" badge — shown for any listing marked featured, regardless of viewer. */
-  const isFeaturedListing = Boolean(product.isFeatured) || featuredStatus === "active";
   /** Pay Now only for own listings that are not favorited and not actively featured. */
   const showFeaturePayNow =
     showOwnerFeaturedControls &&
@@ -87,9 +79,8 @@ export const VehicleCard = memo(function VehicleCard({
   const imageUrl = getBuySellImageUrl(product.images?.[0]);
   const title = getListingCardTitle(product);
   const categoryLabel = getListingCardCategory(product);
-  const location = getProductLocation(product);
-  const sellerName = getSellerDisplayName(product);
-  const sellerMobile = getSellerMobile(product);
+  const priceLabel = formatProductPrice(product.price);
+  const vehicleInfo = getVehicleInfoValues(product);
   const isList = layout === "list";
 
   const handleClick = () => onClick?.(productId);
@@ -214,6 +205,37 @@ export const VehicleCard = memo(function VehicleCard({
               <Chip label="Expired" size="small" color="default" sx={{ fontWeight: 600 }} />
             ) : null}
           </Box>
+
+          <Box
+            sx={{
+              position: "absolute",
+              left: 12,
+              bottom: 12,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 1,
+              px: 2,
+              py: 1,
+              borderRadius: 3,
+              bgcolor: "rgba(15, 23, 42, 0.82)",
+              color: "#fff",
+              backdropFilter: "blur(12px)",
+              boxShadow: "0 12px 24px rgba(0,0,0,0.18)",
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: 16,
+                fontWeight: 800,
+                lineHeight: 1.1,
+                letterSpacing: "0.01em",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {priceLabel}
+            </Typography>
+          </Box>
+
           {onFavoriteToggle ? (
             <IconButton
               size="small"
@@ -222,9 +244,11 @@ export const VehicleCard = memo(function VehicleCard({
               onClick={handleFavorite}
               sx={{
                 position: "absolute",
-                top: 8,
-                right: 8,
-                bgcolor: "rgba(255,255,255,0.92)",
+                top: 10,
+                right: 10,
+                bgcolor: "rgba(255,255,255,0.94)",
+                border: `1px solid ${alpha(T.color.border, 0.85)}`,
+                boxShadow: "0 6px 18px rgba(15, 23, 42, 0.12)",
                 "&:hover": { bgcolor: "#fff" },
               }}
             >
@@ -280,65 +304,7 @@ export const VehicleCard = memo(function VehicleCard({
               </Typography>
             ) : null}
 
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                gap: 0.75,
-                mt: 1,
-                maxWidth: 340,
-              }}
-            >
-              {getListingSpecChips(product).slice(0, 3).map((chip) => (
-                <Box
-                  key={chip.key}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    bgcolor: T.color.surfaceMuted,
-                    borderRadius: 1.5,
-                    py: 0.75,
-                    px: 0.85,
-                  }}
-                >
-                  <Typography
-                    sx={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: T.color.textPrimary,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {chip.label}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-
-            <Typography
-              sx={{
-                fontSize: 12,
-                color: T.color.textSecondary,
-                mt: 1,
-                lineHeight: 1.4,
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }}
-            >
-              {location || "Location not specified"}
-            </Typography>
-
-            <Box sx={{ display: "flex", gap: 0.75, alignItems: "center", mt: 0.75 }}>
-              <PersonOutlineIcon sx={{ fontSize: 16, color: T.color.textMuted }} />
-              <Typography sx={{ fontSize: 12, color: T.color.textPrimary, fontWeight: 600 }}>
-                {sellerName}
-              </Typography>
-            </Box>
+            <VehicleInfo info={vehicleInfo} />
           </Box>
 
           <Box
@@ -437,54 +403,6 @@ export const VehicleCard = memo(function VehicleCard({
             ) : null}
           </Box>
         </Box>
-      </Box>
-
-      {/* Footer: location, seller name, and Featured status — always pinned to the bottom of the card */}
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          flexWrap: "wrap",
-          rowGap: 0.5,
-          columnGap: 1.5,
-          px: 2,
-          py: 1,
-          borderTop: `1px solid ${T.color.border}`,
-          bgcolor: T.color.surfaceMuted,
-        }}
-      >
-        {location ? (
-          <MetaIconLine
-            icon={<LocationOnOutlinedIcon />}
-            dense
-            sx={{ color: T.color.textMuted }}
-          >
-            {location}
-          </MetaIconLine>
-        ) : null}
-
-        <MetaIconLine icon={<PersonOutlineIcon />} dense>
-          <>
-            Seller:{" "}
-            <Box component="span" sx={{ fontWeight: 700, color: T.color.textPrimary }}>
-              {sellerName}
-            </Box>
-          </>
-        </MetaIconLine>
-
-        {isFeaturedListing ? (
-          <Chip
-            icon={<StarIcon sx={{ fontSize: "14px !important" }} />}
-            label="Featured"
-            size="small"
-            sx={{
-              ml: "auto",
-              fontWeight: 700,
-              bgcolor: alpha(WARNING, 0.95),
-              color: "#1a1a1a",
-            }}
-          />
-        ) : null}
       </Box>
     </Box>
   );

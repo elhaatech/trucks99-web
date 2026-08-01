@@ -40,6 +40,7 @@ export type BuySellProduct = {
   /** Resolved highlight fields from list enrichment (preferred for cards). */
   listing_highlights?: {
     makeYear?: string | null;
+    mileage?: string | null;
     fuelType?: string | null;
     owners?: string | null;
     brand?: string | null;

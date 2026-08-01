@@ -5,6 +5,7 @@ import Typography from "@mui/material/Typography";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
 import LocalGasStationOutlinedIcon from "@mui/icons-material/LocalGasStationOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
+import SpeedOutlinedIcon from "@mui/icons-material/SpeedOutlined";
 import TagOutlinedIcon from "@mui/icons-material/TagOutlined";
 import type { BuySellProduct } from "@/model/services/buysellapi";
 import { PRODUCT_THEME as T } from "@/lib/theme";
@@ -15,6 +16,7 @@ const CHIP_META: Record<
   { color: string; Icon: typeof CalendarMonthOutlinedIcon }
 > = {
   year: { color: "#2563eb", Icon: CalendarMonthOutlinedIcon },
+  km: { color: "#0f766e", Icon: SpeedOutlinedIcon },
   fuel: { color: "#ea580c", Icon: LocalGasStationOutlinedIcon },
   owners: { color: "#7c3aed", Icon: PersonOutlineOutlinedIcon },
   listingId: { color: "#0f766e", Icon: TagOutlinedIcon },

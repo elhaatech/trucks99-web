@@ -7,6 +7,10 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import { alpha } from "@mui/material/styles";
 import NorthEastIcon from "@mui/icons-material/NorthEast";
+import Inventory2Icon from "@mui/icons-material/Inventory2";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import LocalOfferIcon from "@mui/icons-material/LocalOffer";
+import ToggleOnIcon from "@mui/icons-material/ToggleOn";
 import { PRODUCT_THEME as T, DASHBOARD_ACCENTS, INFO, LAYOUT, PRIMARY, SHADOW } from "@/lib/theme";
 import { HERO_TRUCK_IMAGES } from "@/lib/heroTruckImages";
 import { userProductRoutes } from "@/lib/userProductRoutes";
@@ -85,9 +89,10 @@ type StatCardProps = {
   accent: (typeof DASHBOARD_ACCENTS)[keyof typeof DASHBOARD_ACCENTS];
   emphasis: "primary" | "secondary";
   composition?: { value: number; label: string };
+  icon?: React.ReactNode;
 };
 
-function StatCard({ label, value, accent, emphasis, composition }: StatCardProps) {
+function StatCard({ label, value, accent, emphasis, composition, icon }: StatCardProps) {
   const primary = emphasis === "primary";
 
   return (
@@ -111,18 +116,22 @@ function StatCard({ label, value, accent, emphasis, composition }: StatCardProps
         },
       }}
     >
-      <Typography
-        sx={{
-          fontSize: primary ? 11 : 10.5,
-          fontWeight: 600,
-          letterSpacing: "0.06em",
-          textTransform: "uppercase",
-          color: T.color.textMuted,
-          lineHeight: 1.2,
-        }}
-      >
-        {label}
-      </Typography>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}>
+        <Typography
+          sx={{
+            fontSize: primary ? 11 : 10.5,
+            fontWeight: 600,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+            color: T.color.textMuted,
+            lineHeight: 1.2,
+            flex: 1,
+          }}
+        >
+          {label}
+        </Typography>
+        {icon ? <Box sx={{ color: accent.main, ml: 1, flexShrink: 0 }}>{icon}</Box> : null}
+      </Box>
 
       <Typography
         sx={{
@@ -316,10 +325,12 @@ export function MarketplaceStatsCards({
             sm: "repeat(2, minmax(0, 1fr))",
             lg: "repeat(4, minmax(0, 1fr))",
           },
+          gridAutoRows: "1fr",
+          alignItems: "stretch",
           gap: 3,
         }}
       >
-        <Box sx={{ height: "100%" }}>
+        <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
           <StatCard
             label="Total listings"
             value={stats.totalListings}
@@ -329,9 +340,10 @@ export function MarketplaceStatsCards({
               value: activeShare,
               label: `${activeShare}% currently active`,
             }}
+            icon={<Inventory2Icon />}
           />
         </Box>
-        <Box sx={{ gridColumn: { xs: "span 2", sm: "span 1", md: "span 4" } }}>
+        <Box sx={{ gridColumn: { xs: "span 2", sm: "span 1", md: "span 4" }, height: "100%", display: "flex", flexDirection: "column" }}>
           <StatCard
             label="Active listings"
             value={stats.activeListings}
@@ -345,8 +357,9 @@ export function MarketplaceStatsCards({
                   : "No listings yet",
             }}
           />
+            icon={<ToggleOnIcon />}
         </Box>
-        <Box sx={{ gridColumn: { xs: "span 1", md: "span 2" } }}>
+        <Box sx={{ gridColumn: { xs: "span 1", md: "span 2" }, height: "100%", display: "flex", flexDirection: "column" }}>
           <StatCard
             label="Sold"
             value={stats.soldVehicles}
@@ -356,9 +369,10 @@ export function MarketplaceStatsCards({
               value: soldShare,
               label: `${soldShare}% of inventory`,
             }}
+            icon={<CheckCircleOutlineIcon />}
           />
         </Box>
-        <Box sx={{ gridColumn: { xs: "span 1", md: "span 2" } }}>
+        <Box sx={{ gridColumn: { xs: "span 1", md: "span 2" }, height: "100%", display: "flex", flexDirection: "column" }}>
           <StatCard
             label="Offers"
             value={stats.totalOffers}
@@ -371,6 +385,7 @@ export function MarketplaceStatsCards({
                   ? `~${offersPerListing} per listing`
                   : "No offers yet",
             }}
+            icon={<LocalOfferIcon />}
           />
         </Box>
       </Box>

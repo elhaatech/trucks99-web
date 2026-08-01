@@ -125,7 +125,7 @@ export function getProductSubtitle(product: BuySellProduct): string {
 }
 
 export type ListingSpecChip = {
-  key: "year" | "fuel" | "owners" | "listingId";
+  key: "year" | "km" | "fuel" | "owners" | "listingId";
   label: string;
   /** Small caption shown above/beside the value (matches Vehicle Details). */
   caption: string;
@@ -135,6 +135,13 @@ function formatOwnersLabel(raw: string): string {
   const n = Number(String(raw).replace(/[^\d]/g, ""));
   if (Number.isFinite(n)) return String(n);
   return raw.trim();
+}
+
+function formatKilometers(raw: string | undefined): string | undefined {
+  const value = String(raw ?? "").trim();
+  if (!value) return undefined;
+ 
+  return value;
 }
 
 /**
@@ -154,6 +161,9 @@ export function getListingSpecChips(product: BuySellProduct): ListingSpecChip[] 
       "model year",
       "year",
     );
+  const km =
+    highlights?.mileage?.trim() ||
+    pullSpecLoose(specs, "kilometers", "km", "mileage", "odometer", "driven");
   const fuel =
     highlights?.fuelType?.trim() ||
     pullSpecLoose(specs, "fuel type", "fuel");
@@ -179,6 +189,10 @@ export function getListingSpecChips(product: BuySellProduct): ListingSpecChip[] 
   if (year?.trim() && !looksLikeObjectId(year)) {
     chips.push({ key: "year", caption: "Make Year", label: year.trim() });
   }
+  const formattedKm = formatKilometers(km);
+  if (formattedKm && !looksLikeObjectId(formattedKm)) {
+    chips.push({ key: "km", caption: "Odometer", label: formattedKm });
+  }
   if (fuel?.trim() && !looksLikeObjectId(fuel)) {
     chips.push({
       key: "fuel",
@@ -201,6 +215,34 @@ export function getListingSpecChips(product: BuySellProduct): ListingSpecChip[] 
   //   });
   // }
   return chips;
+}
+
+export type VehicleInfoValues = {
+  year?: string;
+  fuelType?: string;
+  kmDriven?: string;
+  owners?: string;
+  location?: string;
+};
+
+export function getVehicleInfoValues(product: BuySellProduct): VehicleInfoValues {
+  const specChips = getListingSpecChips(product);
+  const values = Object.fromEntries(
+    specChips.map((chip) => [chip.key, chip.label]),
+  ) as Partial<Record<"year" | "km" | "fuel" | "owners", string>>;
+
+  const directYear = String((product as any).manufacturingYear ?? "").trim();
+  const directFuel = String((product as any).fuelType ?? "").trim();
+  const directKm = formatKilometers(String((product as any).kmDriven ?? "").trim());
+  const directOwners = String((product as any).owners ?? "").trim();
+
+  return {
+    year: directYear || values.year,
+    fuelType: directFuel || values.fuel,
+    kmDriven: directKm || values.km,
+    owners: directOwners || values.owners,
+    location: getProductLocation(product) || undefined,
+  };
 }
 
 /** Prefer brand for card heading when specs are enriched. */
