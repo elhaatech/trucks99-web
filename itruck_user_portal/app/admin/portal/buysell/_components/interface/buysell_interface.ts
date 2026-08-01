@@ -51,7 +51,7 @@ export const EMPTY_FILTERS: FilterState = {
   subcategory_id: "",
   status: "",
   user_type: "",
-  usear_type: "buy",
+  usear_type: "all",
   userid: "",
   min_price: "",
   max_price: "",

@@ -34,15 +34,18 @@ import { getBlockUnblockAction } from "@/lib/blockUnblockUtils";
 import {
   BuySellProduct,
   deleteBuySellProducts,
-  getBuySellList,
+  getBuySellListPage,
   getBuySellRowId,
   bulkUploadBuySellProducts,
 } from "@/model/services/buysellapi";
+import { toBuySellListPayload } from "@/lib/buySellListUtils";
 import { EMPTY_FILTERS, FilterState } from "../interface/buysell_interface";
 import { useBuySellColumns } from "./buysellcolumns";
 import { BuySellFilters } from "./buysellcolumnsFilters";
 import { addFavorite, removeFavorite } from "@/model/services/favoriteapi";
 import { BulkUploadDialog } from "./bulkuploaddialog";
+
+const ADMIN_LIST_PAGE_SIZE = 20;
 
 type DeleteCtx = { mode: "single"; row: BuySellProduct } | { mode: "bulk" };
 type BlockCtx = { row: BuySellProduct; action: "block" | "unblock" };
@@ -50,6 +53,8 @@ type BlockCtx = { row: BuySellProduct; action: "block" | "unblock" };
 type BuySellListPersistedState = {
   filters: FilterState;
   appliedFilters: FilterState;
+  page?: number;
+  pageSize?: number;
 };
 
 export function BuySellListPage() {
@@ -62,13 +67,21 @@ export function BuySellListPage() {
   const [appliedFilters, setAppliedFilters] =
     useState<FilterState>(EMPTY_FILTERS);
 
-  usePersistListState<BuySellListPersistedState>({ filters, appliedFilters });
-
   const [items, setItems] = useState<BuySellProduct[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(0); // DataTable uses 0-based page
+  const [pageSize, setPageSize] = useState(ADMIN_LIST_PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  usePersistListState<BuySellListPersistedState>({
+    filters,
+    appliedFilters,
+    page,
+    pageSize,
+  });
 
   // ── Favourites state ──────────────────────────────────────────────────────
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
@@ -93,33 +106,28 @@ export function BuySellListPage() {
 
   // ── Load list (always pass filters explicitly — no closure deps) ──────────
   const loadAll = useCallback(
-    async (applied: FilterState) => {
+    async (
+      applied: FilterState,
+      opts?: { page?: number; pageSize?: number },
+    ) => {
       setLoading(true);
       setError("");
+      const nextPage = opts?.page ?? page;
+      const nextPageSize = opts?.pageSize ?? pageSize;
       try {
-        const minPrice = applied.min_price
-          ? Number(applied.min_price)
-          : undefined;
-        const maxPrice = applied.max_price
-          ? Number(applied.max_price)
-          : undefined;
-
-        const res = await getBuySellList({
-          status: applied.status || undefined,
-          usear_type: applied.usear_type || "buy",
-          category_id: applied.category_id || undefined,
-          subcategory_id: applied.subcategory_id || undefined,
-          min_price:
-            minPrice !== undefined && !Number.isNaN(minPrice)
-              ? minPrice
-              : undefined,
-          max_price:
-            maxPrice !== undefined && !Number.isNaN(maxPrice)
-              ? maxPrice
-              : undefined,
+        const result = await getBuySellListPage({
+          ...toBuySellListPayload({
+            ...applied,
+            usear_type: applied.usear_type || "all",
+          }),
+          page: nextPage + 1, // API is 1-based
+          limit: nextPageSize,
         });
-        const products = res ?? [];
+        const products = result.items ?? [];
         setItems(products);
+        setTotalCount(result.total ?? products.length);
+        setPage((result.page ?? nextPage + 1) - 1);
+        setPageSize(result.limit ?? nextPageSize);
 
         // Seed favoriteIds directly from is_favorite field returned by API
         setFavoriteIds(
@@ -138,35 +146,62 @@ export function BuySellListPage() {
         setLoading(false);
       }
     },
-    [notify], // notify is stable — no eslint-disable needed
+    [notify, page, pageSize],
   );
 
   // ── Mount: restore saved filters when navigating back ─────────────────────
   useEffect(() => {
     const saved = loadListState<BuySellListPersistedState>(pathname);
     const initialApplied = saved?.appliedFilters ?? EMPTY_FILTERS;
+    const initialPage = saved?.page ?? 0;
+    const initialPageSize = saved?.pageSize ?? ADMIN_LIST_PAGE_SIZE;
     if (saved) {
       setFiltersPatch(saved.filters);
       setAppliedFilters(saved.appliedFilters);
+      setPage(initialPage);
+      setPageSize(initialPageSize);
     }
-    void loadAll(initialApplied);
+    void loadAll(initialApplied, {
+      page: initialPage,
+      pageSize: initialPageSize,
+    });
     getCurrentUser()
       .then((u) => setCurrentUser(u as User))
       .catch(() => setCurrentUser(null));
-  }, [loadAll, pathname, setFiltersPatch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount / pathname restore only
+  }, [pathname, setFiltersPatch]);
 
   // ── Search / Clear ────────────────────────────────────────────────────────
   const handleSearch = useCallback(() => {
     setAppliedFilters({ ...filters });
-    void loadAll(filters);
-  }, [filters, loadAll]);
+    setPage(0);
+    void loadAll(filters, { page: 0, pageSize });
+  }, [filters, loadAll, pageSize]);
 
   const handleClear = useCallback(() => {
     resetFilters();
     setAppliedFilters(EMPTY_FILTERS);
     setSelectedIds([]);
-    void loadAll(EMPTY_FILTERS);
-  }, [resetFilters, loadAll]);
+    setPage(0);
+    void loadAll(EMPTY_FILTERS, { page: 0, pageSize });
+  }, [resetFilters, loadAll, pageSize]);
+
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      setPage(newPage);
+      void loadAll(appliedFilters, { page: newPage, pageSize });
+    },
+    [appliedFilters, loadAll, pageSize],
+  );
+
+  const handlePageSizeChange = useCallback(
+    (newSize: number) => {
+      setPageSize(newSize);
+      setPage(0);
+      void loadAll(appliedFilters, { page: 0, pageSize: newSize });
+    },
+    [appliedFilters, loadAll],
+  );
 
   const userOptions = useMemo(() => {
     const seen = new Map<string, string>();
@@ -180,18 +215,6 @@ export function BuySellListPage() {
       label,
     }));
   }, [items]);
-
-  const filteredItems = useMemo(() => {
-    const q = appliedFilters.search.trim().toLowerCase();
-    return items.filter((row) => {
-      const desc = (row.description ?? "").toLowerCase();
-      const addr = (row.address ?? "").toLowerCase();
-      const matchesSearch = !q || desc.includes(q) || addr.includes(q);
-      const matchesUser =
-        !appliedFilters.userid || row.userid === appliedFilters.userid;
-      return matchesSearch && matchesUser;
-    });
-  }, [items, appliedFilters.search, appliedFilters.userid]);
   // ── Favourite toggle (optimistic) ─────────────────────────────────────────
   const handleToggleFavorite = useCallback(
     async (row: BuySellProduct) => {
@@ -274,13 +297,13 @@ export function BuySellListPage() {
         setSelectedIds([]);
         notify({ type: "danger", message: "Products deleted successfully." });
       }
-      await loadAll(appliedFilters);
+      await loadAll(appliedFilters, { page, pageSize });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Delete failed";
       setError(msg);
       notify({ type: "error", message: msg });
     }
-  }, [deleteTarget, loadAll, appliedFilters, notify, selectedIds]);
+  }, [deleteTarget, loadAll, appliedFilters, notify, selectedIds, page, pageSize]);
 
   // ── Block / Unblock handlers ──────────────────────────────────────────────
   const handleBlockUnblock = useCallback(
@@ -404,10 +427,10 @@ export function BuySellListPage() {
     >
       <SelectionBanner
         count={selectedIds.length}
-        total={filteredItems.length}
+        total={totalCount}
         onAction={canDelete ? handleDeleteSelected : undefined}
         onClear={() => setSelectedIds([])}
-        onSelectAll={canDelete ? () => setSelectedIds(filteredItems.map(getBuySellRowId)) : undefined}
+        onSelectAll={canDelete ? () => setSelectedIds(items.map(getBuySellRowId)) : undefined}
       />
 
       <BuySellFilters
@@ -421,7 +444,7 @@ export function BuySellListPage() {
 
       <DataTable<BuySellProduct>
         columns={columns}
-        rows={filteredItems}
+        rows={items}
         getRowId={getBuySellRowId}
         loading={loading}
         emptyMessage="No listings yet. Add one to get started."
@@ -429,6 +452,11 @@ export function BuySellListPage() {
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
         actions={rowActions}
+        totalCount={totalCount}
+        page={page}
+        pageSize={pageSize}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
       />
 
       <ConfirmDialog
@@ -459,7 +487,7 @@ export function BuySellListPage() {
         open={bulkUploadOpen}
         onClose={() => setBulkUploadOpen(false)}
         onUpload={bulkUploadBuySellProducts}
-        onSuccess={() => loadAll(appliedFilters)}
+        onSuccess={() => loadAll(appliedFilters, { page, pageSize })}
         entityLabel="Buy & Sell Products"
         templateHint={
           "Excel columns required (row 1 headers, exact spelling):\n" +

@@ -850,6 +850,16 @@ function buildBuySellUseridFilter(ownerUser) {
   return { $or: conditions };
 }
 
+/** Actor-shaped wrapper — listings store userid as either Mongo _id or custom uuid. */
+function buildBuySellUseridFilterFromActor(actor) {
+  if (!actor) return null;
+  const mongoId = actor.mongoId ? toObjectId(actor.mongoId) : null;
+  return buildBuySellUseridFilter({
+    _id: mongoId || actor.mongoId || null,
+    id: actor.customId || null,
+  });
+}
+
 /** Batch-enrich buy/sell list items with country/state/city info. */
 async function enrichBuySellProductsWithLocation(items) {
   if (!Array.isArray(items) || items.length === 0) return items;
@@ -1097,6 +1107,7 @@ buySellRouter.post("/list", async (req, res) => {
       country_id,
       state_id,
       city_id,
+      userid,
       usear_type,
       min_price,
       max_price,
@@ -1108,10 +1119,33 @@ buySellRouter.post("/list", async (req, res) => {
 
     const filter = {};
 
-    if (usear_type === "sell" && actor.id) {
-      filter.userid = actor.id;
-    } else if (usear_type === "buy" && actor.id) {
-      filter.userid = { $ne: actor.id };
+    // Ownership scope: sell = mine, buy = others, all/empty = everyone.
+    // userid may be Mongo ObjectId or custom uuid — never compare with a single shape.
+    const scope = String(usear_type || "").toLowerCase();
+    if (scope === "sell" && actor.id) {
+      const mine = buildBuySellUseridFilterFromActor(actor);
+      if (mine) {
+        filter.$and = [...(filter.$and || []), mine];
+      }
+    } else if (scope === "buy" && actor.id) {
+      const mine = buildBuySellUseridFilterFromActor(actor);
+      if (mine) {
+        filter.$nor = [...(filter.$nor || []), mine];
+      }
+    }
+
+    // Optional seller filter (admin list / tools).
+    if (userid) {
+      const sellerUser = await findUserByEitherId(String(userid));
+      const sellerFilter = sellerUser
+        ? buildBuySellUseridFilter(sellerUser)
+        : buildBuySellUseridFilter({
+            _id: toObjectId(userid),
+            id: String(userid),
+          });
+      if (sellerFilter) {
+        filter.$and = [...(filter.$and || []), sellerFilter];
+      }
     }
 
     if (category_id) {
@@ -1234,13 +1268,20 @@ buySellRouter.post("/list", async (req, res) => {
 
     // Legacy clients expect a bare array; paginated clients send page/limit.
     if (pagination) {
+      const totalPages = Math.max(1, Math.ceil(total / pagination.limit));
       return res.json({
         success: true,
         data: toResponseList(enrichedList),
         total,
         page: pagination.page,
         limit: pagination.limit,
-        totalPages: Math.max(1, Math.ceil(total / pagination.limit)),
+        totalPages,
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total,
+          totalPages,
+        },
       });
     }
 

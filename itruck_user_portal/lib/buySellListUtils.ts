@@ -12,16 +12,21 @@ export function toBuySellListPayload(
     | "status"
     | "min_price"
     | "max_price"
+    | "userid"
+    | "search"
   >,
 ): BuySellListFilter {
   const minPrice = filters.min_price ? Number(filters.min_price) : undefined;
   const maxPrice = filters.max_price ? Number(filters.max_price) : undefined;
+  const search = filters.search?.trim();
 
   return {
     status: filters.status || undefined,
     usear_type: filters.usear_type || "buy",
     category_id: filters.category_id || undefined,
     subcategory_id: filters.subcategory_id || undefined,
+    userid: filters.userid || undefined,
+    search: search || undefined,
     min_price:
       minPrice !== undefined && !Number.isNaN(minPrice) ? minPrice : undefined,
     max_price:

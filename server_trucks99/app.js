@@ -74,6 +74,7 @@ const assistantRouter = require("./views/handleAssistant");
 const advertisementRouter = require("./views/advertisementrouter");
 const emiRouter = require("./views/handleEmiRouter");
 const contactRouter = require("./views/handleContactRouter");
+const legalRouter = require("./views/handleLegalRouter");
 
 // const reportRouter = require('./views/handleBuySellReport');
 const app = express();
@@ -336,6 +337,8 @@ app.use("/api/buysell", buySellProductRouter);
 app.use("/api/emi", emiRouter);
 // Contact us — public info + form submit
 app.use("/api/contact", contactRouter);
+// Terms & Privacy — public read, admin update
+app.use("/api/legal", legalRouter);
 
 app.use("/api", firebaseSendMessageRouter);
 app.use("/api/specifications", specificationRouter);

@@ -176,6 +176,8 @@ export type BuySellListFilter = {
   country_id?: string;
   state_id?: string;
   city_id?: string;
+  /** Filter by seller (Mongo _id or custom uuid). */
+  userid?: string;
   user_type?: "buy" | "sell" | "all" | "";
   usear_type?: "buy" | "sell" | "all" | "";
   min_price?: number;
@@ -453,6 +455,34 @@ export async function getBuySellList(
   }
 }
 
+/** Read page meta from top-level fields or nested `pagination`. */
+function readBuySellListPagination(
+  payload: unknown,
+  fallback: { page: number; limit: number; itemCount: number },
+): Omit<BuySellListPage, "items"> {
+  const root =
+    payload && typeof payload === "object"
+      ? (payload as Record<string, unknown>)
+      : {};
+  const nested =
+    root.pagination && typeof root.pagination === "object"
+      ? (root.pagination as Record<string, unknown>)
+      : {};
+
+  const num = (v: unknown, d: number) =>
+    typeof v === "number" && Number.isFinite(v) ? v : d;
+
+  const limit = num(nested.limit, num(root.limit, fallback.limit));
+  const page = num(nested.page, num(root.page, fallback.page));
+  const total = num(nested.total, num(root.total, fallback.itemCount));
+  const totalPages = num(
+    nested.totalPages,
+    num(root.totalPages, Math.max(1, Math.ceil(total / Math.max(1, limit)))),
+  );
+
+  return { total, page, limit, totalPages };
+}
+
 /** Paginated list — prefers server `total` when page/limit are sent. */
 export async function getBuySellListPage(
   body: BuySellListFilter & { page: number; limit: number },
@@ -469,21 +499,12 @@ export async function getBuySellListPage(
           signal: options?.signal,
         });
         const items = unwrapBuySellListResponse(payload);
-        const root =
-          payload && typeof payload === "object"
-            ? (payload as Record<string, unknown>)
-            : {};
-        const total =
-          typeof root.total === "number" ? root.total : items.length;
-        const page =
-          typeof root.page === "number" ? root.page : body.page;
-        const limit =
-          typeof root.limit === "number" ? root.limit : body.limit;
-        const totalPages =
-          typeof root.totalPages === "number"
-            ? root.totalPages
-            : Math.max(1, Math.ceil(total / limit));
-        return { items, total, page, limit, totalPages };
+        const meta = readBuySellListPagination(payload, {
+          page: body.page,
+          limit: body.limit,
+          itemCount: items.length,
+        });
+        return { items, ...meta };
       },
       options?.signal ? 0 : 15_000,
     );

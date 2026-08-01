@@ -355,7 +355,7 @@ export default function MarketplaceRegisterPage() {
                 <Typography variant="body2">
                   I agree to the{" "}
                   <Link
-                    href="/privacy/policy"
+                    href={userProductRoutes.legal("terms")}
                     target="_blank"
                     style={{ fontWeight: 600, textDecoration: "none" }}
                   >

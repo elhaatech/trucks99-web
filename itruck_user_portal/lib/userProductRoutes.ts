@@ -37,6 +37,7 @@ export const userProductRoutes = {
   featuredVehicles: () => `${BASE}/featured-vehicles`,
   purchases: () => `${BASE}/purchases`,
   contact: () => `${BASE}/contact`,
+  legal: (type: "terms" | "privacy") => `${BASE}/legal/${type}`,
   profile: () => `${BASE}/profile`,
   login: (returnTo?: string) => {
     const path = `${BASE}/login`;

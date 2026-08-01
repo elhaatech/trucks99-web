@@ -20,7 +20,7 @@ import { userProductRoutes } from "@/lib/userProductRoutes";
 import { PRODUCT_THEME as T } from "@/lib/theme";
 import {
   deleteBuySellProducts,
-  getBuySellList,
+  getBuySellListPage,
   getBuySellRowId,
   type BuySellProduct,
 } from "@/model/services/buysellapi";
@@ -36,6 +36,9 @@ import {
 import { SellVehiclePageHeader } from "./_components/SellVehiclePageHeader";
 import type { BuySellFormSuccessContext } from "@/app/admin/portal/buysell/_components/buysellcolumnsForm/buysellForm";
 import { toErrorMessage } from "@/lib/errors";
+import { MARKETPLACE } from "@/constants/marketplace";
+import { isAbortError } from "@/lib/apiCache";
+import { VEHICLE_PAGE_SIZE } from "@/app/common/components/buysell";
 
 const BuySellForm = dynamic(
   () =>
@@ -66,6 +69,9 @@ function SellVehicleContent() {
 
   const isCreate = searchParams.get("tab") === "create";
   const [products, setProducts] = useState<BuySellProduct[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
@@ -74,20 +80,34 @@ function SellVehicleContent() {
   const [featurePlansTarget, setFeaturePlansTarget] =
     useState<NewListingFeaturedPrompt | null>(null);
 
-  const listingCount = products.length;
+  const listingCount = total;
+  const pageSize = VEHICLE_PAGE_SIZE || MARKETPLACE.VEHICLE_PAGE_SIZE;
 
   const loadListings = useCallback(
-    async (options?: { silent?: boolean }) => {
+    async (options?: { silent?: boolean; page?: number }) => {
+      const pageToLoad = options?.page ?? page;
       if (!options?.silent) {
         setLoading(true);
       }
       setListError("");
       try {
-        const res = await getBuySellList(
-          toBuySellListPayload({ ...EMPTY_FILTERS, usear_type: "sell" }),
-        );
-        setProducts(res ?? []);
+        const result = await getBuySellListPage({
+          ...toBuySellListPayload({ ...EMPTY_FILTERS, usear_type: "sell" }),
+          page: pageToLoad,
+          limit: pageSize,
+        });
+        const items = result.items ?? [];
+        const nextPage = result.page ?? pageToLoad;
+        const nextTotal = result.total ?? items.length;
+        setProducts(items);
+        setTotal(nextTotal);
+        setTotalPages(result.totalPages ?? 1);
+        // If delete emptied the last page, step back once.
+        if (items.length === 0 && nextPage > 1 && nextTotal > 0) {
+          setPage(nextPage - 1);
+        }
       } catch (err) {
+        if (isAbortError(err)) return;
         const message = toErrorMessage(err, "Failed to load listings");
         setListError(message);
         if (!options?.silent) {
@@ -99,14 +119,14 @@ function SellVehicleContent() {
         }
       }
     },
-    [notify],
+    [notify, page, pageSize],
   );
 
   useEffect(() => {
     if (!isCreate) {
-      void loadListings();
+      void loadListings({ page });
     }
-  }, [isCreate, loadListings]);
+  }, [isCreate, page]); // eslint-disable-line react-hooks/exhaustive-deps -- page drives reload
 
   const handleCreateSuccess = (ctx?: BuySellFormSuccessContext) => {
     router.replace(userProductRoutes.sellVehicle());
@@ -301,6 +321,9 @@ function SellVehicleContent() {
           onFeaturePayNow={openFeaturePlansForProduct}
           emptyTitle="No listings yet"
           emptyDescription='Tap "List new vehicle" to create your first ad. It only takes a few minutes.'
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
         />
       )}
 

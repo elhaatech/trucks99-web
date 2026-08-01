@@ -19,8 +19,8 @@ const FOOTER_LINKS = {
     { label: "EMI Calculator", href: userProductRoutes.emi() },
   ],
   legal: [
-    { label: "Privacy Policy", href: "/privacy/policy" },
-    { label: "Terms of Service", href: "/privacy/policy" },
+    { label: "Privacy Policy", href: userProductRoutes.legal("privacy") },
+    { label: "Terms of Service", href: userProductRoutes.legal("terms") },
   ],
 };
 
