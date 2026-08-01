@@ -347,13 +347,13 @@ export default function UserProductDashboardPage() {
         <Typography
           sx={{
             fontWeight: 800,
-            fontSize: { xs: 18, md: 20 },
-            mb: 2,
+            fontSize: 24,
+            mb: 3,
             color: T.color.textPrimary,
-            letterSpacing: "-0.02em",
+            letterSpacing: "-0.01em",
           }}
         >
-          Top categories
+          Top Categories
         </Typography>
         <CategoryScroller>
           {categories.map((cat) => (
@@ -380,12 +380,12 @@ export default function UserProductDashboardPage() {
           <Typography
             sx={{
               fontWeight: 800,
-              fontSize: { xs: 18, md: 20 },
+              fontSize: 24,
               color: T.color.textPrimary,
-              letterSpacing: "-0.02em",
+              letterSpacing: "-0.01em",
             }}
           >
-            Featured vehicles
+            Featured Vehicles
           </Typography>
           <Button
             onClick={() => router.push(userProductRoutes.featuredVehicles())}
@@ -431,12 +431,12 @@ export default function UserProductDashboardPage() {
           <Typography
             sx={{
               fontWeight: 800,
-              fontSize: { xs: 18, md: 20 },
+              fontSize: 24,
               color: T.color.textPrimary,
-              letterSpacing: "-0.02em",
+              letterSpacing: "-0.01em",
             }}
           >
-            Recently added vehicles
+            Recently Added Vehicles
           </Typography>
           <Button
             onClick={() => router.push(userProductRoutes.list())}
@@ -476,12 +476,12 @@ export default function UserProductDashboardPage() {
           <Typography
             sx={{
               fontWeight: 800,
-              fontSize: { xs: 18, md: 20 },
+              fontSize: 24,
               color: T.color.textPrimary,
-              letterSpacing: "-0.02em",
+              letterSpacing: "-0.01em",
             }}
           >
-            Explore all vehicles
+            Explore All Vehicles
           </Typography>
           <Button
             onClick={() => router.push(userProductRoutes.list())}

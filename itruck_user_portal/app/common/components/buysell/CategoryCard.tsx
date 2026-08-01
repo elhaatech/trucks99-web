@@ -56,10 +56,12 @@ export function CategoryCard({ category, onClick }: CategoryCardProps) {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        gap: 1.25,
-        p: 2,
-        minWidth: 112,
+        justifyContent: "flex-start",
+        gap: 1.5,
+        p: 2.25,
+        width: 140,
+        height: 140,
+        flexShrink: 0,
         borderRadius: T.radius.lg,
         border: `1px solid ${T.color.border}`,
         bgcolor: T.color.surface,
@@ -101,6 +103,10 @@ export function CategoryCard({ category, onClick }: CategoryCardProps) {
           textAlign: "center",
           color: T.color.textPrimary,
           lineHeight: 1.3,
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
         }}
       >
         {category.category_name}
@@ -114,9 +120,10 @@ export function CategoryScroller({ children }: { children: React.ReactNode }) {
     <Box
       sx={{
         display: "flex",
-        gap: 1.5,
+        gap: 1.75,
         overflowX: "auto",
-        pb: 1,
+        pb: 1.25,
+        pt: 0.25,
         "&::-webkit-scrollbar": { height: 6 },
         "&::-webkit-scrollbar-thumb": {
           bgcolor: T.color.borderStrong,

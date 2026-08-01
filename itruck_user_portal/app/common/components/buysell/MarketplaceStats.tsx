@@ -45,12 +45,12 @@ function CompositionBar({
   label: string;
 }) {
   return (
-    <Box sx={{ mt: 1.25 }}>
+    <Box sx={{ mt: "auto", pt: 1.25, display: "flex", flexDirection: "column", gap: 0.75 }}>
       <Box
         sx={{
-          height: 4,
+          height: 5,
           borderRadius: 99,
-          bgcolor: alpha(color, 0.12),
+          bgcolor: alpha(color, 0.14),
           overflow: "hidden",
         }}
       >
@@ -66,11 +66,11 @@ function CompositionBar({
       </Box>
       <Typography
         sx={{
-          mt: 0.6,
-          fontSize: 11,
+          fontSize: 11.5,
           fontWeight: 500,
           color: T.color.textMuted,
           letterSpacing: "0.01em",
+          lineHeight: 1.4,
         }}
       >
         {label}
@@ -93,15 +93,17 @@ function StatCard({ label, value, accent, emphasis, composition }: StatCardProps
   return (
     <Box
       sx={{
-        p: primary ? { xs: 1.75, md: 2 } : { xs: 1.5, md: 1.75 },
+        p: { xs: 3, md: 3 },
         borderRadius: T.radius.lg,
         border: `1px solid ${T.color.border}`,
         bgcolor: primary ? T.color.surface : T.color.surfaceMuted,
         boxShadow: primary ? T.shadow.card : "none",
         display: "flex",
         flexDirection: "column",
-        justifyContent: "space-between",
-        minHeight: primary ? { xs: 118, md: 132 } : { xs: 96, md: 104 },
+        justifyContent: "flex-start",
+        gap: 1.25,
+        height: "100%",
+        minHeight: { xs: 190, md: 215 },
         transition: "box-shadow 200ms ease, border-color 200ms ease",
         "&:hover": {
           borderColor: alpha(accent.main, 0.35),
@@ -124,8 +126,8 @@ function StatCard({ label, value, accent, emphasis, composition }: StatCardProps
 
       <Typography
         sx={{
-          mt: primary ? 1.25 : 0.85,
-          fontSize: primary ? { xs: 28, md: 34 } : { xs: 22, md: 24 },
+          mt: 0.25,
+          fontSize: primary ? { xs: 30, md: 32 } : { xs: 24, md: 26 },
           fontWeight: 800,
           color: primary ? accent.text : T.color.textPrimary,
           letterSpacing: "-0.03em",
@@ -284,12 +286,13 @@ export function MarketplaceStatsCards({
         <Typography
           sx={{
             fontWeight: 800,
-            fontSize: { xs: 18, md: 20 },
+            fontSize: 24,
             color: T.color.textPrimary,
-            letterSpacing: "-0.02em",
+            letterSpacing: "-0.01em",
+            mb: 0.5,
           }}
         >
-          Marketplace overview
+          Marketplace statistics
         </Typography>
         <Typography
           sx={{
@@ -309,13 +312,14 @@ export function MarketplaceStatsCards({
         sx={{
           display: "grid",
           gridTemplateColumns: {
-            xs: "1fr 1fr",
-            md: "repeat(12, 1fr)",
+            xs: "1fr",
+            sm: "repeat(2, minmax(0, 1fr))",
+            lg: "repeat(4, minmax(0, 1fr))",
           },
-          gap: 1.5,
+          gap: 3,
         }}
       >
-        <Box sx={{ gridColumn: { xs: "span 2", sm: "span 1", md: "span 4" } }}>
+        <Box sx={{ height: "100%" }}>
           <StatCard
             label="Total listings"
             value={stats.totalListings}

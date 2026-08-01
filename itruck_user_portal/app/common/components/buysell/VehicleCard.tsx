@@ -24,6 +24,7 @@ import {
   formatProductPrice,
   getListingCardCategory,
   getListingCardTitle,
+  getListingSpecChips,
   getProductLocation,
   getSellerDisplayName,
   getSellerMobile,
@@ -34,7 +35,6 @@ import {
   resolveFeaturedListingUi,
 } from "@/lib/featuredVehicleListingStatus";
 import { ProductStatusChip } from "@/app/admin/portal/buysell/_components/ProductStatusChip";
-import { VehicleSpecChips } from "./VehicleSpecChips";
 
 type VehicleCardProps = {
   product: BuySellProduct;
@@ -270,22 +270,75 @@ export const VehicleCard = memo(function VehicleCard({
                 sx={{
                   fontSize: 12.5,
                   fontWeight: 600,
-                  color: T.color.textMuted,
+                  color: T.color.textSecondary,
                   mt: 0.35,
-                  letterSpacing: "0.04em",
+                  letterSpacing: "0.03em",
                   textTransform: "uppercase",
                 }}
               >
                 {categoryLabel}
               </Typography>
             ) : null}
-            <VehicleSpecChips product={product} dense={isList} />
-            <PhoneMetaLine
-              icon={<PhoneOutlinedIcon />}
-              mobile={sellerMobile}
-              dense
-              sx={{ mt: 0.75 }}
-            />
+
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                gap: 0.75,
+                mt: 1,
+                maxWidth: 340,
+              }}
+            >
+              {getListingSpecChips(product).slice(0, 3).map((chip) => (
+                <Box
+                  key={chip.key}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    bgcolor: T.color.surfaceMuted,
+                    borderRadius: 1.5,
+                    py: 0.75,
+                    px: 0.85,
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: T.color.textPrimary,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {chip.label}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+
+            <Typography
+              sx={{
+                fontSize: 12,
+                color: T.color.textSecondary,
+                mt: 1,
+                lineHeight: 1.4,
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              {location || "Location not specified"}
+            </Typography>
+
+            <Box sx={{ display: "flex", gap: 0.75, alignItems: "center", mt: 0.75 }}>
+              <PersonOutlineIcon sx={{ fontSize: 16, color: T.color.textMuted }} />
+              <Typography sx={{ fontSize: 12, color: T.color.textPrimary, fontWeight: 600 }}>
+                {sellerName}
+              </Typography>
+            </Box>
           </Box>
 
           <Box
