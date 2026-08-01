@@ -64,7 +64,6 @@ const {
 const categoryRouter = require("./views/handleCategoryrouter");
 const subCategoryRouter = require("./views/handleSubCategoryrouter");
 const buySellProductRouter = require("./views/handlebuysellProduct");
-const emiRouter = require("./views/handleEmiRouter");
 const favoriteRouter = require("./views/handlefavoriteRoute");
 const matchRouter = require("./views/handleMatchrouter");
 const reportRouter = require("./views/handlereports");
@@ -73,6 +72,7 @@ const cmspagerouter  = require("./views/handlecmspagerouter");
 const chatRouter = require("./views/handleChat");
 const assistantRouter = require("./views/handleAssistant");
 const advertisementRouter = require("./views/advertisementrouter");
+const emiRouter = require("./views/handleEmiRouter");
 
 // const reportRouter = require('./views/handleBuySellReport');
 const app = express();
@@ -331,7 +331,7 @@ app.use("/api/block-unblock", blockUnblockRouter);
 // Public browse routes: helpers/buySellPublicRoutes.js (via requireAuthUnlessPublic)
 app.use("/api/buy-sell", buySellProductRouter);
 app.use("/api/buysell", buySellProductRouter);
-// EMI purchase flow — mount before broad /api handlers
+// EMI calculator — public estimate endpoints
 app.use("/api/emi", emiRouter);
 
 app.use("/api", firebaseSendMessageRouter);

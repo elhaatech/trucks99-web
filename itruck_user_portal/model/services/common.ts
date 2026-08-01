@@ -138,7 +138,7 @@ export async function publicApi<T = unknown>(
     return data as T;
   };
 
-  if (typeof window !== "undefined") {
+  if (typeof window !== "undefined" && !init.signal) {
     let p = inFlightRequests.get(key) as Promise<T> | undefined;
     if (!p) {
       p = run().finally(() => inFlightRequests.delete(key));

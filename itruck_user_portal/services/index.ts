@@ -40,3 +40,11 @@ export {
   listBuySellFavoriteProducts,
   getBuySellFavoriteCount,
 } from "@/model/services/favoriteapi";
+
+export {
+  getEmiDefaults,
+  calculateEmiApi,
+  type EmiDefaults,
+  type EmiCalculateInput,
+  type EmiCalculateResult,
+} from "@/model/services/emi";

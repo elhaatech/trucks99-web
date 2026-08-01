@@ -52,9 +52,9 @@ async function startServer() {
                 (layer) => layer.regexp && String(layer.regexp).includes('emi'),
             );
             if (emiMounted) {
-                console.log('[startup] EMI API mounted at /api/emi (list, create, view, pay, cancel, tenures)');
+                console.log('[startup] EMI API mounted at /api/emi (tenures, calculate)');
             } else {
-                console.error('[startup] WARNING: /api/emi routes are NOT mounted — EMI features will return 404');
+                console.error('[startup] WARNING: /api/emi routes are NOT mounted — EMI calculator will return 404');
             }
         }
 

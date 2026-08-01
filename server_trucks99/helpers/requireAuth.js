@@ -55,6 +55,7 @@ const PUBLIC_METHOD_PATHS = [
   { method: "GET", path: "/api/advertisement/active" },
   { method: "GET", path: "/api/ads/active" },
   { method: "GET", path: "/api/emi/tenures" },
+  { method: "POST", path: "/api/emi/calculate" },
   { method: "GET", path: "/api/category/all" },
   { method: "GET", path: "/api/buy-sell/dashboard-stats" },
   { method: "GET", path: "/api/buysell/dashboard-stats" },

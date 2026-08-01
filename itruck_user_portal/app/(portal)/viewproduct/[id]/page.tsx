@@ -448,6 +448,15 @@ export default function UserProductViewPage() {
             </Box>
           ) : null}
 
+          {canShop ? (
+            <Box sx={{ mb: 2.5, display: { xs: "block", md: "none" } }}>
+              <ProductEmiSidebarCard
+                vehiclePrice={Number(item.price) || 0}
+                onOpenCalculator={() => setEmiOpen(true)}
+              />
+            </Box>
+          ) : null}
+
           {relatedOwnerId ? (
             <UserRelatedProductsSection
               sellerId={relatedOwnerId}
@@ -564,11 +573,14 @@ export default function UserProductViewPage() {
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ px: { xs: 2, sm: 3 }, py: 3 }}>
-          <EmiCalculator
-            variant="modal"
-            defaultVehiclePrice={Number(item.price) || 500000}
-            showChart
-          />
+          {emiOpen ? (
+            <EmiCalculator
+              key={`emi-calc-${id}-${Number(item.price) || 0}`}
+              variant="modal"
+              defaultVehiclePrice={Number(item.price) || 500000}
+              showChart
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
 
