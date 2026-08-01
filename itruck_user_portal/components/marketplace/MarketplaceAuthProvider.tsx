@@ -22,7 +22,7 @@ type MarketplaceAuthContextValue = {
   userId: string | null;
   authReady: boolean;
   isLoggedIn: boolean;
-  refresh: () => Promise<void>;
+  refresh: (opts?: { force?: boolean }) => Promise<void>;
   logout: () => Promise<void>;
 };
 

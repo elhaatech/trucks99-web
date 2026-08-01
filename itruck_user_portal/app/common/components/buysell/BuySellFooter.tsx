@@ -10,11 +10,11 @@ import { BrandLogo } from "@/components/ui/BrandLogo";
 const FOOTER_LINKS = {
   company: [
     { label: "About Us", href: userProductRoutes.dashboard() },
-    { label: "Contact", href: userProductRoutes.chat() },
+    { label: "Contact", href: userProductRoutes.contact() },
     { label: "Careers", href: userProductRoutes.dashboard() },
   ],
   support: [
-    { label: "Help Center", href: userProductRoutes.dashboard() },
+    { label: "Help Center", href: userProductRoutes.contact() },
     { label: "FAQ", href: userProductRoutes.emi() },
     { label: "EMI Calculator", href: userProductRoutes.emi() },
   ],

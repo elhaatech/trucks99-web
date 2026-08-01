@@ -25,6 +25,8 @@ import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
 import ShoppingBagOutlinedIcon from "@mui/icons-material/ShoppingBagOutlined";
 import DirectionsCarOutlinedIcon from "@mui/icons-material/DirectionsCarOutlined";
+import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
+import ContactSupportOutlinedIcon from "@mui/icons-material/ContactSupportOutlined";
 import { alpha } from "@mui/material/styles";
 import {
   INFO,
@@ -36,6 +38,7 @@ import {
   TRANSITION,
 } from "@/lib/theme";
 import { isSellHubPath, userProductRoutes } from "@/lib/userProductRoutes";
+import { getBuySellImageUrl } from "@/lib/buysellUtils";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import {
   MARKETPLACE_FAVORITES_CHANGED_EVENT,
@@ -348,6 +351,8 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                   {user.name || "Account"}
                 </Typography>
                 <Avatar
+                  src={getBuySellImageUrl(user.profileImage) || undefined}
+                  alt={user.name || "Account"}
                   sx={{
                     width: 32,
                     height: 32,
@@ -371,15 +376,33 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                   },
                 }}
               >
-                <Box sx={{ px: 2, py: 1.5 }}>
-                  <Typography fontWeight={700} fontSize={14}>
-                    {user.name || "Account"}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Marketplace account
-                  </Typography>
+                <Box sx={{ px: 2, py: 1.5, display: "flex", alignItems: "center", gap: 1.25 }}>
+                  <Avatar
+                    src={getBuySellImageUrl(user.profileImage) || undefined}
+                    alt={user.name || "Account"}
+                    sx={{ width: 40, height: 40, bgcolor: PRIMARY, fontSize: 15, fontWeight: 700 }}
+                  >
+                    {(user.name || "U").charAt(0).toUpperCase()}
+                  </Avatar>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography fontWeight={700} fontSize={14} noWrap>
+                      {user.name || "Account"}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Marketplace account
+                    </Typography>
+                  </Box>
                 </Box>
                 <Divider />
+                <MenuItem
+                  onClick={() => {
+                    setUserMenuAnchor(null);
+                    router.push(userProductRoutes.profile());
+                  }}
+                >
+                  <PersonOutlineOutlinedIcon sx={{ mr: 1.5, fontSize: 18, color: "text.secondary" }} />
+                  My Profile
+                </MenuItem>
                 <MenuItem
                   onClick={() => {
                     setUserMenuAnchor(null);
@@ -415,6 +438,15 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                 >
                   <ShoppingBagOutlinedIcon sx={{ mr: 1.5, fontSize: 18, color: "text.secondary" }} />
                   My Purchases
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    setUserMenuAnchor(null);
+                    router.push(userProductRoutes.contact());
+                  }}
+                >
+                  <ContactSupportOutlinedIcon sx={{ mr: 1.5, fontSize: 18, color: "text.secondary" }} />
+                  Contact Us
                 </MenuItem>
                 <Divider />
                 <MenuItem

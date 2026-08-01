@@ -73,6 +73,7 @@ const chatRouter = require("./views/handleChat");
 const assistantRouter = require("./views/handleAssistant");
 const advertisementRouter = require("./views/advertisementrouter");
 const emiRouter = require("./views/handleEmiRouter");
+const contactRouter = require("./views/handleContactRouter");
 
 // const reportRouter = require('./views/handleBuySellReport');
 const app = express();
@@ -333,6 +334,8 @@ app.use("/api/buy-sell", buySellProductRouter);
 app.use("/api/buysell", buySellProductRouter);
 // EMI calculator — public estimate endpoints
 app.use("/api/emi", emiRouter);
+// Contact us — public info + form submit
+app.use("/api/contact", contactRouter);
 
 app.use("/api", firebaseSendMessageRouter);
 app.use("/api/specifications", specificationRouter);

@@ -36,6 +36,8 @@ export const userProductRoutes = {
   featured: () => `${BASE}/featured`,
   featuredVehicles: () => `${BASE}/featured-vehicles`,
   purchases: () => `${BASE}/purchases`,
+  contact: () => `${BASE}/contact`,
+  profile: () => `${BASE}/profile`,
   login: (returnTo?: string) => {
     const path = `${BASE}/login`;
     if (!returnTo?.trim()) return path;

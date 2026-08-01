@@ -19,6 +19,7 @@ const allowedFolders = [
   'truck_rc_doc',
   'user_profile',
   'buy_sell_doc',
+  'contact_doc',
 ];
 
 const storage = multer.diskStorage({
