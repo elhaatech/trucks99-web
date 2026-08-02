@@ -200,41 +200,12 @@ export const VehicleCard = memo(function VehicleCard({
             </Box>
           )}
           <Box sx={{ position: "absolute", top: 10, left: 10, display: "flex", flexDirection: "column", gap: 0.75, alignItems: "flex-start" }}>
-            <ProductStatusChip status={product.status} />
+            {/* <ProductStatusChip status={product.status} /> */}
             {featuredStatus === "expired" ? (
               <Chip label="Expired" size="small" color="default" sx={{ fontWeight: 600 }} />
             ) : null}
           </Box>
 
-          <Box
-            sx={{
-              position: "absolute",
-              left: 12,
-              bottom: 12,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 1,
-              px: 2,
-              py: 1,
-              borderRadius: 3,
-              bgcolor: "rgba(15, 23, 42, 0.82)",
-              color: "#fff",
-              backdropFilter: "blur(12px)",
-              boxShadow: "0 12px 24px rgba(0,0,0,0.18)",
-            }}
-          >
-            <Typography
-              sx={{
-                fontSize: 16,
-                fontWeight: 800,
-                lineHeight: 1.1,
-                letterSpacing: "0.01em",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {priceLabel}
-            </Typography>
-          </Box>
 
           {onFavoriteToggle ? (
             <IconButton

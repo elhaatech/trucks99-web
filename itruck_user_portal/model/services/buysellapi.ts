@@ -104,6 +104,8 @@ export type FeaturedVehicleMeta = {
   paymentStatus?: string | null;
   durationDays?: number;
   featuredStatus?: string;
+  expiryStatus?: string | null;
+  remainingDays?: number | null;
   featuredAt?: string;
   featuredStartDate?: string;
   expiresAt?: string;
@@ -124,6 +126,8 @@ export type FeaturedVehiclePlacementRecord = {
   featuredEndDate?: string;
   expiresAt?: string;
   status?: string;
+  expiryStatus?: string | null;
+  remainingDays?: number | null;
   createdAt?: string;
   updatedAt?: string;
 };

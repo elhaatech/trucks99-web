@@ -21,7 +21,7 @@ const VEHICLE_INFO_CONFIG: Array<{
   { key: "fuelType", Icon: LocalGasStationOutlinedIcon, label: "Fuel Type" },
   { key: "kmDriven", Icon: SpeedOutlinedIcon, label: "KM Driven" },
   { key: "owners", Icon: PersonOutlineOutlinedIcon, label: "Owners" },
-  { key: "location", Icon: LocationOnOutlinedIcon, label: "Location" },
+  // { key: "location", Icon: LocationOnOutlinedIcon, label: "Location" },
 ];
 
 type VehicleInfoProps = {

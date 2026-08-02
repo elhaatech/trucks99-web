@@ -9,8 +9,9 @@ import Chip from "@mui/material/Chip";
 import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
 import StarIcon from "@mui/icons-material/Star";
 import { alpha } from "@mui/material/styles";
-import { PRODUCT_THEME as T, INFO, WARNING } from "@/lib/theme";
+import { PRODUCT_THEME as T, INFO, WARNING, SUCCESS, ERROR } from "@/lib/theme";
 import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { resolveFeaturedListingUi } from "@/lib/featuredVehicleListingStatus";
 import { getBuySellRowId, type BuySellProduct } from "@/model/services/buysellapi";
 import {
   formatProductPrice,
@@ -52,9 +53,31 @@ export const FeaturedVehicleCard = memo(function FeaturedVehicleCard({
   const sellerName = getSellerDisplayName(product);
   const sellerMobile = getSellerMobile(product);
   const expiry =
-    product.featured?.featuredEndDate ||
     product.featured?.expiresAt ||
+    product.featured?.featuredEndDate ||
     product.placement?.featuredEndDate;
+
+  const startDate = product.featured?.featuredAt;
+  const packageName = product.featured?.packageName || product.placement?.packageName;
+  const featuredUi = resolveFeaturedListingUi(product);
+  const expiryStatus =
+    product.featured?.expiryStatus ??
+    (featuredUi.state === "expired"
+      ? "Expired"
+      : featuredUi.state === "cancelled"
+        ? "Cancelled"
+        : featuredUi.state === "active"
+          ? "Active"
+          : undefined);
+  const remainingDays = product.featured?.remainingDays ?? featuredUi.daysRemaining ?? undefined;
+
+  const isExpired = expiryStatus === "Expired";
+  const isExpiringSoon = expiryStatus === "Expiring Soon";
+  const isActive = expiryStatus === "Active";
+
+  let statusColor = SUCCESS;
+  if (isExpired) statusColor = ERROR;
+  else if (isExpiringSoon) statusColor = WARNING;
 
   return (
     <Box
@@ -118,7 +141,7 @@ export const FeaturedVehicleCard = memo(function FeaturedVehicleCard({
         )}
         <Chip
           icon={<StarIcon sx={{ fontSize: 16 }} />}
-          label="Featured"
+          label={expiryStatus || "Featured"}
           size="small"
           sx={{
             position: "absolute",
@@ -126,8 +149,9 @@ export const FeaturedVehicleCard = memo(function FeaturedVehicleCard({
             left: 12,
             zIndex: 1,
             fontWeight: 700,
-            bgcolor: alpha(WARNING, 0.95),
-            color: "#1a1a1a",
+            bgcolor: statusColor,
+            color: "#fff",
+            boxShadow: "0px 2px 8px rgba(0,0,0,0.2)",
           }}
         />
       </Box>
@@ -171,16 +195,42 @@ export const FeaturedVehicleCard = memo(function FeaturedVehicleCard({
         </Typography>
         <PhoneMetaLine icon={<PhoneOutlinedIcon />} mobile={sellerMobile} />
 
-        <Typography variant="caption" color="text.secondary">
-          Featured until {formatExpiry(expiry)}
-        </Typography>
+        {packageName && (
+          <Typography variant="body2" fontWeight={600} color="primary.main" sx={{ mt: 1 }}>
+            Package: {packageName}
+          </Typography>
+        )}
 
-        <Box sx={{ mt: "auto", pt: 1 }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1 }}>
+          <Typography variant="caption" color="text.secondary">
+            Started: {formatExpiry(startDate)}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" fontWeight={isExpiringSoon ? 700 : 400} sx={{ color: isExpiringSoon ? WARNING : isExpired ? ERROR : "text.secondary" }}>
+            Expires: {formatExpiry(expiry)}
+          </Typography>
+        </Box>
+        
+        {remainingDays !== undefined && (
+          <Typography variant="caption" color="text.secondary" sx={{ color: isExpiringSoon ? WARNING : "inherit", fontWeight: isExpiringSoon ? 700 : 400 }}>
+            {remainingDays > 0 ? `${remainingDays} days remaining` : 'Expired'}
+          </Typography>
+        )}
+
+        <Box sx={{ mt: "auto", pt: 1, display: "flex", gap: 1 }}>
+          {isExpired && (
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={() => onViewDetails?.(productId)}
+              sx={{ textTransform: "none", fontWeight: 700, borderRadius: 2, flex: 1 }}
+            >
+              Renew Featured
+            </Button>
+          )}
           <Button
-            fullWidth
             variant="contained"
             onClick={() => onViewDetails?.(productId)}
-            sx={{ textTransform: "none", fontWeight: 700, borderRadius: 2 }}
+            sx={{ textTransform: "none", fontWeight: 700, borderRadius: 2, flex: isExpired ? 1 : undefined, width: isExpired ? undefined : "100%" }}
           >
             View Details
           </Button>

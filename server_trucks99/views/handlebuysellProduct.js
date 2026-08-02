@@ -636,6 +636,8 @@ function enrichProductListItem(item, contactMap, favoriteSet, bitRecords, bidSum
     bit_records: records,
     bid_count,
     highest_bid,
+    featured: item.featured || null,
+    isFeatured: item.featured ? item.featured.expiryStatus === 'Active' : false,
   };
 }
 
@@ -731,7 +733,7 @@ async function getBidSummaryByProductIds(productIds) {
 
 // ─── SHARED ENRICHMENT HELPER ──────────────────────────────────────────────────
 async function buildEnrichedResponse(data) {
-  const [countryDoc, stateDoc, cityDoc, sellerContactMap] = await Promise.all([
+  const [countryDoc, stateDoc, cityDoc, sellerContactMap, featuredDoc] = await Promise.all([
     data.country_id
       ? LocationCountry.findById(data.country_id).select("name sortname").lean()
       : null,
@@ -742,6 +744,7 @@ async function buildEnrichedResponse(data) {
       ? LocationCity.findById(data.city_id).select("name").lean()
       : null,
     getUsersContactMap([data.userid].filter(Boolean)),
+    BuySellFeaturedVehicle.findOne({ productId: data._id }).sort({ createdAt: -1 }).lean(),
   ]);
   const sellerContact = contactFromMap(sellerContactMap, data.userid);
   const sellerMobile = sellerContact.mobile;
@@ -824,6 +827,33 @@ async function buildEnrichedResponse(data) {
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
     __v: data.__v,
+    ...(featuredDoc ? (() => {
+      const nowMs = Date.now();
+      const expiresMs = featuredDoc.expiresAt ? new Date(featuredDoc.expiresAt).getTime() : 0;
+      const remainingDays = expiresMs > nowMs ? Math.ceil((expiresMs - nowMs) / (1000 * 60 * 60 * 24)) : 0;
+      let expiryStatus = 'Expired';
+      if (expiresMs > nowMs) {
+        expiryStatus = remainingDays <= 3 ? 'Expiring Soon' : 'Active';
+      }
+      return {
+        featured: {
+          featuredPlacementId: featuredDoc._id,
+          packageId: featuredDoc.packageId,
+          packageName: featuredDoc.packageName,
+          packageType: featuredDoc.packageType,
+          price: featuredDoc.price,
+          durationDays: featuredDoc.durationDays,
+          paymentId: featuredDoc.paymentId,
+          orderId: featuredDoc.orderId,
+          featuredStatus: featuredDoc.status,
+          featuredAt: featuredDoc.createdAt,
+          expiresAt: featuredDoc.expiresAt,
+          remainingDays,
+          expiryStatus,
+        },
+        isFeatured: expiryStatus === 'Active',
+      };
+    })() : { featured: null, isFeatured: false }),
   };
 }
 
@@ -1046,18 +1076,59 @@ async function enrichBuySellListItems(items, actor, options = {}) {
           .lean()
       : Promise.resolve([]);
 
+  const featuredPromise = BuySellFeaturedVehicle.find({
+    productId: { $in: allProductIds },
+  }).sort({ createdAt: -1 }).lean();
+
+  const [userFavorites, featuredResult] = await Promise.all([
+    favoritePromise,
+    featuredPromise,
+  ]);
+
+  const featuredMetaByProductId = new Map();
+  if (featuredResult && featuredResult.length > 0) {
+    for (const placement of featuredResult) {
+      if (!featuredMetaByProductId.has(String(placement.productId))) {
+        const nowMs = Date.now();
+        const expiresMs = placement.expiresAt ? new Date(placement.expiresAt).getTime() : 0;
+        const remainingDays = expiresMs > nowMs ? Math.ceil((expiresMs - nowMs) / (1000 * 60 * 60 * 24)) : 0;
+        let expiryStatus = 'Expired';
+        if (expiresMs > nowMs) {
+          expiryStatus = remainingDays <= 3 ? 'Expiring Soon' : 'Active';
+        }
+
+        featuredMetaByProductId.set(String(placement.productId), {
+          featuredPlacementId: placement._id,
+          packageId: placement.packageId,
+          packageName: placement.packageName,
+          packageType: placement.packageType,
+          price: placement.price,
+          durationDays: placement.durationDays,
+          paymentId: placement.paymentId,
+          orderId: placement.orderId,
+          featuredStatus: placement.status,
+          featuredAt: placement.createdAt,
+          expiresAt: placement.expiresAt,
+          remainingDays,
+          expiryStatus,
+        });
+      }
+    }
+  }
+
   if (lite) {
-    const userFavorites = await favoritePromise;
     const favoriteSet = new Set(
       userFavorites.map((fav) => String(fav.entityId)),
     );
     const emptyContact = {};
-    return items.map((item) =>
-      enrichProductListItem(item, emptyContact, favoriteSet, [], {
+    return items.map((item) => {
+      const featured = featuredMetaByProductId ? featuredMetaByProductId.get(String(item._id)) : null;
+      if (featured) item.featured = featured;
+      return enrichProductListItem(item, emptyContact, favoriteSet, [], {
         bid_count: 0,
         highest_bid: null,
-      }),
-    );
+      });
+    });
   }
 
   const bidsPromise = includeBitRecords
@@ -1067,10 +1138,7 @@ async function enrichBuySellListItems(items, actor, options = {}) {
         .lean()
     : getBidSummaryByProductIds(allProductIds);
 
-  const [userFavorites, bidsResult] = await Promise.all([
-    favoritePromise,
-    bidsPromise,
-  ]);
+  const bidsResult = await bidsPromise;
 
   const favoriteSet = new Set(
     userFavorites.map((fav) => String(fav.entityId)),
@@ -1098,6 +1166,8 @@ async function enrichBuySellListItems(items, actor, options = {}) {
     return items.map((item) => {
       const productKey = String(item._id);
       const bitRecords = bitRecordsByProductId[productKey] || [];
+      const featured = featuredMetaByProductId.get(productKey);
+      if (featured) item.featured = featured;
       return enrichProductListItem(item, contactMap, favoriteSet, bitRecords);
     });
   }
@@ -1108,6 +1178,8 @@ async function enrichBuySellListItems(items, actor, options = {}) {
 
   return items.map((item) => {
     const productKey = String(item._id);
+    const featured = featuredMetaByProductId.get(productKey);
+    if (featured) item.featured = featured;
     return enrichProductListItem(
       item,
       contactMap,
@@ -1836,6 +1908,14 @@ buySellRouter.post("/featured-vehicles/list", async (req, res) => {
       const product = productById.get(String(placement.productId));
       if (!product) continue;
       orderedProducts.push(product);
+      const nowMs = Date.now();
+      const expiresMs = placement.expiresAt ? new Date(placement.expiresAt).getTime() : 0;
+      const remainingDays = expiresMs > nowMs ? Math.ceil((expiresMs - nowMs) / (1000 * 60 * 60 * 24)) : 0;
+      let expiryStatus = 'Expired';
+      if (expiresMs > nowMs) {
+        expiryStatus = remainingDays <= 3 ? 'Expiring Soon' : 'Active';
+      }
+
       featuredMetaByProductId.set(String(product._id), {
         featuredPlacementId: placement._id,
         packageId: placement.packageId,
@@ -1848,6 +1928,8 @@ buySellRouter.post("/featured-vehicles/list", async (req, res) => {
         featuredStatus: placement.status,
         featuredAt: placement.createdAt,
         expiresAt: placement.expiresAt,
+        remainingDays,
+        expiryStatus,
       });
     }
 
