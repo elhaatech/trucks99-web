@@ -31,7 +31,7 @@ import {
 import { getCategories, type Category } from "@/model/services/category";
 import { addFavorite, removeFavorite } from "@/model/services/favoriteapi";
 import { useNotification } from "@/hooks/useNotification";
-import { ensureLoggedInToViewProduct } from "@/lib/requireMarketplaceLogin";
+import { ensureLoggedInToViewProduct, getMarketplaceLoginPath } from "@/lib/requireMarketplaceLogin";
 import type { MarketplaceStats } from "@/app/common/components/buysell/utils";
 import { EMPTY_FILTERS } from "@/app/admin/portal/buysell/_components/interface/buysell_interface";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
@@ -112,11 +112,9 @@ export default function UserProductDashboardPage() {
 
     setLoading(true);
     setStatsLoading(true);
-    setFeaturedLoading(true);
     setRecentVehiclesLoading(true);
     setStatsError("");
     setListError("");
-    setFeaturedError("");
     setRecentVehiclesError("");
 
     void (async () => {
@@ -162,27 +160,6 @@ export default function UserProductDashboardPage() {
         if (!signal.aborted) setStatsLoading(false);
       });
 
-    void getBuySellFeaturedVehicles(MARKETPLACE.FEATURED_SECTION_LIMIT)
-      .then((data) => {
-        if (signal.aborted) return;
-        const items = data ?? [];
-        setFeaturedVehicles(items);
-        setFavoriteIds((prev) => {
-          const next = new Set(prev);
-          for (const p of items) {
-            if (p.is_favorite) next.add(getBuySellRowId(p));
-          }
-          return next;
-        });
-      })
-      .catch((err) => {
-        if (signal.aborted) return;
-        setFeaturedError(toErrorMessage(err, "Failed to load featured vehicles"));
-      })
-      .finally(() => {
-        if (!signal.aborted) setFeaturedLoading(false);
-      });
-
     void getBuySellRecentVehicles(MARKETPLACE.RECENT_SECTION_LIMIT)
       .then((data) => {
         if (signal.aborted) return;
@@ -208,6 +185,58 @@ export default function UserProductDashboardPage() {
       controller.abort();
     };
   }, [loadExplorePage]);
+
+  useEffect(() => {
+    if (!authReady) return;
+
+    if (!isLoggedIn) {
+      setFeaturedVehicles([]);
+      setFeaturedError("");
+      setFeaturedLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setFeaturedLoading(true);
+    setFeaturedError("");
+
+    void getBuySellFeaturedVehicles(MARKETPLACE.FEATURED_SECTION_LIMIT)
+      .then((data) => {
+        if (cancelled) return;
+        const items = data ?? [];
+        setFeaturedVehicles(items);
+        setFavoriteIds((prev) => {
+          const next = new Set(prev);
+          for (const p of items) {
+            if (p.is_favorite) next.add(getBuySellRowId(p));
+          }
+          return next;
+        });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setFeaturedError(toErrorMessage(err, "Failed to load featured vehicles"));
+      })
+      .finally(() => {
+        if (!cancelled) setFeaturedLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, isLoggedIn]);
+
+  const loadFeaturedVehicles = useCallback(() => {
+    if (!isLoggedIn) return;
+    setFeaturedLoading(true);
+    setFeaturedError("");
+    void getBuySellFeaturedVehicles(MARKETPLACE.FEATURED_SECTION_LIMIT)
+      .then((data) => setFeaturedVehicles(data ?? []))
+      .catch((err) =>
+        setFeaturedError(toErrorMessage(err, "Failed to load featured vehicles")),
+      )
+      .finally(() => setFeaturedLoading(false));
+  }, [isLoggedIn]);
 
   const handleExplorePageChange = useCallback(
     async (page: number) => {
@@ -397,26 +426,39 @@ export default function UserProductDashboardPage() {
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Premium listings with paid featured visibility on TRUCKS99.
         </Typography>
-        <FeaturedVehiclesGrid
-          products={featuredVehicles}
-          loading={featuredLoading}
-          error={featuredError}
-          onRetry={() => {
-            setFeaturedLoading(true);
-            setFeaturedError("");
-            void getBuySellFeaturedVehicles(MARKETPLACE.FEATURED_SECTION_LIMIT)
-              .then((data) => setFeaturedVehicles(data ?? []))
-              .catch((err) =>
-                setFeaturedError(
-                  toErrorMessage(err, "Failed to load featured vehicles"),
-                ),
-              )
-              .finally(() => setFeaturedLoading(false));
-          }}
-          onViewDetails={(id) => void handleViewProduct(id)}
-          onBrowseAll={() => router.push(userProductRoutes.list())}
-          emptyDescription="No featured listings yet. Browse all vehicles or feature yours from your listing page."
-        />
+        {!authReady ? (
+          <FeaturedVehiclesGrid products={[]} loading onViewDetails={() => {}} />
+        ) : !isLoggedIn ? (
+          <Alert
+            severity="info"
+            sx={{ mb: 2, borderRadius: 2 }}
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() =>
+                  router.push(
+                    getMarketplaceLoginPath(userProductRoutes.dashboard()),
+                  )
+                }
+              >
+                Sign in
+              </Button>
+            }
+          >
+            Sign in to view featured vehicles and premium listings.
+          </Alert>
+        ) : (
+          <FeaturedVehiclesGrid
+            products={featuredVehicles}
+            loading={featuredLoading}
+            error={featuredError}
+            onRetry={loadFeaturedVehicles}
+            onViewDetails={(id) => void handleViewProduct(id)}
+            onBrowseAll={() => router.push(userProductRoutes.list())}
+            emptyDescription="No featured listings yet. Browse all vehicles or feature yours from your listing page."
+          />
+        )}
       </Box>
       <Box sx={{ mt: 5 }}>
         <Box

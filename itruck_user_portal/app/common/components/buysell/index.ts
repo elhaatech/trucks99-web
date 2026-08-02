@@ -1,7 +1,7 @@
 export { BuySellShell } from "./BuySellShell";
 export { BuySellPageBack } from "./BuySellPageBack";
 export { BuySellHeader, BUYSELL_NAV_LINKS } from "./BuySellHeader";
-export { BuySellFooter } from "./BuySellFooter";
+export { BuySellFooter } from "../../../common/components/buysell/footercomponents/footer/BuySellFooter";
 export { VehicleCard } from "./VehicleCard";
 export {
   VehicleGrid,

@@ -585,7 +585,7 @@ export async function getBuySellRecentVehicles(limit = 8): Promise<BuySellProduc
   }
 }
 
-/** Public POST /api/buy-sell/featured-vehicles/list — no login required. */
+/** POST /api/buy-sell/featured-vehicles/list — requires login. */
 export async function fetchFeaturedVehicles(
   params: FeaturedVehiclesListParams = {},
 ): Promise<FeaturedVehiclesListResponse> {
@@ -600,7 +600,7 @@ export async function fetchFeaturedVehicles(
     return await cachedRequest(
       cacheKey,
       async () => {
-        const payload = await publicApi<FeaturedVehiclesListResponse>(
+        const payload = await api<FeaturedVehiclesListResponse>(
           "/api/buy-sell/featured-vehicles/list",
           {
             method: "POST",
@@ -677,14 +677,14 @@ export async function removeFeaturedVehicleAdmin(
   }
 }
 
-/** POST /api/buy-sell/featured-vehicles/list — active paid featured marketplace listings. */
+/** POST /api/buy-sell/featured-vehicles/list — active paid featured marketplace listings (requires login). */
 export async function getBuySellFeaturedVehicles(limit = 8): Promise<BuySellProduct[]> {
   try {
     const safeLimit = Math.min(Math.max(limit, 1), 24);
     return await cachedRequest(
       `buy-sell-featured:${safeLimit}`,
       async () => {
-        const payload = await publicApi<BuySellRecentVehiclesResponse>(
+        const payload = await api<BuySellRecentVehiclesResponse>(
           "/api/buy-sell/featured-vehicles/list",
           {
             method: "POST",

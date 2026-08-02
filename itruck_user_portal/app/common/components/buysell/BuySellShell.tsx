@@ -26,10 +26,11 @@ import {
   TRANSITION,
 } from "@/lib/theme";
 import { BuySellHeader, BUYSELL_NAV_LINKS, MOBILE_EXTRA_LINKS } from "./BuySellHeader";
-import { BuySellFooter } from "./BuySellFooter";
+
 import { BuySellPageBack } from "./BuySellPageBack";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { AssistantFab } from "@/components/chat/AssistantFab";
+import { BuySellFooter } from "./footercomponents/footer/BuySellFooter";
 
 type BuySellShellProps = {
   children: React.ReactNode;
@@ -207,7 +208,7 @@ export function BuySellShell({ children }: BuySellShellProps) {
           zIndex: Z_INDEX.navbar - 1,
         }}
       >
-        <BuySellFooter compact />
+        <BuySellFooter  />
       </Box>
       <AssistantFab />
     </Box>

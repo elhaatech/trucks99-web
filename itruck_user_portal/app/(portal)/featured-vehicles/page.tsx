@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
+import Alert from "@mui/material/Alert";
 import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
 import Pagination from "@mui/material/Pagination";
@@ -25,7 +26,7 @@ import {
   type BuySellProduct,
 } from "@/model/services/buysellapi";
 import { useNotification } from "@/hooks/useNotification";
-import { ensureLoggedInToViewProduct } from "@/lib/requireMarketplaceLogin";
+import { ensureLoggedInToViewProduct, getMarketplaceLoginPath } from "@/lib/requireMarketplaceLogin";
 import { isAbortError } from "@/lib/apiCache";
 import { toErrorMessage } from "@/lib/errors";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
@@ -90,6 +91,17 @@ export default function FeaturedVehiclesMarketplacePage() {
   );
 
   useEffect(() => {
+    if (!authReady) return;
+    if (!isLoggedIn) {
+      router.replace(
+        getMarketplaceLoginPath(userProductRoutes.featuredVehicles()),
+      );
+    }
+  }, [authReady, isLoggedIn, router]);
+
+  useEffect(() => {
+    if (!authReady || !isLoggedIn) return;
+
     const controller = new AbortController();
     let cancelled = false;
 
@@ -120,7 +132,7 @@ export default function FeaturedVehiclesMarketplacePage() {
       cancelled = true;
       controller.abort();
     };
-  }, [notify, page, search, sortBy]);
+  }, [authReady, isLoggedIn, notify, page, search, sortBy]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,10 +169,48 @@ export default function FeaturedVehiclesMarketplacePage() {
   );
 
   const handleRetry = useCallback(() => {
+    if (!isLoggedIn) return;
     setPage((p) => p);
     setSearch((s) => s);
     setSortBy((s) => s);
-  }, []);
+  }, [isLoggedIn]);
+
+  const featuredLoginPath = getMarketplaceLoginPath(
+    userProductRoutes.featuredVehicles(),
+  );
+
+  if (!authReady) {
+    return (
+      <Box sx={{ width: "100%" }}>
+        <Typography
+          component="h1"
+          variant="h4"
+          fontWeight={800}
+          sx={{ mb: 3, color: T.color.textPrimary }}
+        >
+          Featured Vehicles
+        </Typography>
+        <VehicleGridSkeleton count={6} />
+      </Box>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <Box sx={{ maxWidth: 480, mx: "auto", py: 6, px: 2 }}>
+        <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+          Please sign in to browse featured vehicles.
+        </Alert>
+        <Button
+          variant="contained"
+          onClick={() => router.push(featuredLoginPath)}
+          sx={{ textTransform: "none" }}
+        >
+          Sign in
+        </Button>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ width: "100%" }}>
@@ -172,9 +222,9 @@ export default function FeaturedVehiclesMarketplacePage() {
       >
         Featured Vehicles
       </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+      {/* <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
         Premium listings with paid featured visibility on TRUCK99.
-      </Typography>
+      </Typography> */}
 
       <Box
         sx={{
@@ -205,7 +255,7 @@ export default function FeaturedVehiclesMarketplacePage() {
             }}
           />
         </Box>
-        <SortDropdown value={sortBy as SortOption} onChange={handleSortChange} />
+        {/* <SortDropdown value={sortBy as SortOption} onChange={handleSortChange} /> */}
       </Box>
 
       {error && !loading ? (
