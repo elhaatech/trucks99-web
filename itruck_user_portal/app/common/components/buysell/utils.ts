@@ -83,7 +83,6 @@ function pullSpecLoose(
 }
 
 export function getProductTitle(product: BuySellProduct): string {
-  if (product.description?.trim()) return product.description.trim();
   const sub =
     typeof product.subcategory_id === "object" && product.subcategory_id
       ? product.subcategory_id.sub_category_name
@@ -95,6 +94,7 @@ export function getProductTitle(product: BuySellProduct): string {
   if (sub && cat) return `${sub} · ${cat}`;
   if (sub) return sub;
   if (cat) return cat;
+  if (product.description?.trim()) return product.description.trim();
   return product.bsNumber || "Commercial Vehicle";
 }
 
