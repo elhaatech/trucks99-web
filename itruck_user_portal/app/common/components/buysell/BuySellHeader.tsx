@@ -396,7 +396,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                   <LocalOfferOutlinedIcon sx={{ mr: 1.5, fontSize: 18, color: "text.secondary" }} />
                   My Offers
                 </MenuItem>
-                <MenuItem
+                {/* <MenuItem
                   onClick={() => {
                     setUserMenuAnchor(null);
                     router.push(userProductRoutes.purchases());
@@ -404,7 +404,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                 >
                   <ShoppingBagOutlinedIcon sx={{ mr: 1.5, fontSize: 18, color: "text.secondary" }} />
                   My Purchases
-                </MenuItem>
+                </MenuItem> */}
                 <MenuItem
                   onClick={() => {
                     setUserMenuAnchor(null);

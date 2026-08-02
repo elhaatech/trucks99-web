@@ -87,7 +87,7 @@ contactRouter.post("/submit", upload.single("attachment"), async (req, res) => {
       return res.status(400).json({ message: "A valid email is required." });
     }
     if (!message || message.length < 5) {
-      return res.status(400).json({ message: "Please enter a message." });
+      return res.status(400).json({ message: "Message must be at least 5 characters long." });
     }
 
     const actor = req.user || {};

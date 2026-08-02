@@ -34,27 +34,39 @@ function LegalSectionBlock({
       component="section"
       sx={{
         scrollMarginTop: 24,
+        p: { xs: 2.5, md: 3.5 },
+        borderRadius: "24px",
+        border: `1px solid ${T.color.border}`,
+        bgcolor: T.color.surface,
+        boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.02)",
+        transition: "all 0.3s ease",
+        "&:hover": {
+          transform: "translateY(-4px)",
+          boxShadow: "0px 8px 30px rgba(0, 0, 0, 0.06)",
+          borderColor: "rgba(37, 99, 235, 0.2)",
+        },
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, mb: 1 }}>
+      <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2, mb: 1.5 }}>
         <Box
           sx={{
-            minWidth: 32,
-            height: 32,
-            borderRadius: "50%",
-            bgcolor: "rgba(37, 99, 235, 0.1)",
-            color: INFO,
+            minWidth: 40,
+            height: 40,
+            borderRadius: "12px",
+            background: "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)",
+            color: "#fff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             fontWeight: 800,
-            fontSize: 14,
+            fontSize: 16,
             flexShrink: 0,
+            boxShadow: "0px 4px 12px rgba(37, 99, 235, 0.3)",
           }}
         >
           {number}
         </Box>
-        <Typography sx={{ fontWeight: 700, fontSize: { xs: 16, md: 18 }, color: T.color.textPrimary, pt: 0.35 }}>
+        <Typography sx={{ fontWeight: 800, fontSize: { xs: 18, md: 20 }, color: T.color.textPrimary, pt: 0.5, letterSpacing: "-0.01em" }}>
           {title}
         </Typography>
       </Box>
@@ -63,11 +75,11 @@ function LegalSectionBlock({
         <Typography
           sx={{
             color: T.color.textSecondary,
-            fontSize: 14,
-            lineHeight: 1.75,
+            fontSize: 15,
+            lineHeight: 1.8,
             whiteSpace: "pre-line",
-            pl: { xs: 0, sm: 5.5 },
-            mb: bullets.length ? 1 : 0,
+            pl: { xs: 0, sm: 7 },
+            mb: bullets.length ? 2 : 0,
           }}
         >
           {content}
@@ -79,11 +91,14 @@ function LegalSectionBlock({
           component="ul"
           sx={{
             m: 0,
-            pl: { xs: 2.5, sm: 7 },
+            pl: { xs: 3, sm: 9 },
             color: T.color.textSecondary,
-            fontSize: 14,
-            lineHeight: 1.75,
-            "& li": { mb: 0.75 },
+            fontSize: 15,
+            lineHeight: 1.8,
+            "& li": { 
+              mb: 1,
+              "&::marker": { color: "#2563eb" }
+            },
           }}
         >
           {bullets.map((item) => (
@@ -158,31 +173,58 @@ export default function LegalPage() {
   }
 
   return (
-    <Box sx={{ maxWidth: 860, mx: "auto" }}>
-      <Typography sx={{ fontWeight: 800, fontSize: { xs: 24, md: 32 }, color: T.color.textPrimary }}>
-        {doc.title}
-      </Typography>
-      {doc.subtitle ? (
-        <Typography sx={{ color: T.color.textSecondary, mt: 0.75, mb: 1, fontSize: { xs: 14, md: 16 } }}>
-          {doc.subtitle}
+    <Box sx={{ maxWidth: 900, mx: "auto", pb: 6 }}>
+      <Box sx={{ 
+        textAlign: "center", 
+        mb: { xs: 4, md: 6 },
+        py: { xs: 4, md: 6 },
+        px: 2,
+        borderRadius: "24px",
+        background: "linear-gradient(180deg, rgba(37, 99, 235, 0.05) 0%, rgba(255, 255, 255, 0) 100%)",
+        border: "1px solid rgba(37, 99, 235, 0.1)"
+      }}>
+        <Typography sx={{ 
+          fontWeight: 900, 
+          fontSize: { xs: 32, md: 48 }, 
+          color: T.color.textPrimary,
+          letterSpacing: "-0.02em",
+          background: "linear-gradient(90deg, #1e3a8a 0%, #2563eb 100%)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          mb: 1.5
+        }}>
+          {doc.title}
         </Typography>
-      ) : null}
-      {updatedLabel ? (
-        <Typography sx={{ fontSize: 12, color: T.color.textMuted, mb: doc.intro ? 1.5 : 3 }}>
-          Last updated: {updatedLabel}
-        </Typography>
-      ) : (
-        <Box sx={{ mb: doc.intro ? 1.5 : 3 }} />
-      )}
+        {doc.subtitle ? (
+          <Typography sx={{ color: T.color.textSecondary, mt: 1, mb: 2, fontSize: { xs: 16, md: 18 }, fontWeight: 500, maxWidth: 600, mx: "auto" }}>
+            {doc.subtitle}
+          </Typography>
+        ) : null}
+        {updatedLabel ? (
+          <Box sx={{ 
+            display: "inline-block", 
+            px: 2, 
+            py: 0.75, 
+            bgcolor: "rgba(37, 99, 235, 0.1)", 
+            borderRadius: "20px",
+            color: "#2563eb",
+            fontSize: 13,
+            fontWeight: 600
+          }}>
+            Last updated: {updatedLabel}
+          </Box>
+        ) : null}
+      </Box>
 
       {doc.intro ? (
         <Typography
           sx={{
             color: T.color.textSecondary,
-            fontSize: 14,
-            lineHeight: 1.75,
-            mb: 3,
-            maxWidth: 760,
+            fontSize: 16,
+            lineHeight: 1.8,
+            mb: 5,
+            px: { xs: 1, md: 2 },
+            textAlign: "center",
           }}
         >
           {doc.intro}
@@ -191,11 +233,6 @@ export default function LegalPage() {
 
       <Box
         sx={{
-          p: { xs: 2, md: 3 },
-          borderRadius: T.radius.lg,
-          border: `1px solid ${T.color.border}`,
-          bgcolor: T.color.surface,
-          boxShadow: T.shadow.card,
           display: "flex",
           flexDirection: "column",
           gap: 3,
@@ -208,29 +245,50 @@ export default function LegalPage() {
         {doc.contactEmail ? (
           <Box
             sx={{
-              mt: 1,
-              pt: 2.5,
-              borderTop: `1px solid ${T.color.border}`,
+              mt: 2,
+              p: 4,
+              borderRadius: "24px",
+              background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
+              border: `1px solid ${T.color.border}`,
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 2,
             }}
           >
-            <Typography sx={{ fontWeight: 700, fontSize: 16, color: T.color.textPrimary, mb: 1 }}>
-              {doc.contactLabel || "Contact us"}
-            </Typography>
+            <Box>
+              <Typography sx={{ fontWeight: 800, fontSize: 20, color: T.color.textPrimary, mb: 0.5 }}>
+                {doc.contactLabel || "Contact us"}
+              </Typography>
+              <Typography sx={{ color: T.color.textSecondary, fontSize: 14 }}>
+                We're here to help if you have any questions.
+              </Typography>
+            </Box>
             <Box
               component="a"
               href={`mailto:${doc.contactEmail}`}
               sx={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 1,
-                color: INFO,
+                gap: 1.5,
+                bgcolor: "#fff",
+                color: "#2563eb",
+                px: 3,
+                py: 1.5,
+                borderRadius: "12px",
                 textDecoration: "none",
-                fontWeight: 600,
-                fontSize: 14,
-                "&:hover": { textDecoration: "underline" },
+                fontWeight: 700,
+                fontSize: 15,
+                boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.05)",
+                transition: "all 0.2s",
+                "&:hover": { 
+                  transform: "translateY(-2px)",
+                  boxShadow: "0px 6px 16px rgba(37, 99, 235, 0.15)",
+                },
               }}
             >
-              <EmailOutlinedIcon fontSize="small" />
+              <EmailOutlinedIcon />
               {doc.contactEmail}
             </Box>
           </Box>

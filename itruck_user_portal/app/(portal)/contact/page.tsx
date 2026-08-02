@@ -242,6 +242,8 @@ export default function ContactUsPage() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             disabled={submitting}
+            inputProps={{ minLength: 5 }}
+            helperText="Please enter at least 5 characters."
           />
 
           <input

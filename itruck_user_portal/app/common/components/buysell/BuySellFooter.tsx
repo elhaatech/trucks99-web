@@ -78,8 +78,8 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
             }}
           >
             {[
-              ...FOOTER_LINKS.support.slice(0, 2),
-              FOOTER_LINKS.legal[0],
+              ...FOOTER_LINKS.legal,
+              FOOTER_LINKS.support[0],
             ].map((item) => (
               <Link key={item.label} href={item.href} prefetch={false} style={{ textDecoration: "none" }}>
                 <Typography
