@@ -186,9 +186,9 @@ export const FeaturedVehicleCard = memo(function FeaturedVehicleCard({
           {formatProductPrice(product.price)}
         </Typography>
 
-        {location ? (
+        {/* {location ? (
           <MetaIconLine icon={<LocationOnOutlinedIcon />}>{location}</MetaIconLine>
-        ) : null}
+        ) : null} */}
 
         <Typography variant="body2" color="text.secondary">
           Seller: <strong>{sellerName}</strong>
