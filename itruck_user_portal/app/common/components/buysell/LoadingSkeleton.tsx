@@ -11,7 +11,7 @@ export function VehicleCardSkeleton() {
       sx={{
         bgcolor: T.color.surface,
         border: `1px solid ${T.color.border}`,
-        borderRadius: T.radius.md,
+        borderRadius: 0,
         overflow: "hidden",
       }}
     >
@@ -49,48 +49,49 @@ export function VehicleGridSkeleton({ count = 6 }: { count?: number }) {
 export function StatsSkeleton() {
   return (
     <Box>
-      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-        <Skeleton width={200} height={28} />
-        <Skeleton width={120} height={18} />
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1.5, gap: 2, flexWrap: "wrap" }}>
+        <Box>
+          <Skeleton width={220} height={30} />
+          <Skeleton width={320} height={16} sx={{ mt: 1 }} />
+        </Box>
+        <Skeleton width={140} height={34} sx={{ borderRadius: 0 }} />
       </Box>
-      <Skeleton width={280} height={18} sx={{ mb: 2 }} />
       <Box
         sx={{
           display: "grid",
           gridTemplateColumns: {
-            xs: "1fr 1fr",
-            md: "repeat(12, 1fr)",
+            xs: "1fr",
+            sm: "repeat(2, minmax(0, 1fr))",
+            lg: "repeat(3, minmax(0, 1fr))",
+            xl: "repeat(4, minmax(0, 1fr))",
           },
-          gap: 1.5,
+          gap: { xs: 1.5, md: 2 },
         }}
       >
-        {[4, 4, 2, 2].map((span, i) => (
+        {Array.from({ length: 4 }).map((_, i) => (
           <Box
             key={i}
             sx={{
-              gridColumn: {
-                xs: i < 2 ? "span 2" : "span 1",
-                sm: i < 2 ? "span 1" : "span 1",
-                md: `span ${span}`,
-              },
-              p: 2,
-              borderRadius: T.radius.md,
+              p: { xs: 2.25, md: 2.6 },
+              borderRadius: 0,
               border: `1px solid ${T.color.border}`,
               bgcolor: T.color.surface,
-              minHeight: i < 2 ? 120 : 96,
+              minHeight: 210,
+              boxShadow: "0 2px 10px rgba(15, 23, 42, 0.04)",
             }}
           >
-            <Skeleton width="55%" height={12} />
-            <Skeleton width="40%" height={i < 2 ? 36 : 28} sx={{ mt: 1.25 }} />
-            <Skeleton width="70%" height={8} sx={{ mt: 1.5 }} />
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Skeleton width="70%" height={14} />
+              <Skeleton variant="circular" width={48} height={48} />
+            </Box>
+            <Skeleton width="55%" height={38} sx={{ mt: 2.25 }} />
+            <Skeleton width="90%" height={16} sx={{ mt: 1.5 }} />
+            <Skeleton width="100%" height={8} sx={{ mt: 2.25, borderRadius: 0 }} />
+            <Skeleton width="45%" height={12} sx={{ mt: 1.25 }} />
           </Box>
         ))}
       </Box>
-      <Skeleton
-        variant="rounded"
-        height={52}
-        sx={{ mt: 2, borderRadius: T.radius.lg }}
-      />
+      <Skeleton variant="rounded" height={72} sx={{ mt: 2.25, borderRadius: 0 }} />
     </Box>
   );
 }

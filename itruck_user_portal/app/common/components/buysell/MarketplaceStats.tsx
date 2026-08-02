@@ -1,16 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import { alpha } from "@mui/material/styles";
 import NorthEastIcon from "@mui/icons-material/NorthEast";
-import Inventory2Icon from "@mui/icons-material/Inventory2";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import LocalOfferIcon from "@mui/icons-material/LocalOffer";
-import ToggleOnIcon from "@mui/icons-material/ToggleOn";
+import { ArrowUpRight, BadgeDollarSign, CircleCheck, Eye, Heart, Package2, Sparkles, Truck } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { PRODUCT_THEME as T, DASHBOARD_ACCENTS, INFO, LAYOUT, PRIMARY, SHADOW } from "@/lib/theme";
 import { HERO_TRUCK_IMAGES } from "@/lib/heroTruckImages";
 import { userProductRoutes } from "@/lib/userProductRoutes";
@@ -39,122 +37,159 @@ function formatUpdatedAt(value?: Date | string | null): string {
   });
 }
 
-function CompositionBar({
-  value,
-  color,
-  label,
-}: {
-  value: number;
-  color: string;
-  label: string;
-}) {
-  return (
-    <Box sx={{ mt: "auto", pt: 1.25, display: "flex", flexDirection: "column", gap: 0.75 }}>
-      <Box
-        sx={{
-          height: 5,
-          borderRadius: 99,
-          bgcolor: alpha(color, 0.14),
-          overflow: "hidden",
-        }}
-      >
-        <Box
-          sx={{
-            width: `${Math.max(2, value)}%`,
-            height: "100%",
-            bgcolor: color,
-            borderRadius: 99,
-            transition: "width 280ms ease",
-          }}
-        />
-      </Box>
-      <Typography
-        sx={{
-          fontSize: 11.5,
-          fontWeight: 500,
-          color: T.color.textMuted,
-          letterSpacing: "0.01em",
-          lineHeight: 1.4,
-        }}
-      >
-        {label}
-      </Typography>
-    </Box>
-  );
-}
+type AccentTone = (typeof DASHBOARD_ACCENTS)[keyof typeof DASHBOARD_ACCENTS];
 
 type StatCardProps = {
   label: string;
   value: number;
-  accent: (typeof DASHBOARD_ACCENTS)[keyof typeof DASHBOARD_ACCENTS];
-  emphasis: "primary" | "secondary";
-  composition?: { value: number; label: string };
-  icon?: React.ReactNode;
+  accent: AccentTone;
+  description: string;
+  subtitle?: string;
+  trendText: string;
+  progressValue: number;
+  icon: LucideIcon;
 };
 
-function StatCard({ label, value, accent, emphasis, composition, icon }: StatCardProps) {
-  const primary = emphasis === "primary";
+function StatCard({
+  label,
+  value,
+  accent,
+  description,
+  subtitle,
+  trendText,
+  progressValue,
+  icon: Icon,
+}: StatCardProps) {
+  const resolvedProgress = Math.max(6, Math.min(100, progressValue));
 
   return (
     <Box
       sx={{
-        p: { xs: 3, md: 3 },
-        borderRadius: T.radius.lg,
-        border: `1px solid ${T.color.border}`,
-        bgcolor: primary ? T.color.surface : T.color.surfaceMuted,
-        boxShadow: primary ? T.shadow.card : "none",
+        height: "100%",
         display: "flex",
         flexDirection: "column",
-        justifyContent: "flex-start",
-        gap: 1.25,
-        height: "100%",
-        minHeight: { xs: 190, md: 215 },
-        transition: "box-shadow 200ms ease, border-color 200ms ease",
+        borderRadius: 0,
+        border: `1px solid ${alpha(T.color.border, 0.8)}`,
+        bgcolor: "#FFFFFF",
+        boxShadow: SHADOW.sm,
+        p: { xs: 2.25, md: 2.6 },
+        transition: "transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease",
+        transform: "translateY(0)",
+        cursor: "default",
         "&:hover": {
-          borderColor: alpha(accent.main, 0.35),
-          boxShadow: primary ? T.shadow.cardHover : SHADOW.sm,
+          transform: "translateY(-4px)",
+          boxShadow: SHADOW.lg,
+          borderColor: alpha(accent.main, 0.26),
         },
       }}
     >
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}>
-        <Typography
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 1.25 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            sx={{
+              fontSize: { xs: 12, md: 13 },
+              fontWeight: 700,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              color: T.color.textMuted,
+              lineHeight: 1.2,
+              mb: 0.5,
+            }}
+          >
+            {label}
+          </Typography>
+          {subtitle ? (
+            <Typography
+              sx={{
+                fontSize: 12.5,
+                fontWeight: 500,
+                color: T.color.textSecondary,
+                lineHeight: 1.4,
+              }}
+            >
+              {subtitle}
+            </Typography>
+          ) : null}
+        </Box>
+        <Box
           sx={{
-            fontSize: primary ? 11 : 10.5,
-            fontWeight: 600,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-            color: T.color.textMuted,
-            lineHeight: 1.2,
-            flex: 1,
+            width: { xs: 44, md: 48 },
+            height: { xs: 44, md: 48 },
+            borderRadius: 0,
+            display: "grid",
+            placeItems: "center",
+            bgcolor: alpha(accent.main, 0.12),
+            color: accent.main,
+            flexShrink: 0,
           }}
         >
-          {label}
-        </Typography>
-        {icon ? <Box sx={{ color: accent.main, ml: 1, flexShrink: 0 }}>{icon}</Box> : null}
+          <Icon size={22} strokeWidth={1.8} />
+        </Box>
       </Box>
 
       <Typography
         sx={{
-          mt: 0.25,
-          fontSize: primary ? { xs: 30, md: 32 } : { xs: 24, md: 26 },
+          mt: 2,
+          fontSize: { xs: 32, sm: 36, md: 40 },
           fontWeight: 800,
-          color: primary ? accent.text : T.color.textPrimary,
-          letterSpacing: "-0.03em",
+          color: T.color.textPrimary,
+          letterSpacing: "-0.04em",
           lineHeight: 1,
         }}
       >
         {value.toLocaleString("en-IN")}
       </Typography>
 
-      {composition ? (
-        <CompositionBar
-          value={composition.value}
-          color={accent.main}
-          label={composition.label}
-        />
-      ) : (
-        <Box sx={{ mt: 1, height: 20 }} />
-      )}
+      <Typography
+        sx={{
+          mt: 1.1,
+          fontSize: 13.5,
+          fontWeight: 500,
+          color: T.color.textSecondary,
+          lineHeight: 1.55,
+        }}
+      >
+        {description}
+      </Typography>
+
+      <Box sx={{ mt: "auto", pt: 2.25 }}>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mb: 0.9 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.6, color: accent.text }}>
+            <ArrowUpRight size={15} strokeWidth={2} />
+            <Typography
+              sx={{
+                fontSize: 12.2,
+                fontWeight: 700,
+                color: accent.text,
+                lineHeight: 1,
+              }}
+            >
+              {trendText}
+            </Typography>
+          </Box>
+          <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: T.color.textMuted }}>
+            {resolvedProgress}%
+          </Typography>
+        </Box>
+        <Box
+          sx={{
+            height: 7,
+            borderRadius: 0,
+            bgcolor: alpha(accent.main, 0.14),
+            overflow: "hidden",
+          }}
+        >
+          <Box
+            sx={{
+              width: `${resolvedProgress}%`,
+              height: "100%",
+              bgcolor: accent.main,
+              borderRadius: 0,
+              transition: "width 260ms ease",
+            }}
+          />
+        </Box>
+      </Box>
     </Box>
   );
 }
@@ -176,31 +211,50 @@ function MySellActivityStrip({
   return (
     <Box
       sx={{
-        mt: 2,
-        px: { xs: 1.75, md: 2 },
-        py: { xs: 1.5, md: 1.65 },
-        borderRadius: T.radius.lg,
-        border: `1px solid ${T.color.border}`,
-        bgcolor: alpha(PRIMARY, 0.04),
+        mt: 2.5,
+        px: { xs: 2, md: 2.4 },
+        py: { xs: 1.6, md: 1.8 },
+        borderRadius: 0,
+        border: `1px solid ${alpha(T.color.border, 0.8)}`,
+        bgcolor: "linear-gradient(135deg, rgba(37, 99, 235, 0.04) 0%, rgba(248, 250, 252, 0.96) 100%)",
         display: "flex",
         flexWrap: "wrap",
         alignItems: "center",
         gap: { xs: 1.25, md: 2 },
+        boxShadow: SHADOW.sm,
       }}
     >
-      <Typography
-        sx={{
-          fontSize: 12,
-          fontWeight: 700,
-          color: T.color.textSecondary,
-          letterSpacing: "0.04em",
-          textTransform: "uppercase",
-          mr: { md: 0.5 },
-          flexShrink: 0,
-        }}
-      >
-        Your sell activity
-      </Typography>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0, flex: 1 }}>
+        <Box
+          sx={{
+            width: 44,
+            height: 44,
+            borderRadius: "50%",
+            display: "grid",
+            placeItems: "center",
+            bgcolor: alpha(PRIMARY, 0.12),
+            color: PRIMARY,
+          }}
+        >
+          <Sparkles size={20} strokeWidth={1.8} />
+        </Box>
+        <Box>
+          <Typography
+            sx={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: T.color.textSecondary,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+            }}
+          >
+            Your sell activity
+          </Typography>
+          <Typography sx={{ fontSize: 13.5, color: T.color.textSecondary, mt: 0.25 }}>
+            Keep a pulse on what is live, active, and converting.
+          </Typography>
+        </Box>
+      </Box>
 
       <Box
         sx={{
@@ -208,8 +262,7 @@ function MySellActivityStrip({
           flexWrap: "wrap",
           alignItems: "center",
           gap: { xs: 1.25, sm: 2 },
-          flex: 1,
-          minWidth: 0,
+          ml: { md: "auto" },
         }}
       >
         {items.map((item, i) => (
@@ -222,7 +275,7 @@ function MySellActivityStrip({
               ...(i > 0
                 ? {
                     pl: { sm: 2 },
-                    borderLeft: { sm: `1px solid ${T.color.border}` },
+                    borderLeft: { sm: `1px solid ${alpha(T.color.border, 0.8)}` },
                   }
                 : {}),
             }}
@@ -238,7 +291,7 @@ function MySellActivityStrip({
             >
               {item.value.toLocaleString("en-IN")}
             </Typography>
-            <Typography sx={{ fontSize: 12, color: T.color.textMuted, fontWeight: 500 }}>
+            <Typography sx={{ fontSize: 12, color: T.color.textMuted, fontWeight: 600 }}>
               {item.label}
             </Typography>
           </Box>
@@ -255,9 +308,11 @@ function MySellActivityStrip({
           fontWeight: 700,
           fontSize: 12.5,
           color: PRIMARY,
-          ml: { xs: 0, md: "auto" },
-          px: 1,
+          px: 1.2,
           minWidth: "auto",
+          borderRadius: 0,
+          bgcolor: alpha(PRIMARY, 0.08),
+          "&:hover": { bgcolor: alpha(PRIMARY, 0.12) },
         }}
       >
         My listings
@@ -280,6 +335,54 @@ export function MarketplaceStatsCards({
       ? Math.round((stats.totalOffers / stats.totalListings) * 10) / 10
       : 0;
 
+  const cards = useMemo(
+    () => [
+      {
+        label: "Total listings",
+        value: stats.totalListings,
+        accent: DASHBOARD_ACCENTS.blue,
+        description: "A complete view of inventory currently available in the marketplace.",
+        subtitle: "Live inventory breadth",
+        trendText: `${activeShare}% active now`,
+        progressValue: Math.max(14, Math.min(100, activeShare + 12)),
+        icon: Package2,
+      },
+      {
+        label: "Active listings",
+        value: stats.activeListings,
+        accent: DASHBOARD_ACCENTS.green,
+        description: "Vehicles that remain visible and ready for buyer discovery.",
+        subtitle: "Available to browse",
+        trendText: stats.totalListings > 0
+          ? `${stats.activeListings.toLocaleString("en-IN")}/${stats.totalListings.toLocaleString("en-IN")}`
+          : "No listings yet",
+        progressValue: activeShare,
+        icon: Truck,
+      },
+      {
+        label: "Sold",
+        value: stats.soldVehicles,
+        accent: DASHBOARD_ACCENTS.purple,
+        description: "Successful closes and completed transactions across the platform.",
+        subtitle: "Completed deals",
+        trendText: `${soldShare}% of inventory`,
+        progressValue: soldShare,
+        icon: CircleCheck,
+      },
+      {
+        label: "Offers",
+        value: stats.totalOffers,
+        accent: DASHBOARD_ACCENTS.amber,
+        description: "Buyer inquiries and bid activity generated by your listings.",
+        subtitle: "Engagement volume",
+        trendText: stats.totalListings > 0 ? `~${offersPerListing} / listing` : "No offers yet",
+        progressValue: Math.min(100, Math.max(8, offersPerListing * 22)),
+        icon: BadgeDollarSign,
+      },
+    ],
+    [activeShare, offersPerListing, soldShare, stats.activeListings, stats.totalListings, stats.totalOffers, stats.soldVehicles],
+  );
+
   return (
     <Box>
       <Box
@@ -288,34 +391,52 @@ export function MarketplaceStatsCards({
           flexWrap: "wrap",
           alignItems: "flex-end",
           justifyContent: "space-between",
-          gap: 1,
-          mb: 0.5,
+          gap: 1.5,
+          mb: 1.25,
         }}
       >
-        <Typography
+        <Box>
+          <Typography
+            sx={{
+              fontWeight: 800,
+              fontSize: { xs: 24, md: 28 },
+              color: T.color.textPrimary,
+              letterSpacing: "-0.03em",
+              lineHeight: 1.1,
+            }}
+          >
+            Marketplace overview
+          </Typography>
+          <Typography
+            sx={{
+              mt: 0.75,
+              fontSize: 13.5,
+              fontWeight: 500,
+              color: T.color.textSecondary,
+              lineHeight: 1.6,
+            }}
+          >
+            A premium snapshot of marketplace activity, buyer signals, and conversion movement.
+          </Typography>
+        </Box>
+        <Box
           sx={{
-            fontWeight: 800,
-            fontSize: 24,
-            color: T.color.textPrimary,
-            letterSpacing: "-0.01em",
-            mb: 0.5,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 0.75,
+            px: 1.4,
+            py: 0.8,
+            borderRadius: 0,
+            bgcolor: alpha(PRIMARY, 0.08),
+            color: PRIMARY,
+            fontSize: 12.5,
+            fontWeight: 700,
           }}
         >
-          Marketplace statistics
-        </Typography>
-        <Typography
-          sx={{
-            fontSize: 12,
-            fontWeight: 500,
-            color: T.color.textMuted,
-          }}
-        >
-          Last updated {formatUpdatedAt(updatedAt)}
-        </Typography>
+          <Eye size={16} strokeWidth={2} />
+          Updated {formatUpdatedAt(updatedAt)}
+        </Box>
       </Box>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: 13.5 }}>
-        Live inventory signals across the TRUCKS99 marketplace.
-      </Typography>
 
       <Box
         sx={{
@@ -323,71 +444,19 @@ export function MarketplaceStatsCards({
           gridTemplateColumns: {
             xs: "1fr",
             sm: "repeat(2, minmax(0, 1fr))",
-            lg: "repeat(4, minmax(0, 1fr))",
+            lg: "repeat(3, minmax(0, 1fr))",
+            xl: "repeat(4, minmax(0, 1fr))",
           },
           gridAutoRows: "1fr",
           alignItems: "stretch",
-          gap: 3,
+          gap: { xs: 1.5, md: 2 },
         }}
       >
-        <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-          <StatCard
-            label="Total listings"
-            value={stats.totalListings}
-            accent={DASHBOARD_ACCENTS.blue}
-            emphasis="primary"
-            composition={{
-              value: activeShare,
-              label: `${activeShare}% currently active`,
-            }}
-            icon={<Inventory2Icon />}
-          />
-        </Box>
-        <Box sx={{ gridColumn: { xs: "span 2", sm: "span 1", md: "span 4" }, height: "100%", display: "flex", flexDirection: "column" }}>
-          <StatCard
-            label="Active listings"
-            value={stats.activeListings}
-            accent={DASHBOARD_ACCENTS.green}
-            emphasis="primary"
-            composition={{
-              value: activeShare,
-              label:
-                stats.totalListings > 0
-                  ? `${stats.activeListings.toLocaleString("en-IN")} of ${stats.totalListings.toLocaleString("en-IN")} total`
-                  : "No listings yet",
-            }}
-          />
-            icon={<ToggleOnIcon />}
-        </Box>
-        <Box sx={{ gridColumn: { xs: "span 1", md: "span 2" }, height: "100%", display: "flex", flexDirection: "column" }}>
-          <StatCard
-            label="Sold"
-            value={stats.soldVehicles}
-            accent={DASHBOARD_ACCENTS.purple}
-            emphasis="secondary"
-            composition={{
-              value: soldShare,
-              label: `${soldShare}% of inventory`,
-            }}
-            icon={<CheckCircleOutlineIcon />}
-          />
-        </Box>
-        <Box sx={{ gridColumn: { xs: "span 1", md: "span 2" }, height: "100%", display: "flex", flexDirection: "column" }}>
-          <StatCard
-            label="Offers"
-            value={stats.totalOffers}
-            accent={DASHBOARD_ACCENTS.amber}
-            emphasis="secondary"
-            composition={{
-              value: Math.min(100, offersPerListing * 20),
-              label:
-                stats.totalListings > 0
-                  ? `~${offersPerListing} per listing`
-                  : "No offers yet",
-            }}
-            icon={<LocalOfferIcon />}
-          />
-        </Box>
+        {cards.map((card) => (
+          <Box key={card.label} sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+            <StatCard {...card} />
+          </Box>
+        ))}
       </Box>
 
       {mySell ? (
@@ -469,7 +538,7 @@ function HeroTruckBackground({
               width: { xs: 52, sm: 64, md: 72 },
               height: { xs: 36, sm: 44, md: 48 },
               flexShrink: 0,
-              borderRadius: 1,
+              borderRadius: 0,
               overflow: "hidden",
               cursor: "pointer",
               border: index === activeIndex ? "2px solid #fff" : "2px solid rgba(255,255,255,0.35)",
@@ -523,7 +592,7 @@ export function HeroSearchSection({
     <Box
       sx={{
         position: "relative",
-        borderRadius: fullBleed ? 0 : T.radius.lg,
+        borderRadius: 0,
         overflow: "hidden",
         minHeight: { xs: 340, md: 420 },
         display: "flex",
@@ -594,7 +663,7 @@ export function HeroSearchSection({
             gap: 1.5,
             bgcolor: "rgba(255,255,255,0.98)",
             p: 1.5,
-            borderRadius: T.radius.lg,
+            borderRadius: 0,
             boxShadow: T.shadow.elevated,
             maxWidth: 760,
             mx: "auto",
@@ -607,7 +676,7 @@ export function HeroSearchSection({
             onChange={(e) => onSearchChange(e.target.value)}
             sx={{
               border: `1px solid ${T.color.border}`,
-              borderRadius: T.radius.md,
+              borderRadius: 0,
               px: 2,
               py: 1.35,
               fontSize: 14,
@@ -621,7 +690,7 @@ export function HeroSearchSection({
             onChange={(e) => onCategoryChange(e.target.value)}
             sx={{
               border: `1px solid ${T.color.border}`,
-              borderRadius: T.radius.md,
+              borderRadius: 0,
               px: 2,
               py: 1.35,
               fontSize: 14,
@@ -640,7 +709,7 @@ export function HeroSearchSection({
             type="submit"
             sx={{
               border: "none",
-              borderRadius: T.radius.md,
+              borderRadius: 0,
               bgcolor: INFO,
               color: "#fff",
               fontWeight: 700,
