@@ -13,6 +13,10 @@ export {
   clearToken,
   resolveApiBase,
   API_BASE,
+  getRowId,
+  blockUnblock,
+  type RequestOptions,
+  type BlockUnblockEntity,
 } from "@/model/services/common_fixed";
 
 export { getAuthHeaders } from "@/model/services/getAuthHeaders";
