@@ -3,7 +3,7 @@
 import { initializeApp, getApps } from "firebase/app";
 import { doc, getFirestore, onSnapshot } from "firebase/firestore";
 import { getMessaging, getToken, isSupported, onMessage } from "firebase/messaging";
-import { api } from "./common";
+import { api } from "./common_fixed";
 
 type FirebaseWebConfig = {
   apiKey: string;

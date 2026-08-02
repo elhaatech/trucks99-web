@@ -12,4 +12,4 @@ export {
   blockUnblock,
   type RequestOptions,
   type BlockUnblockEntity,
-} from "@/model/services/common";
+} from "@/services";
