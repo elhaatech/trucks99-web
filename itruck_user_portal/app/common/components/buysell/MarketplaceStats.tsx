@@ -7,7 +7,15 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import { alpha } from "@mui/material/styles";
 import NorthEastIcon from "@mui/icons-material/NorthEast";
-import { ArrowUpRight, BadgeDollarSign, CircleCheck, Eye, Heart, Package2, Sparkles, Truck } from "lucide-react";
+import {
+  ArrowUpRight,
+  CheckCircle2,
+  Eye,
+  Handshake,
+  ListChecks,
+  Sparkles,
+  Truck,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PRODUCT_THEME as T, DASHBOARD_ACCENTS, INFO, LAYOUT, PRIMARY, SHADOW } from "@/lib/theme";
 import { HERO_TRUCK_IMAGES } from "@/lib/heroTruckImages";
@@ -68,17 +76,17 @@ function StatCard({
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        borderRadius: 0,
+        borderRadius: 2,
         border: `1px solid ${alpha(T.color.border, 0.8)}`,
         bgcolor: "#FFFFFF",
-        boxShadow: SHADOW.sm,
-        p: { xs: 2.25, md: 2.6 },
+        boxShadow: SHADOW.card,
+        p: { xs: 2.5, md: 3 },
         transition: "transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease",
         transform: "translateY(0)",
         cursor: "default",
         "&:hover": {
           transform: "translateY(-4px)",
-          boxShadow: SHADOW.lg,
+          boxShadow: SHADOW.cardHover,
           borderColor: alpha(accent.main, 0.26),
         },
       }}
@@ -113,17 +121,18 @@ function StatCard({
         </Box>
         <Box
           sx={{
-            width: { xs: 44, md: 48 },
-            height: { xs: 44, md: 48 },
-            borderRadius: 0,
+            width: { xs: 46, md: 52 },
+            height: { xs: 46, md: 52 },
+            borderRadius: "14px",
             display: "grid",
             placeItems: "center",
-            bgcolor: alpha(accent.main, 0.12),
+            bgcolor: `linear-gradient(135deg, ${alpha(accent.main, 0.18)} 0%, ${alpha(accent.main, 0.04)} 100%)`,
             color: accent.main,
             flexShrink: 0,
+            boxShadow: `0 12px 24px ${alpha(accent.main, 0.08)}`,
           }}
         >
-          <Icon size={22} strokeWidth={1.8} />
+          <Icon size={24} strokeWidth={1.9} />
         </Box>
       </Box>
 
@@ -152,30 +161,31 @@ function StatCard({
         {description}
       </Typography>
 
-      <Box sx={{ mt: "auto", pt: 2.25 }}>
-        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mb: 0.9 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.6, color: accent.text }}>
+      <Box sx={{ mt: "auto", pt: 2.5 }}>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mb: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, color: accent.text }}>
             <ArrowUpRight size={15} strokeWidth={2} />
             <Typography
               sx={{
-                fontSize: 12.2,
+                fontSize: 12.5,
                 fontWeight: 700,
                 color: accent.text,
                 lineHeight: 1,
+                textTransform: "capitalize",
               }}
             >
               {trendText}
             </Typography>
           </Box>
-          <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: T.color.textMuted }}>
+          <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: T.color.textMuted }}>
             {resolvedProgress}%
           </Typography>
         </Box>
         <Box
           sx={{
-            height: 7,
-            borderRadius: 0,
-            bgcolor: alpha(accent.main, 0.14),
+            height: 8,
+            borderRadius: 99,
+            bgcolor: alpha(accent.main, 0.12),
             overflow: "hidden",
           }}
         >
@@ -184,7 +194,7 @@ function StatCard({
               width: `${resolvedProgress}%`,
               height: "100%",
               bgcolor: accent.main,
-              borderRadius: 0,
+              borderRadius: 99,
               transition: "width 260ms ease",
             }}
           />
@@ -345,7 +355,7 @@ export function MarketplaceStatsCards({
         subtitle: "Live inventory breadth",
         trendText: `${activeShare}% active now`,
         progressValue: Math.max(14, Math.min(100, activeShare + 12)),
-        icon: Package2,
+        icon: ListChecks,
       },
       {
         label: "Active listings",
@@ -367,7 +377,7 @@ export function MarketplaceStatsCards({
         subtitle: "Completed deals",
         trendText: `${soldShare}% of inventory`,
         progressValue: soldShare,
-        icon: CircleCheck,
+        icon: CheckCircle2,
       },
       {
         label: "Offers",
@@ -377,7 +387,7 @@ export function MarketplaceStatsCards({
         subtitle: "Engagement volume",
         trendText: stats.totalListings > 0 ? `~${offersPerListing} / listing` : "No offers yet",
         progressValue: Math.min(100, Math.max(8, offersPerListing * 22)),
-        icon: BadgeDollarSign,
+        icon: Handshake,
       },
     ],
     [activeShare, offersPerListing, soldShare, stats.activeListings, stats.totalListings, stats.totalOffers, stats.soldVehicles],
