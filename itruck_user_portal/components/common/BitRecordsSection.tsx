@@ -22,7 +22,7 @@ import {
   BIT_RECORD_API_BASE,
   getLoaderAll,
 } from "@/model/api";
-import { api } from "@/model/services/common";
+import { api } from "@/model/services/common_fixed";
 import { getUserAll, type User } from "@/model/services/user";
 import { getTruckAll, type Truck } from "@/model/services/truck";
 import { getBuySellAll, getLoadAll, type Load } from "@/model/services/load";

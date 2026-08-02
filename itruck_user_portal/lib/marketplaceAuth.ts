@@ -1,5 +1,5 @@
 import type { User } from "@/model/services/user";
-import { getAuthHeaders } from "@/model/services/common";
+import { getAuthHeaders } from "@/services";
 import {
   getMarketplaceUserId,
   persistMarketplaceUserId,

@@ -11,10 +11,11 @@ export {
   publicApi,
   setToken,
   clearToken,
-  getAuthHeaders,
   resolveApiBase,
   API_BASE,
-} from "@/model/services/common";
+} from "@/model/services/common_fixed";
+
+export { getAuthHeaders } from "@/model/services/getAuthHeaders";
 
 export {
   getBuySellList,

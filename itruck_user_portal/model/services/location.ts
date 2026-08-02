@@ -1,4 +1,4 @@
-import { api } from "./common";
+import { api } from "./common_fixed";
 
 export type LocationCountry = {
   _id?: string;

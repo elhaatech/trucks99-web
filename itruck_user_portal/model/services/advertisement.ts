@@ -1,4 +1,5 @@
-import { api, publicApi, getAuthHeaders, resolveApiBase } from "./common";
+import { api, publicApi, resolveApiBase } from "./common_fixed";
+import { getAuthHeaders } from "@/services";
 import type { ApiUser } from "./user";
 
 export const AD_TYPES = ["Text", "Banner", "Image", "Video"] as const;

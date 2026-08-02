@@ -1,4 +1,4 @@
-import { getAuthHeaders } from "@/model/services/common";
+import { getAuthHeaders } from "@/services";
 import { setReturnUrl } from "@/lib/navigation/navigation";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { hasMarketplaceBearerToken } from "@/lib/marketplaceAuth";
