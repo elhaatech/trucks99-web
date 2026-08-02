@@ -1416,7 +1416,8 @@ buySellRouter.get("/all", async (req, res) => {
       .lean();
 
     const withLocation = await enrichBuySellProductsWithLocation(list);
-    const enriched = await enrichBuySellListItems(withLocation, actor);
+    const withSpecifications = await enrichBuySellSpecifications(withLocation);
+    const enriched = await enrichBuySellListItems(withSpecifications, actor);
     res.json(toResponseList(enriched));
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -1727,10 +1728,10 @@ async function fetchDashboardMarketplaceVehicles(actor, limit, sort) {
     .populate("subcategory_id", "sub_category_name")
     .lean();
 
-  return enrichBuySellListItems(
-    await enrichBuySellProductsWithLocation(list),
-    actor,
-  );
+  const withLocation = await enrichBuySellProductsWithLocation(list);
+  const withSpecifications = await enrichBuySellSpecifications(withLocation);
+
+  return enrichBuySellListItems(withSpecifications, actor);
 }
 
 // POST /api/buy-sell/recent-vehicles   body: { limit?: number }
@@ -1911,9 +1912,11 @@ buySellRouter.post("/featured-vehicles/list", async (req, res) => {
       safePage * limit,
     );
 
+    const withSpecifications = await enrichBuySellSpecifications(slice);
+
     // Lite enrich — skip bid agg, seller User lookups, and location lookups
     // (cards fall back to address/pincode for location).
-    const enrichedList = await enrichBuySellListItems(slice, actor, {
+    const enrichedList = await enrichBuySellListItems(withSpecifications, actor, {
       lite: true,
     });
 
