@@ -1,4 +1,5 @@
-import { api, clearToken, getAuthHeaders, setToken, resolveApiBase } from "./common";
+import { api, clearToken, setToken, resolveApiBase } from "./common_fixed";
+import { getAuthHeaders } from "@/services";
 import { persistMarketplaceUserId, clearMarketplaceUserId } from "@/lib/marketplaceUser";
 import { clearMarketplaceGuestKey } from "@/lib/marketplaceGuest";
 import { notifyMarketplaceAuthChanged } from "@/lib/marketplaceAuth";

@@ -1,4 +1,4 @@
-import { api, publicApi } from "./common";
+import { api, publicApi } from "./common_fixed";
 import { axiosClient } from "./axiosClient";
 import { cachedRequest } from "@/lib/apiCache";
 

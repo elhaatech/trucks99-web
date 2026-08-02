@@ -1,4 +1,5 @@
-import { api, publicApi, getAuthHeaders } from "./common";
+import { api, publicApi } from "./common_fixed";
+import { getAuthHeaders } from "@/services";
 import type { ApiUser } from "./user";
 import { getMarketplaceUserId } from "@/lib/marketplaceUser";
 import { getOrCreateGuestKey } from "@/lib/marketplaceGuest";

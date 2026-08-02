@@ -1,4 +1,4 @@
-import { publicApi } from "@/model/services/common";
+import { publicApi } from "@/model/services/common_fixed";
 
 export type EmiDefaults = {
   tenures: number[];

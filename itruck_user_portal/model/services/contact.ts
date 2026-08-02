@@ -1,4 +1,4 @@
-import { publicApi, resolveApiBase } from "@/model/services/common";
+import { publicApi, resolveApiBase } from "@/model/services/common_fixed";
 
 export type ContactInfo = {
   phone: string;
