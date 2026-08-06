@@ -1,4 +1,4 @@
-import { publicApi } from "@/model/services/common_fixed";
+import { api } from "@/model/services/common_fixed";
 
 export type EmiDefaults = {
   tenures: number[];
@@ -40,11 +40,11 @@ type EmiCalculateResponse = {
   data: EmiCalculateResult;
 };
 
-/** GET /api/emi/tenures — calculator defaults + tenure list. */
+/** GET /api/emi/tenures — calculator defaults + tenure list. (auth required) */
 export async function getEmiDefaults(
   signal?: AbortSignal,
 ): Promise<EmiDefaults> {
-  const res = await publicApi<EmiDefaultsResponse>("/api/emi/tenures", {
+  const res = await api<EmiDefaultsResponse>("/api/emi/tenures", {
     signal,
   });
   const raw = (res?.data ?? {}) as Partial<EmiDefaults> & Record<string, unknown>;
@@ -60,12 +60,12 @@ export async function getEmiDefaults(
   };
 }
 
-/** POST /api/emi/calculate — server-side reducing-balance EMI. */
+/** POST /api/emi/calculate — server-side reducing-balance EMI. (auth required) */
 export async function calculateEmiApi(
   input: EmiCalculateInput,
   signal?: AbortSignal,
 ): Promise<EmiCalculateResult> {
-  const res = await publicApi<EmiCalculateResponse>("/api/emi/calculate", {
+  const res = await api<EmiCalculateResponse>("/api/emi/calculate", {
     method: "POST",
     body: JSON.stringify({
       vehiclePrice: input.vehiclePrice,
