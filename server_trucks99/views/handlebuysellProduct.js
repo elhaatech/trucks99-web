@@ -290,7 +290,7 @@ function resolveCreateStatus(raw, isAdmin) {
     return allowed.includes(normalized) ? normalized : "active";
   }
   // Regular users publish listings as active — no admin approval step.
-  return "active";
+  return "pending";
 }
 
 function computeAdvanceAmount(product, requestedAmount) {
