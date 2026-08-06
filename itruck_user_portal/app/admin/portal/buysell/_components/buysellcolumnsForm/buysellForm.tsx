@@ -83,7 +83,6 @@ const STATUS_OPTIONS: {
   label: string;
   color: "warning" | "default" | "success";
 }[] = [
-  { value: "active", label: "Publish", color: "success" },
   { value: "draft", label: "Draft", color: "default" },
 ];
 
@@ -497,7 +496,7 @@ export function BuySellForm({
   // ── Sync isDraft → form status (create mode only) ─────────────────────────
   useEffect(() => {
     if (isEdit) return;
-    const next: BuySellStatus = isDraft ? "draft" : "active";
+    const next: BuySellStatus = isDraft ? "draft" : "pending";
     setFieldValue("status", next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDraft, isEdit]);
