@@ -94,7 +94,7 @@ const buySellSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["active", "inactive","draft","pending","rejected","purchased","sold","booking"],
+      enum: ["draft","pending","rejected","accepeted"],
       default: "pending",
     },
 

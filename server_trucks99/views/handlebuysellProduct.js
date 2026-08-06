@@ -68,23 +68,26 @@ const RESERVED_SINGLE_SEGMENT_PATHS = new Set([
 // ─── VALID STATUSES & LIFECYCLE ────────────────────────────────────────────────
 // Must match schema enum exactly (all lowercase).
 const VALID_STATUSES = [
-  "active",
-  "inactive",
   "draft",
   "pending",
   "rejected",
   "purchased",
   "sold",
   "booking",
+  // Set on the product itself once a buyer's offer is accepted (see PUT
+  // /bit/accept/:id). Spelling matches the ProductBitRecord enum on purpose
+  // — this codebase uses "accepeted", not "accept"/"accepted".
+  "accepeted",
 ];
 
-/** Allowed status transitions for the product purchase lifecycle. */
+/** Allowed status transitions for the product purchase lifecycle.
+ *  "pending" is the default, publicly-visible state — there is no separate
+ *  "active" state. "accepeted" is only ever reached via PUT /bit/accept/:id,
+ *  once a buyer's offer is accepted. */
 const STATUS_TRANSITIONS = {
-  // draft → active mirrors create (sellers publish without admin approval)
-  draft: ["pending", "active"],
-  pending: ["active", "rejected"],
-  active: ["booking", "inactive", "draft"],
-  inactive: ["active", "draft"],
+  draft: ["pending"],
+  pending: ["rejected", "accepeted"],
+  accepeted: ["booking", "purchased", "sold"],
   booking: ["purchased"],
   purchased: ["sold"],
   rejected: [],
@@ -282,14 +285,18 @@ function assertStatusTransition(fromStatus, toStatus) {
   }
 }
 
+// ─── CREATE-STATUS RESOLUTION ─────────────────────────────────────────────────
+// Only "draft" or "pending" are ever assigned at creation time — "active" is
+// never set here. Non-admins always land on "pending"; admins may explicitly
+// choose "draft", otherwise they also fall back to "pending".
 function resolveCreateStatus(raw, isAdmin) {
-  const normalized = normaliseStatus(raw, "active");
+  const normalized = normaliseStatus(raw, "pending");
   if (normalized === "draft") return "draft";
   if (isAdmin) {
-    const allowed = ["draft", "pending", "active", "inactive"];
-    return allowed.includes(normalized) ? normalized : "active";
+    const allowed = ["draft", "pending"];
+    return allowed.includes(normalized) ? normalized : "pending";
   }
-  // Regular users publish listings as active — no admin approval step.
+  // Regular users always land in pending — awaiting admin approval.
   return "pending";
 }
 
@@ -363,8 +370,8 @@ function assertProductAvailableForBooking(product) {
     err.statusCode = 400;
     throw err;
   }
-  // active + pending listings are available in the marketplace
-  if (!["active", "pending"].includes(product.status)) {
+  // pending (default listing) or accepeted (offer accepted) can be booked
+  if (!["pending", "accepeted"].includes(product.status)) {
     const err = new Error("Product is not available for purchase.");
     err.statusCode = 400;
     throw err;
@@ -626,6 +633,8 @@ function enrichProductListItem(item, contactMap, favoriteSet, bitRecords, bidSum
             0,
           )
         : null;
+  const accepted_bid = records.find((r) => r.status === "accepeted") || null;
+
   return {
     ...item,
     bsNumber: formatBsNumberWithDate(item.bsNumber, item.createdAt) || null,
@@ -636,18 +645,21 @@ function enrichProductListItem(item, contactMap, favoriteSet, bitRecords, bidSum
     bit_records: records,
     bid_count,
     highest_bid,
+    accepted_bid,
     featured: item.featured || null,
     isFeatured: item.featured ? item.featured.expiryStatus === 'Active' : false,
   };
 }
 
-/** Fields needed for marketplace list cards — omit lifecycle/payment noise. */
+/** Full field set — kept in parity with getById so the list response is
+ *  self-sufficient and the frontend never needs a follow-up detail call. */
 const LIST_PRODUCT_SELECT =
-  "id bsNumber category_id subcategory_id userid price description images specifications country_id state_id city_id address pincode user_type status viewCount created_by createdAt updatedAt";
+  "id bsNumber category_id subcategory_id userid price description images specifications country_id state_id city_id address pincode user_type status viewCount created_by updated_by createdAt updatedAt __v bookedBy bookedAt advanceAmount purchasedBy purchasedAt purchaseAmount soldAt";
 
-/** Even leaner for paginated browse while keeping full specs payload for UI cards. */
-const LIST_PRODUCT_SELECT_LITE =
-  "id bsNumber category_id subcategory_id userid price description images specifications country_id state_id city_id address pincode user_type status viewCount created_by createdAt updatedAt";
+/** Same field set for paginated browse — kept identical to LIST_PRODUCT_SELECT
+ *  on purpose; see enrichBuySellListItems' `lite` option for the actual
+ *  perf/latency lever (skips bid + user lookups, not fields). */
+const LIST_PRODUCT_SELECT_LITE = LIST_PRODUCT_SELECT;
 
 /** Optional page/limit — omit both to keep legacy full-list behavior. */
 function parseListPagination(body = {}) {
@@ -861,7 +873,6 @@ async function buildEnrichedResponse(data) {
 const SELLER_PRODUCTS_EXCLUDED_STATUSES = [
   "sold",
   "purchased",
-  "inactive",
   "rejected",
   "draft",
 ];
@@ -1117,6 +1128,9 @@ async function enrichBuySellListItems(items, actor, options = {}) {
   }
 
   if (lite) {
+    // Still cheap (single aggregate) — was previously hardcoded to 0/null,
+    // which made list bid counts wrong whenever pagination kicked in.
+    const bidSummary = await getBidSummaryByProductIds(allProductIds);
     const favoriteSet = new Set(
       userFavorites.map((fav) => String(fav.entityId)),
     );
@@ -1124,10 +1138,13 @@ async function enrichBuySellListItems(items, actor, options = {}) {
     return items.map((item) => {
       const featured = featuredMetaByProductId ? featuredMetaByProductId.get(String(item._id)) : null;
       if (featured) item.featured = featured;
-      return enrichProductListItem(item, emptyContact, favoriteSet, [], {
-        bid_count: 0,
-        highest_bid: null,
-      });
+      return enrichProductListItem(
+        item,
+        emptyContact,
+        favoriteSet,
+        [],
+        bidSummary[String(item._id)] || { bid_count: 0, highest_bid: null },
+      );
     });
   }
 
@@ -1194,6 +1211,9 @@ async function enrichBuySellListItems(items, actor, options = {}) {
 // Seller accepts a buyer's offer on their product. Marks the bit record accepted,
 // rejects sibling (still-pending) offers on the same product, and auto-creates the
 // income (seller)/expense (buyer) transactions.
+//
+// NOTE: status literal must match the ProductBitRecord schema enum spelling
+// exactly — this codebase uses "accepeted" (not "accept"/"accepted").
 buySellRouter.put("/bit/accept/:id", async (req, res) => {
   try {
     const actor = getActor(req);
@@ -1214,10 +1234,18 @@ buySellRouter.put("/bit/accept/:id", async (req, res) => {
     if (product.status === "sold") {
       return res.status(400).json({ message: "Product is already sold." });
     }
-    if (!["active", "booking"].includes(product.status)) {
+    // Bids can be accepted while the product is pending (default create
+    // state) or booking.
+    if (!["pending", "booking"].includes(product.status)) {
       return res.status(400).json({
         message: "Product is not available for offer acceptance.",
       });
+    }
+    if (bitRecord.status === "accepeted") {
+      return res.status(400).json({ message: "This offer is already accepted." });
+    }
+    if (bitRecord.status === "reject") {
+      return res.status(400).json({ message: "This offer was already rejected." });
     }
 
     // Only the seller (product owner) may accept an offer on their own product.
@@ -1229,23 +1257,34 @@ buySellRouter.put("/bit/accept/:id", async (req, res) => {
 
     const updatedBit = await ProductBitRecord.findByIdAndUpdate(
       resolvedBitId,
-      { $set: { status: "accept" } },
+      { $set: { status: "accepeted" } },
       { new: true },
     ).lean();
 
-    // Reject other pending offers on the same product.
+    // Reject other pending offers on the same product — never more than one
+    // accepted bid per product.
     await ProductBitRecord.updateMany(
       {
         productId: bitRecord.productId,
         _id: { $ne: resolvedBitId },
-        status: { $nin: ["accept", "reject"] },
+        status: { $nin: ["accepeted", "reject"] },
       },
       { $set: { status: "reject" } },
     );
 
+    // Keep the product's own status in sync with the accepted bid.
+    const updatedProduct = await BuySellProduct.findByIdAndUpdate(
+      bitRecord.productId,
+      { $set: { status: "accepeted", updated_by: actor.name } },
+      { new: true },
+    ).lean();
+
     let transactionResult = { skipped: true, reason: "not_attempted" };
     try {
-      transactionResult = await createBuySellTransactions(product, updatedBit);
+      transactionResult = await createBuySellTransactions(
+        updatedProduct || product,
+        updatedBit,
+      );
     } catch (txErr) {
       console.error(
         `[BuySell Offer Accept] createBuySellTransactions failed for bit ${resolvedBitId}:`,
@@ -1263,6 +1302,7 @@ buySellRouter.put("/bit/accept/:id", async (req, res) => {
     res.status(200).json({
       message: "Offer accepted successfully",
       bit_record: updatedBit,
+      product_status: updatedProduct?.status || "accepeted",
       transaction: transactionResult,
     });
   } catch (error) {
@@ -1443,8 +1483,9 @@ buySellRouter.post("/list", async (req, res) => {
     const withLocation = await enrichBuySellProductsWithLocation(trimmedList);
     const withSpecifications = await enrichBuySellSpecifications(withLocation);
     const enrichedList = await enrichBuySellListItems(withSpecifications, actor, {
-      // Paginated browse — skip bid aggregation + seller User lookups
-      lite: Boolean(pagination),
+      // Match getById: bring back bit_records/bid_count/highest_bid/accepted_bid
+      // so the frontend never needs a per-item detail call.
+      includeBitRecords: true,
     });
 
     // Legacy clients expect a bare array; paginated clients send page/limit.
@@ -1478,7 +1519,7 @@ buySellRouter.get("/all", async (req, res) => {
   try {
     const actor = getActor(req);
     const list = await BuySellProduct.find({
-      status: { $in: ["active", "pending"] },
+      status: "pending",
     })
       .select(LIST_PRODUCT_SELECT)
       .sort({ createdAt: -1 })
@@ -1489,7 +1530,9 @@ buySellRouter.get("/all", async (req, res) => {
 
     const withLocation = await enrichBuySellProductsWithLocation(list);
     const withSpecifications = await enrichBuySellSpecifications(withLocation);
-    const enriched = await enrichBuySellListItems(withSpecifications, actor);
+    const enriched = await enrichBuySellListItems(withSpecifications, actor, {
+      includeBitRecords: true,
+    });
     res.json(toResponseList(enriched));
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -1708,7 +1751,7 @@ async function computeSellMetricsBlock(productFilter) {
   const count = (key) => map[key] || 0;
 
   const totalListings = Object.values(map).reduce((sum, n) => sum + n, 0);
-  const activeListings = count("active") + count("pending");
+  const activeListings = count("pending"); // "pending" is the live/visible state
   const soldVehicles = count("sold") + count("purchased");
   const totalBooked = count("booking");
   const totalOffers = offerAgg[0]?.totalOffers || 0;
@@ -1720,10 +1763,9 @@ async function computeSellMetricsBlock(productFilter) {
     totalOffers,
     totalBooked,
     totalPending: count("pending"),
-    totalActive: count("active"),
+    totalAccepeted: count("accepeted"),
     totalDraft: count("draft"),
     totalRejected: count("rejected"),
-    totalInactive: count("inactive"),
     totalPurchased: count("purchased"),
     totalSold: count("sold"),
   };
@@ -1749,7 +1791,7 @@ buySellRouter.get("/dashboard-stats", async (req, res) => {
     }
 
     const marketplaceFilter = {
-      status: { $in: ["active", "pending", "booking", "sold", "purchased", "inactive", "rejected"] },
+      status: { $in: ["pending", "accepeted", "booking", "sold", "purchased", "rejected"] },
     };
 
     const [marketplace, mySell] = await Promise.all([
@@ -1787,7 +1829,7 @@ function parseDashboardVehicleLimit(raw) {
 /** Marketplace listings shown on the user dashboard (all sellers, newest/featured). */
 function buildDashboardMarketplaceFilter() {
   return {
-    status: { $in: ["active", "pending"] },
+    status: "pending",
   };
 }
 
@@ -1893,7 +1935,7 @@ buySellRouter.post("/featured-vehicles/list", async (req, res) => {
 
     const products = await BuySellProduct.find({
       _id: { $in: productIds },
-      status: { $in: ["active", "pending"] },
+      status: "pending",
     })
       .select(LIST_PRODUCT_SELECT_LITE)
       .populate("category_id", "category_name")
@@ -2110,14 +2152,13 @@ buySellRouter.get("/status-counts", async (req, res) => {
     res.json({
       success: true,
       data: {
-        totalActive: count("active"),
+        totalPending: count("pending"),
+        totalAccepeted: count("accepeted"),
         totalBooked: count("booking"),
         totalPurchased: count("purchased"),
         totalSold: count("sold"),
-        totalPending: count("pending"),
         totalRejected: count("rejected"),
         totalDraft: count("draft"),
-        totalInactive: count("inactive"),
         total: Object.values(map).reduce((sum, n) => sum + n, 0),
       },
     });
@@ -2234,7 +2275,7 @@ buySellRouter.post("/book/:id", async (req, res) => {
     }
 
     const updated = await BuySellProduct.findOneAndUpdate(
-      { _id: resolvedId, status: { $in: ["active", "pending"] } },
+      { _id: resolvedId, status: { $in: ["pending", "accepeted"] } },
       {
         $set: {
           status: "booking",
@@ -2548,10 +2589,10 @@ buySellRouter.post("/cart/add", async (req, res) => {
     if (!product) {
       return res.status(404).json({ success: false, message: "Product not found." });
     }
-    if (product.status !== "active" && product.status !== "pending") {
+    if (product.status !== "pending" && product.status !== "accepeted") {
       return res.status(400).json({
         success: false,
-        message: "Only active products can be added to cart.",
+        message: "Only pending products can be added to cart.",
       });
     }
     if (isSameUserAsActor(product.userid, actor)) {
@@ -2782,7 +2823,7 @@ buySellRouter.post("/payment/verify", async (req, res) => {
     let updated = null;
     if (type === "advance") {
       updated = await BuySellProduct.findOneAndUpdate(
-        { _id: resolvedProductId, status: { $in: ["active", "pending"] } },
+        { _id: resolvedProductId, status: { $in: ["pending", "accepeted"] } },
         {
           $set: {
             status: "booking",
@@ -2826,7 +2867,7 @@ buySellRouter.post("/payment/verify", async (req, res) => {
       }
     } else {
       updated = await BuySellProduct.findOneAndUpdate(
-        { _id: resolvedProductId, status: { $in: ["active", "pending"] } },
+        { _id: resolvedProductId, status: { $in: ["pending", "accepeted"] } },
         {
           $set: {
             status: "purchased",
@@ -3018,7 +3059,7 @@ buySellRouter.post("/add", upload.array("images", 10), async (req, res) => {
       address,
       pincode,
       specifications,
-      // Client sends "draft" | "active" — normalised via resolveCreateStatus
+      // Client sends "draft" | "pending" — normalised via resolveCreateStatus
       status,
     } = req.body;
 
@@ -3292,36 +3333,27 @@ buySellRouter.put("/edit/:id", upload.array("images", 10), async (req, res) => {
         return res.status(400).json({ message: "Invalid product status." });
       }
 
-      const lifecycleStatuses = ["booking", "purchased", "sold"];
+      // "accepeted" is only ever set via PUT /bit/accept/:id, never through
+      // generic edit — same as booking/purchased/sold.
+      const lifecycleStatuses = ["booking", "purchased", "sold", "accepeted"];
       if (lifecycleStatuses.includes(nextStatus)) {
         return res.status(400).json({
-          message: "Use the booking, purchase, or sold API for this status change.",
+          message: "Use the bid-accept, booking, or purchase API for this status change.",
         });
       }
 
-      const adminOnlyTargets = ["active", "rejected"];
-      if (
-        adminOnlyTargets.includes(nextStatus) &&
-        !isAdminActor(actor) &&
-        existing.status === "pending"
-      ) {
+      const adminOnlyTargets = ["rejected"];
+      if (adminOnlyTargets.includes(nextStatus) && !isAdminActor(actor)) {
         return res.status(403).json({
-          message: "Only an admin can approve or reject pending products.",
+          message: "Only an admin can reject a product.",
         });
       }
 
-      // Sellers may keep status, or publish a draft (draft → active|pending).
+      // Sellers may keep their current status, or publish a draft to pending.
       if (
         !isAdminActor(actor) &&
         nextStatus !== existing.status &&
-        !(
-          existing.status === "draft" &&
-          (nextStatus === "pending" || nextStatus === "active")
-        ) &&
-        !(
-          (existing.status === "active" || existing.status === "inactive") &&
-          (nextStatus === "draft" || nextStatus === "active" || nextStatus === "inactive")
-        )
+        !(existing.status === "draft" && nextStatus === "pending")
       ) {
         return res.status(403).json({
           message: "Only an admin can change product status via edit.",
@@ -3763,6 +3795,8 @@ buySellRouter.get("/:id", async (req, res) => {
     response.highest_bid = bitRecords.length
       ? bitRecords.reduce((max, r) => (Number(r.bit) > max ? Number(r.bit) : max), 0)
       : null;
+    response.accepted_bid =
+      response.bit_records.find((r) => r.status === "accepeted") || null;
 
     // Also resolve seller name on single-product view
     const sellerContact = contactFromMap(
