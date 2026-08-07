@@ -174,7 +174,6 @@ export function BuySellShell({ children }: BuySellShellProps) {
           flex: 1,
           minHeight: 0,
           width: "100%",
-          px: LAYOUT.pageGutterX,
           pt: isHeroFlush ? 0 : LAYOUT.pageGutterTop,
           pb: { xs: 2.5, md: 3 },
         }}
@@ -184,6 +183,7 @@ export function BuySellShell({ children }: BuySellShellProps) {
             width: "100%",
             maxWidth: LAYOUT.contentMaxWidth,
             mx: "auto",
+            px: LAYOUT.pageGutterX,
             animation: "pageFadeIn 280ms ease-out",
             "@keyframes pageFadeIn": {
               from: { opacity: 0, transform: "translateY(6px)" },

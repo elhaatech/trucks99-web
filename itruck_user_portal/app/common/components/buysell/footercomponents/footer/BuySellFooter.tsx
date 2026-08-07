@@ -93,17 +93,17 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
 
   return (
     <Box component="footer" sx={{ width: "100%", bgcolor: T.color.trustNavyDark, color: "rgba(255,255,255,0.88)" }}>
-      <Box sx={{ px: LAYOUT.pageGutterX, pt: { xs: 5, md: 6 }, pb: { xs: 3, md: 4 } }}>
-        <Box
-          sx={{
-            width: "100%",
-            maxWidth: 1200,
-            mx: "auto",
-            display: "flex",
-            flexWrap: "wrap",
-            gap: { xs: 3, sm: 4, lg: 5 },
-          }}
-        >
+        <Box sx={{ px: LAYOUT.pageGutterX, pt: { xs: 5, md: 6 }, pb: { xs: 3, md: 4 } }}>
+          <Box
+            sx={{
+              width: "100%",
+              maxWidth: LAYOUT.contentMaxWidth,
+              mx: "auto",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: { xs: 3, sm: 4, lg: 5 },
+            }}
+          >
           {/* Company */}
           <Box sx={{ flex: { xs: "1 1 100%", sm: "1 1 220px" }, maxWidth: { sm: 280 } }}>
             <Box sx={{ mb: 1.5 }}>

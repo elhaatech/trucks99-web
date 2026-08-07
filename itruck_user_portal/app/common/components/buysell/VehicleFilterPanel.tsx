@@ -139,7 +139,7 @@ function FilterFields({
         <TextField
           size="small"
           label="Min year"
-          type="number"n
+          type="number"
           value={values.make_year_min}
           onChange={(e) => onChange({ make_year_min: e.target.value })}
         />
@@ -152,13 +152,7 @@ function FilterFields({
         />
       </Box>
 
-      <TextField
-        size="small"
-        label="Search"
-        value={values.search}
-        onChange={(e) => onChange({ search: e.target.value })}
-        placeholder="Description, address, listing ID…"
-      />
+    
 
       <Button
         variant="contained"

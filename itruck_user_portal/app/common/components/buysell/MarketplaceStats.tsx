@@ -610,17 +610,12 @@ export function HeroSearchSection({
         mb: 4,
         ...(fullBleed
           ? {
-              // Bleed to shell edges so hero sits flush under the sticky header
-              mx: {
-                xs: -LAYOUT.pageGutterX.xs,
-                sm: -LAYOUT.pageGutterX.sm,
-                md: -LAYOUT.pageGutterX.md,
-              },
-              width: {
-                xs: `calc(100% + ${LAYOUT.pageGutterX.xs * 2 * 8}px)`,
-                sm: `calc(100% + ${LAYOUT.pageGutterX.sm * 2 * 8}px)`,
-                md: `calc(100% + ${LAYOUT.pageGutterX.md * 2 * 8}px)`,
-              },
+              width: "100vw",
+              position: "relative",
+              left: "50%",
+              right: "50%",
+              marginLeft: "-50vw",
+              marginRight: "-50vw",
               borderTopLeftRadius: 0,
               borderTopRightRadius: 0,
             }
