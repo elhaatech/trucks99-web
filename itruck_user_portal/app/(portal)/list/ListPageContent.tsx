@@ -29,7 +29,6 @@ import {
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { useNotification } from "@/hooks/useNotification";
 import { isAbortError } from "@/lib/apiCache";
-import { MARKETPLACE } from "@/constants/marketplace";
 import { toErrorMessage } from "@/lib/errors";
 
 function filtersFromSearchParams(searchParams: URLSearchParams): VehicleFilterValues {
@@ -112,10 +111,6 @@ export default function UserProductListContent() {
       try {
         const payload = {
           ...toBuySellListPayload(urlFilters),
-          // Marketplace browse: active + pending unless user picked a status
-          ...(urlFilters.status
-            ? {}
-            : { statuses: [...MARKETPLACE.BROWSE_STATUSES] }),
           search: urlFilters.search.trim() || undefined,
           sort: sortBy,
           page,

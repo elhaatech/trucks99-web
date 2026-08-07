@@ -21,9 +21,8 @@ import {
   formatProductPrice,
   getListingCardCategory,
   getListingCardTitle,
-  getVehicleInfoValues,
 } from "./utils";
-import { VehicleInfo } from "./VehicleInfo";
+import { VehicleSpecChips } from "./VehicleSpecChips";
 import {
   getFeaturedStatus,
   resolveFeaturedListingUi,
@@ -84,7 +83,6 @@ export const VehicleCard = memo(function VehicleCard({
   const title = getListingCardTitle(product);
   const categoryLabel = getListingCardCategory(product);
   const priceLabel = formatProductPrice(product.price);
-  const vehicleInfo = getVehicleInfoValues(product);
   const isList = layout === "list";
 
   const handleClick = () => onClick?.(productId);
@@ -130,6 +128,7 @@ export const VehicleCard = memo(function VehicleCard({
       sx={{
         display: "flex",
         flexDirection: "column",
+        height: "100%",
         bgcolor: T.color.surface,
         border: `1px solid ${T.color.border}`,
         borderRadius: T.radius.lg,
@@ -151,6 +150,8 @@ export const VehicleCard = memo(function VehicleCard({
           display: "flex",
           flexDirection: isList ? { xs: "column", sm: "row" } : "column",
           alignItems: isList ? { sm: "stretch" } : undefined,
+          flex: 1,
+          minHeight: 0,
         }}
       >
         <Box
@@ -267,7 +268,7 @@ export const VehicleCard = memo(function VehicleCard({
               </Typography>
             ) : null}
 
-            <VehicleInfo info={vehicleInfo} />
+            <VehicleSpecChips product={product} />
           </Box>
 
           <Box
