@@ -486,10 +486,7 @@ function readBuySellListPagination(
   const limit = num(nested.limit, num(root.limit, fallback.limit));
   const page = num(nested.page, num(root.page, fallback.page));
   const total = num(nested.total, num(root.total, fallback.itemCount));
-  const totalPages = num(
-    nested.totalPages,
-    num(root.totalPages, Math.max(1, Math.ceil(total / Math.max(1, limit)))),
-  );
+  const totalPages = Math.max(1, Math.ceil(total / Math.max(1, limit)));
 
   return { total, page, limit, totalPages };
 }

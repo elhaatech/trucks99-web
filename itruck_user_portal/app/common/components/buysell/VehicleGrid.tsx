@@ -107,6 +107,7 @@ export function VehicleGrid({
             page={page}
             onChange={(_, p) => onPageChange(p)}
             color="primary"
+            siblingCount={2}
           />
         </Box>
       ) : null}

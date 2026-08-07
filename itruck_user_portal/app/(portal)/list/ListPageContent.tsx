@@ -164,7 +164,7 @@ export default function UserProductListContent() {
       setProducts(result.items ?? []);
       setTotal(result.total ?? 0);
       setTotalPages(result.totalPages ?? 1);
-      setPage((result.page ?? 1) - 1);
+      setPage(result.page ?? 1);
       router.replace(userProductRoutes.list(filtersToQuery(next)), { scroll: false });
     } catch (err) {
       notify({
