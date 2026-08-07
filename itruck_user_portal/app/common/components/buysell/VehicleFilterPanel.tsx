@@ -102,7 +102,24 @@ function FilterFields({
         ))}
       </TextField>
 
-    <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
+        <TextField
+          size="small"
+          label="Min price"
+          type="number"
+          value={values.min_price}
+          onChange={(e) => onChange({ min_price: e.target.value })}
+        />
+        <TextField
+          size="small"
+          label="Max price"
+          type="number"
+          value={values.max_price}
+          onChange={(e) => onChange({ max_price: e.target.value })}
+        />
+      </Box>
+
+     <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
   <TextField
     size="small"
     label="Max owners"
@@ -121,25 +138,8 @@ function FilterFields({
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
         <TextField
           size="small"
-          label="Min KM"
-          type="number"
-          value={values.km_min}
-          onChange={(e) => onChange({ km_min: e.target.value })}
-        />
-        <TextField
-          size="small"
-          label="Max KM"
-          type="number"
-          value={values.km_max}
-          onChange={(e) => onChange({ km_max: e.target.value })}
-        />
-      </Box>
-
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
-        <TextField
-          size="small"
           label="Min year"
-          type="number"
+          type="number"n
           value={values.make_year_min}
           onChange={(e) => onChange({ make_year_min: e.target.value })}
         />
