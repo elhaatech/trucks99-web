@@ -35,6 +35,7 @@ type VehicleFilterPanelProps = {
   onClear: () => void;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
+  applyLoading?: boolean;
 };
 
 function FilterFields({
@@ -42,6 +43,7 @@ function FilterFields({
   onChange,
   onApply,
   onClear,
+  applyLoading = false,
 }: Omit<VehicleFilterPanelProps, "mobileOpen" | "onMobileClose">) {
   const { categoryOptions, subcategoryOptions } = useCategorySubcategories({
     categoryId: values.category_id || "",
@@ -117,18 +119,50 @@ function FilterFields({
         />
       </Box>
 
-      <TextField
-        size="small"
-        label="Search"
-        value={values.search}
-        onChange={(e) => onChange({ search: e.target.value })}
-        placeholder="Description, address, listing ID…"
-      />
+     <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
+  <TextField
+    size="small"
+    label="Max owners"
+    type="number"
+    value={values.no_of_owners_max}
+    onChange={(e) => onChange({ no_of_owners_max: e.target.value })}
+  />
+  <TextField
+    size="small"
+    label="Max KM"
+    type="number"
+    value={values.km_max}
+    onChange={(e) => onChange({ km_max: e.target.value })}
+  />
+</Box>
+      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
+        <TextField
+          size="small"
+          label="Min year"
+          type="number"
+          value={values.make_year_min}
+          onChange={(e) => onChange({ make_year_min: e.target.value })}
+        />
+        <TextField
+          size="small"
+          label="Max year"
+          type="number"
+          value={values.make_year_max}
+          onChange={(e) => onChange({ make_year_max: e.target.value })}
+        />
+      </Box>
 
-      <Button variant="contained" onClick={onApply} sx={{ bgcolor: INFO }}>
-        Apply Filters
+    
+
+      <Button
+        variant="contained"
+        onClick={onApply}
+        disabled={applyLoading}
+        sx={{ bgcolor: INFO }}
+      >
+        {applyLoading ? "Applying…" : "Apply Filters"}
       </Button>
-      <Button variant="outlined" onClick={onClear}>
+      <Button variant="outlined" onClick={onClear} disabled={applyLoading}>
         Clear All
       </Button>
     </Box>
@@ -136,7 +170,7 @@ function FilterFields({
 }
 
 export function VehicleFilterPanel(props: VehicleFilterPanelProps) {
-  const { mobileOpen, onMobileClose, ...fieldProps } = props;
+  const { mobileOpen, onMobileClose, applyLoading, ...fieldProps } = props;
 
   return (
     <>
@@ -151,7 +185,7 @@ export function VehicleFilterPanel(props: VehicleFilterPanelProps) {
           top: 88,
         }}
       >
-        <FilterFields {...fieldProps} />
+        <FilterFields {...fieldProps} applyLoading={applyLoading} />
       </Box>
 
       {/* Keep drawer mounted but only mount FilterFields when open to avoid duplicate category fetches */}
@@ -169,7 +203,7 @@ export function VehicleFilterPanel(props: VehicleFilterPanelProps) {
               <CloseIcon />
             </IconButton>
           </Box>
-          {mobileOpen ? <FilterFields {...fieldProps} /> : null}
+          {mobileOpen ? <FilterFields {...fieldProps} applyLoading={applyLoading} /> : null}
         </Box>
       </Drawer>
     </>

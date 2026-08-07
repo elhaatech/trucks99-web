@@ -15,7 +15,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import AddIcon from "@mui/icons-material/Add";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { Spinner } from "@/components/ui";
-import { BuySellErrorState, VehicleGrid } from "@/app/common/components/buysell";
+import { BuySellErrorState } from "@/app/common/components/buysell";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { PRODUCT_THEME as T } from "@/lib/theme";
 import {
@@ -25,10 +25,21 @@ import {
   type BuySellProduct,
 } from "@/model/services/buysellapi";
 import { toBuySellListPayload } from "@/lib/buySellListUtils";
-import { EMPTY_FILTERS } from "@/app/admin/portal/buysell/_components/interface/buysell_interface";
+import {
+  EMPTY_FILTERS,
+  type FilterState,
+} from "@/app/admin/portal/buysell/_components/interface/buysell_interface";
 import { useNotification } from "@/hooks/useNotification";
 import { getProductTitle } from "@/app/common/components/buysell/utils";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
+import {
+  VehicleFilterPanel,
+  MobileFilterButton,
+  VehicleGrid,
+  VehicleListHeader,
+  EMPTY_VEHICLE_FILTERS,
+  VEHICLE_PAGE_SIZE,
+} from "@/app/common/components/buysell";
 import {
   PostListingFeaturedFlow,
   type NewListingFeaturedPrompt,
@@ -38,7 +49,6 @@ import type { BuySellFormSuccessContext } from "@/app/admin/portal/buysell/_comp
 import { toErrorMessage } from "@/lib/errors";
 import { MARKETPLACE } from "@/constants/marketplace";
 import { isAbortError } from "@/lib/apiCache";
-import { VEHICLE_PAGE_SIZE } from "@/app/common/components/buysell";
 
 const BuySellForm = dynamic(
   () =>
@@ -80,6 +90,15 @@ function SellVehicleContent() {
   const [featurePlansTarget, setFeaturePlansTarget] =
     useState<NewListingFeaturedPrompt | null>(null);
 
+  const [filters, setFilters] = useState<FilterState>({
+    ...EMPTY_FILTERS,
+    usear_type: "sell",
+    no_of_owners_min: "1",
+    km_min: "10000",
+  });
+  const [applyLoading, setApplyLoading] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
   const listingCount = total;
   const pageSize = VEHICLE_PAGE_SIZE || MARKETPLACE.VEHICLE_PAGE_SIZE;
 
@@ -92,7 +111,7 @@ function SellVehicleContent() {
       setListError("");
       try {
         const result = await getBuySellListPage({
-          ...toBuySellListPayload({ ...EMPTY_FILTERS, usear_type: "sell" }),
+          ...toBuySellListPayload(filters),
           page: pageToLoad,
           limit: pageSize,
         });
@@ -119,14 +138,14 @@ function SellVehicleContent() {
         }
       }
     },
-    [notify, page, pageSize],
+    [notify, page, pageSize, filters],
   );
 
   useEffect(() => {
     if (!isCreate) {
       void loadListings({ page });
     }
-  }, [isCreate, page]); // eslint-disable-line react-hooks/exhaustive-deps -- page drives reload
+  }, [isCreate, page, loadListings]);
 
   const handleCreateSuccess = (ctx?: BuySellFormSuccessContext) => {
     router.replace(userProductRoutes.sellVehicle());
@@ -204,6 +223,50 @@ function SellVehicleContent() {
       });
     },
     [products],
+  );
+
+  const handleApplyFilters = useCallback(async () => {
+    setApplyLoading(true);
+    setMobileFiltersOpen(false);
+    setPage(1);
+    try {
+      const payload = {
+        ...toBuySellListPayload(filters),
+        page: 1,
+        limit: pageSize,
+      };
+      const result = await getBuySellListPage(payload);
+      setProducts(result.items ?? []);
+      setTotal(result.total ?? 0);
+      setTotalPages(result.totalPages ?? 1);
+      setPage((result.page ?? 1) - 1);
+    } catch (err) {
+      notify({
+        type: "error",
+        message: toErrorMessage(err, "Failed to apply filters"),
+      });
+    } finally {
+      setApplyLoading(false);
+    }
+  }, [filters, pageSize, notify]);
+
+  const handleClearFilters = useCallback(() => {
+    const cleared = {
+      ...EMPTY_VEHICLE_FILTERS,
+      usear_type: "sell" as FilterState["usear_type"],
+      no_of_owners_min: "1",
+      km_min: "10000",
+    };
+    setFilters(cleared);
+    setPage(1);
+    setMobileFiltersOpen(false);
+  }, []);
+
+  const handleFilterChange = useCallback(
+    (patch: Partial<FilterState>) => {
+      setFilters((prev) => ({ ...prev, ...patch }));
+    },
+    [],
   );
 
   const featuredFlow = (
@@ -290,46 +353,81 @@ function SellVehicleContent() {
         action={listNewVehicleButton}
       />
 
-      {!loading && !listError ? (
-        <Chip
-          label={
-            listingCount === 1
-              ? "1 listing"
-              : `${listingCount} listings`
-          }
-          size="small"
-          sx={{ mb: 2, fontWeight: 600 }}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", lg: "280px 1fr" },
+          gap: 3,
+          width: "100%",
+        }}
+      >
+        <VehicleFilterPanel
+          values={filters}
+          onChange={handleFilterChange}
+          onApply={handleApplyFilters}
+          onClear={handleClearFilters}
+          mobileOpen={mobileFiltersOpen}
+          onMobileClose={() => setMobileFiltersOpen(false)}
+          applyLoading={applyLoading}
         />
-      ) : null}
 
-      {listError && !loading ? (
-        <BuySellErrorState
-          title="Couldn’t load your listings"
-          message={listError}
-          onRetry={() => void loadListings()}
-        />
-      ) : (
-        <VehicleGrid
-          products={products}
-          loading={loading}
-          layout="grid"
-          onProductClick={(id) => router.push(userProductRoutes.view(id))}
-          onEdit={handleEdit}
-          onDelete={handleDeleteRequest}
-          deletingIds={deletingIds}
-          showOwnerFeaturedControls
-          onFeaturePayNow={openFeaturePlansForProduct}
-          emptyTitle="No listings yet"
-          emptyDescription='Tap "List new vehicle" to create your first ad. It only takes a few minutes.'
-          page={page}
-          totalPages={totalPages}
-          onPageChange={setPage}
-        />
-      )}
+        <Box>
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 2,
+              mb: 2,
+            }}
+          >
+            <Box>
+              {!loading && !listError ? (
+                <Chip
+                  label={
+                    listingCount === 1
+                      ? "1 listing"
+                      : `${listingCount} listings`
+                  }
+                  size="small"
+                  sx={{ fontWeight: 600 }}
+                />
+              ) : null}
+            </Box>
+            <MobileFilterButton onClick={() => setMobileFiltersOpen(true)} />
+          </Box>
 
-      {!loading ? (
-        <Box sx={{ display: { xs: "flex", sm: "none" }, mt: 3 }}>{listNewVehicleButton}</Box>
-      ) : null}
+          {listError && !loading ? (
+            <BuySellErrorState
+              title="Couldn't load your listings"
+              message={listError}
+              onRetry={() => void loadListings()}
+            />
+          ) : (
+            <VehicleGrid
+              products={products}
+              loading={loading}
+              layout="grid"
+              onProductClick={(id) => router.push(userProductRoutes.view(id))}
+              onEdit={handleEdit}
+              onDelete={handleDeleteRequest}
+              deletingIds={deletingIds}
+              showOwnerFeaturedControls
+              onFeaturePayNow={openFeaturePlansForProduct}
+              emptyTitle="No listings yet"
+              emptyDescription='Tap "List new vehicle" to create your first ad. It only takes a few minutes.'
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+            />
+          )}
+
+          {!loading ? (
+            <Box sx={{ display: { xs: "flex", sm: "none" }, mt: 3 }}>{listNewVehicleButton}</Box>
+          ) : null}
+        </Box>
+      </Box>
 
       <Dialog
         open={Boolean(deleteTarget)}

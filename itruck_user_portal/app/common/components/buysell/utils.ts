@@ -147,8 +147,15 @@ function formatKilometers(raw: string | undefined): string | undefined {
 /**
  * List-card highlights aligned with Vehicle Details:
  * Make Year, Fuel Type, No. of Owners, Listing ID.
+ *
+ * When `all` is true, always returns all four spec chips with a fallback
+ * label ("N/A") when the underlying value is missing, so the card info
+ * grid never collapses to fewer boxes.
  */
-export function getListingSpecChips(product: BuySellProduct): ListingSpecChip[] {
+export function getListingSpecChips(
+  product: BuySellProduct,
+  all = false,
+): ListingSpecChip[] {
   const highlights = product.listing_highlights;
   const specs = product.specifications;
 
@@ -181,39 +188,36 @@ export function getListingSpecChips(product: BuySellProduct): ListingSpecChip[] 
   const listingId =
     highlights?.listingId?.trim() || product.bsNumber?.trim() || "";
 
-  // Skip unresolved ObjectId-looking selectable values.
   const looksLikeObjectId = (v?: string) =>
     Boolean(v && /^[a-f0-9]{24}$/i.test(v.trim()));
 
+  const fallback = "N/A";
   const chips: ListingSpecChip[] = [];
-  if (year?.trim() && !looksLikeObjectId(year)) {
-    chips.push({ key: "year", caption: "Make Year", label: year.trim() });
-  }
-  const formattedKm = formatKilometers(km);
-  if (formattedKm && !looksLikeObjectId(formattedKm)) {
-    chips.push({ key: "km", caption: "Odometer", label: formattedKm });
-  }
-  if (fuel?.trim() && !looksLikeObjectId(fuel)) {
-    chips.push({
-      key: "fuel",
-      caption: "Fuel Type",
-      label: fuel.trim().toUpperCase(),
-    });
-  }
-  if (owners?.trim() && !looksLikeObjectId(owners)) {
-    chips.push({
-      key: "owners",
-      caption: "No. of Owners",
-      label: formatOwnersLabel(owners),
-    });
-  }
-  // if (listingId) {
-  //   chips.push({
-  //     key: "listingId",
-  //     caption: "Listing ID",
-  //     label: listingId,
-  //   });
-  // }
+
+  const push = (
+    key: ListingSpecChip["key"],
+    caption: string,
+    raw: string | undefined,
+    format?: (v: string) => string | undefined,
+  ) => {
+    const trimmed = raw?.trim();
+    if (!trimmed || looksLikeObjectId(trimmed)) {
+      if (all) chips.push({ key, caption, label: fallback });
+      return;
+    }
+    const formatted = format ? format(trimmed) : trimmed;
+    if (!formatted) {
+      if (all) chips.push({ key, caption, label: fallback });
+      return;
+    }
+    chips.push({ key, caption, label: formatted });
+  };
+
+  push("year", "Make Year", year);
+  push("km", "Odometer", km, formatKilometers);
+  push("fuel", "Fuel Type", fuel, (v) => v.toUpperCase());
+  push("owners", "No. of Owners", owners, formatOwnersLabel);
+
   return chips;
 }
 

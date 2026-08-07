@@ -187,6 +187,12 @@ export type BuySellListFilter = {
   usear_type?: "buy" | "sell" | "all" | "";
   min_price?: number;
   max_price?: number;
+  no_of_owners_min?: number;
+  no_of_owners_max?: number;
+  km_min?: number;
+  km_max?: number;
+  make_year_min?: number;
+  make_year_max?: number;
   /** When set with limit, server paginates (faster home/list pages). */
   page?: number;
   limit?: number;

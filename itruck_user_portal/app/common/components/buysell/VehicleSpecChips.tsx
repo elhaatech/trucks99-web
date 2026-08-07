@@ -26,10 +26,16 @@ type VehicleSpecChipsProps = {
   product: BuySellProduct;
   /** denser chips for compact list rows */
   dense?: boolean;
+  /** When true, always render all four spec boxes with a fallback label for missing values. */
+  alwaysShowAll?: boolean;
 };
 
-export function VehicleSpecChips({ product, dense = false }: VehicleSpecChipsProps) {
-  const chips = getListingSpecChips(product);
+export function VehicleSpecChips({
+  product,
+  dense = false,
+  alwaysShowAll = true,
+}: VehicleSpecChipsProps) {
+  const chips = getListingSpecChips(product, alwaysShowAll);
   if (!chips.length) return null;
 
   return (

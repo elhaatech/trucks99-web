@@ -71,10 +71,9 @@ export function BuySellShell({ children }: BuySellShellProps) {
   return (
     <Box
       sx={{
-        height: "100dvh",
+        minHeight: "100dvh",
         display: "flex",
         flexDirection: "column",
-        overflow: "hidden",
         bgcolor: T.color.bg,
         backgroundImage: `
           radial-gradient(ellipse 80% 50% at 50% -20%, ${alpha(PRIMARY, 0.07)}, transparent),
@@ -175,10 +174,6 @@ export function BuySellShell({ children }: BuySellShellProps) {
           flex: 1,
           minHeight: 0,
           width: "100%",
-          overflowY: "auto",
-          overflowX: "hidden",
-          WebkitOverflowScrolling: "touch",
-          px: LAYOUT.pageGutterX,
           pt: isHeroFlush ? 0 : LAYOUT.pageGutterTop,
           pb: { xs: 2.5, md: 3 },
         }}
@@ -188,6 +183,7 @@ export function BuySellShell({ children }: BuySellShellProps) {
             width: "100%",
             maxWidth: LAYOUT.contentMaxWidth,
             mx: "auto",
+            px: LAYOUT.pageGutterX,
             animation: "pageFadeIn 280ms ease-out",
             "@keyframes pageFadeIn": {
               from: { opacity: 0, transform: "translateY(6px)" },
@@ -199,16 +195,14 @@ export function BuySellShell({ children }: BuySellShellProps) {
           {children}
         </Box>
       </Box>
-
       <Box
         component="footer"
         sx={{
           flexShrink: 0,
           width: "100%",
-          zIndex: Z_INDEX.navbar - 1,
         }}
       >
-        <BuySellFooter  />
+        <BuySellFooter />
       </Box>
       <AssistantFab />
     </Box>

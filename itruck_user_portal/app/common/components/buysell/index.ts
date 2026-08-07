@@ -35,4 +35,5 @@ export { MarketplaceChatSplit } from "./MarketplaceChatSplit";
 export { BuySellErrorState } from "./ErrorState";
 export { VehicleGridSkeleton, StatsSkeleton, BuySellPageLoader } from "./LoadingSkeleton";
 export { MetaIconLine, PhoneMetaLine } from "./MetaIconLine";
+export { PageContainer } from "./PageContainer";
 export * from "./utils";
