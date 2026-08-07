@@ -51,6 +51,7 @@ export function VehicleGrid({
   totalPages = 1,
   onPageChange,
 }: VehicleGridProps) {
+  console.log("[DEBUG] VehicleGrid props:", { productsLength: products.length, page, totalPages });
   if (loading) {
     return <VehicleGridSkeleton count={6} />;
   }
@@ -107,6 +108,7 @@ export function VehicleGrid({
             page={page}
             onChange={(_, p) => onPageChange(p)}
             color="primary"
+            siblingCount={2}
           />
         </Box>
       ) : null}

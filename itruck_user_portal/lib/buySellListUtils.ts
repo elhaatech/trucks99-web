@@ -14,11 +14,27 @@ export function toBuySellListPayload(
     | "max_price"
     | "userid"
     | "search"
+    | "no_of_owners_min"
+    | "no_of_owners_max"
+    | "km_min"
+    | "km_max"
+    | "make_year_min"
+    | "make_year_max"
   >,
 ): BuySellListFilter {
   const minPrice = filters.min_price ? Number(filters.min_price) : undefined;
   const maxPrice = filters.max_price ? Number(filters.max_price) : undefined;
   const search = filters.search?.trim();
+
+  const noOfOwnersMin = filters.no_of_owners_min ? Number(filters.no_of_owners_min) : undefined;
+  const noOfOwnersMax = filters.no_of_owners_max ? Number(filters.no_of_owners_max) : undefined;
+  const kmMin = filters.km_min ? Number(filters.km_min) : undefined;
+  const kmMax = filters.km_max ? Number(filters.km_max) : undefined;
+  const makeYearMin = filters.make_year_min ? Number(filters.make_year_min) : undefined;
+  const makeYearMax = filters.make_year_max ? Number(filters.make_year_max) : undefined;
+
+  const ownerMinChanged = filters.no_of_owners_min !== "1";
+  const kmMinChanged = filters.km_min !== "10000";
 
   return {
     status: filters.status || undefined,
@@ -31,6 +47,30 @@ export function toBuySellListPayload(
       minPrice !== undefined && !Number.isNaN(minPrice) ? minPrice : undefined,
     max_price:
       maxPrice !== undefined && !Number.isNaN(maxPrice) ? maxPrice : undefined,
+    ...((ownerMinChanged || noOfOwnersMax !== undefined)
+      ? {
+          no_of_owners_min:
+            noOfOwnersMin !== undefined && !Number.isNaN(noOfOwnersMin)
+              ? noOfOwnersMin
+              : 1,
+          ...(noOfOwnersMax !== undefined && !Number.isNaN(noOfOwnersMax)
+            ? { no_of_owners_max: noOfOwnersMax }
+            : {}),
+        }
+      : {}),
+    ...((kmMinChanged || kmMax !== undefined)
+      ? {
+          km_min:
+            kmMin !== undefined && !Number.isNaN(kmMin) ? kmMin : 10000,
+          ...(kmMax !== undefined && !Number.isNaN(kmMax) ? { km_max: kmMax } : {}),
+        }
+      : {}),
+    ...(makeYearMin !== undefined && !Number.isNaN(makeYearMin)
+      ? { make_year_min: makeYearMin }
+      : {}),
+    ...(makeYearMax !== undefined && !Number.isNaN(makeYearMax)
+      ? { make_year_max: makeYearMax }
+      : {}),
   };
 }
 

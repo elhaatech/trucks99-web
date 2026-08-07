@@ -40,6 +40,12 @@ function filtersFromSearchParams(searchParams: URLSearchParams): VehicleFilterVa
     status: searchParams.get("status") ?? "",
     min_price: searchParams.get("min_price") ?? "",
     max_price: searchParams.get("max_price") ?? "",
+    no_of_owners_min: searchParams.get("no_of_owners_min") ?? "",
+    no_of_owners_max: searchParams.get("no_of_owners_max") ?? "",
+    km_min: searchParams.get("km_min") ?? "",
+    km_max: searchParams.get("km_max") ?? "",
+    make_year_min: searchParams.get("make_year_min") ?? "",
+    make_year_max: searchParams.get("make_year_max") ?? "",
     search: searchParams.get("q") ?? "",
     usear_type: "buy",
   };
@@ -52,6 +58,12 @@ function filtersToQuery(filters: VehicleFilterValues): Record<string, string> {
   if (filters.status) query.status = filters.status;
   if (filters.min_price) query.min_price = filters.min_price;
   if (filters.max_price) query.max_price = filters.max_price;
+  if (filters.no_of_owners_min) query.no_of_owners_min = filters.no_of_owners_min;
+  if (filters.no_of_owners_max) query.no_of_owners_max = filters.no_of_owners_max;
+  if (filters.km_min) query.km_min = filters.km_min;
+  if (filters.km_max) query.km_max = filters.km_max;
+  if (filters.make_year_min) query.make_year_min = filters.make_year_min;
+  if (filters.make_year_max) query.make_year_max = filters.make_year_max;
   if (filters.search.trim()) query.q = filters.search.trim();
   return query;
 }
@@ -81,6 +93,7 @@ export default function UserProductListContent() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [products, setProducts] = useState<BuySellProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [applyLoading, setApplyLoading] = useState(false);
 
   const { favoriteIds, togglingIds, syncFromProducts, toggleFavorite } =
     useBuySellFavorites(notify);
@@ -116,6 +129,7 @@ export default function UserProductListContent() {
         setProducts(items);
         setTotal(result.total ?? items.length);
         setTotalPages(result.totalPages ?? 1);
+        console.log("[DEBUG] ListPageContent result:", result);
         syncFromProducts(items);
       } catch (err) {
         if (cancelled || isAbortError(err)) return;
@@ -134,15 +148,40 @@ export default function UserProductListContent() {
     };
   }, [urlKey, urlFilters, sortBy, page, notify, syncFromProducts]);
 
-  const handleApplyFilters = () => {
+  const handleApplyFilters = async () => {
     const next = { ...filters, usear_type: "buy" as const };
+    setApplyLoading(true);
     setMobileFiltersOpen(false);
     setPage(1);
-    router.replace(userProductRoutes.list(filtersToQuery(next)), { scroll: false });
+
+    try {
+      const payload = {
+        ...toBuySellListPayload(next),
+        page: 1,
+        limit: VEHICLE_PAGE_SIZE,
+        sort: sortBy,
+      };
+      const result = await getBuySellListPage(payload);
+      setProducts(result.items ?? []);
+      setTotal(result.total ?? 0);
+      setTotalPages(result.totalPages ?? 1);
+      setPage(result.page ?? 1);
+      router.replace(userProductRoutes.list(filtersToQuery(next)), { scroll: false });
+    } catch (err) {
+      notify({
+        type: "error",
+        message: toErrorMessage(err, "Failed to apply filters"),
+      });
+    } finally {
+      setApplyLoading(false);
+    }
   };
 
   const handleClearFilters = () => {
-    const cleared = { ...EMPTY_VEHICLE_FILTERS, usear_type: "buy" as const };
+    const cleared = {
+      ...EMPTY_VEHICLE_FILTERS,
+      usear_type: "buy" as const,
+    };
     setFilters(cleared);
     setPage(1);
     setMobileFiltersOpen(false);
@@ -222,6 +261,7 @@ export default function UserProductListContent() {
           onClear={handleClearFilters}
           mobileOpen={mobileFiltersOpen}
           onMobileClose={() => setMobileFiltersOpen(false)}
+          applyLoading={applyLoading}
         />
 
         <VehicleGrid

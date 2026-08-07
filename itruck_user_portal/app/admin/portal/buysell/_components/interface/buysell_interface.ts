@@ -28,6 +28,12 @@ export type FilterState = {
   user_type: "" | "buy" | "sell";
   min_price: string;
   max_price: string;
+  no_of_owners_min: string;
+  no_of_owners_max: string;
+  km_min: string;
+  km_max: string;
+  make_year_min: string;
+  make_year_max: string;
 };
 
 export const EMPTY_FORM: FormState = {
@@ -55,4 +61,10 @@ export const EMPTY_FILTERS: FilterState = {
   userid: "",
   min_price: "",
   max_price: "",
+  no_of_owners_min: "",
+  no_of_owners_max: "",
+  km_min: "",
+  km_max: "",
+  make_year_min: "",
+  make_year_max: "",
 };

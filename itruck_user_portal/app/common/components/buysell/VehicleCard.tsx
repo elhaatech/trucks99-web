@@ -30,6 +30,10 @@ import {
 } from "@/lib/featuredVehicleListingStatus";
 import { ProductStatusChip } from "@/app/admin/portal/buysell/_components/ProductStatusChip";
 
+import truckimg from "../../../assets/defaulttruck.png";
+
+
+
 type VehicleCardProps = {
   product: BuySellProduct;
   isFavorite?: boolean;
@@ -135,10 +139,10 @@ export const VehicleCard = memo(function VehicleCard({
         transition: "box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease",
         "&:hover": onClick
           ? {
-              boxShadow: T.shadow.cardHover,
-              transform: isList ? "none" : "translateY(-3px)",
-              borderColor: alpha(INFO, 0.35),
-            }
+            boxShadow: T.shadow.cardHover,
+            transform: isList ? "none" : "translateY(-3px)",
+            borderColor: alpha(INFO, 0.35),
+          }
           : undefined,
       }}
     >
@@ -160,45 +164,18 @@ export const VehicleCard = memo(function VehicleCard({
             overflow: "hidden",
           }}
         >
-          {imageUrl ? (
-            <Image
-              src={imageUrl}
-              alt={title}
-              fill
-              sizes={
-                isList
-                  ? "(max-width:600px) 100vw, 220px"
-                  : "(max-width:600px) 100vw, (max-width:1200px) 50vw, 25vw"
-              }
-              style={{ objectFit: "cover" }}
-              unoptimized
-            />
-          ) : (
-            <Box
-              aria-hidden
-              sx={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                bgcolor: alpha(INFO, 0.08),
-                backgroundImage: `linear-gradient(135deg, ${alpha(INFO, 0.12)} 0%, ${alpha(INFO, 0.04)} 100%)`,
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                  color: alpha(INFO, 0.55),
-                }}
-              >
-                No photo
-              </Typography>
-            </Box>
-          )}
+          <Image
+            src={imageUrl ? imageUrl : truckimg}
+            alt={imageUrl ? title : "No vehicle photo available"}
+            fill
+            sizes={
+              isList
+                ? "(max-width:600px) 100vw, 220px"
+                : "(max-width:600px) 100vw, (max-width:1200px) 50vw, 25vw"
+            }
+            style={{ objectFit: "cover" }}
+            unoptimized
+          />
           <Box sx={{ position: "absolute", top: 10, left: 10, display: "flex", flexDirection: "column", gap: 0.75, alignItems: "flex-start" }}>
             {/* <ProductStatusChip status={product.status} /> */}
             {featuredStatus === "expired" ? (
