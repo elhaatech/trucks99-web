@@ -40,9 +40,9 @@ function filtersFromSearchParams(searchParams: URLSearchParams): VehicleFilterVa
     status: searchParams.get("status") ?? "",
     min_price: searchParams.get("min_price") ?? "",
     max_price: searchParams.get("max_price") ?? "",
-    no_of_owners_min: searchParams.get("no_of_owners_min") ?? "1",
+    no_of_owners_min: searchParams.get("no_of_owners_min") ?? "",
     no_of_owners_max: searchParams.get("no_of_owners_max") ?? "",
-    km_min: searchParams.get("km_min") ?? "10000",
+    km_min: searchParams.get("km_min") ?? "",
     km_max: searchParams.get("km_max") ?? "",
     make_year_min: searchParams.get("make_year_min") ?? "",
     make_year_max: searchParams.get("make_year_max") ?? "",
@@ -129,6 +129,7 @@ export default function UserProductListContent() {
         setProducts(items);
         setTotal(result.total ?? items.length);
         setTotalPages(result.totalPages ?? 1);
+        console.log("[DEBUG] ListPageContent result:", result);
         syncFromProducts(items);
       } catch (err) {
         if (cancelled || isAbortError(err)) return;
@@ -180,8 +181,6 @@ export default function UserProductListContent() {
     const cleared = {
       ...EMPTY_VEHICLE_FILTERS,
       usear_type: "buy" as const,
-      no_of_owners_min: "1",
-      km_min: "10000",
     };
     setFilters(cleared);
     setPage(1);

@@ -480,13 +480,35 @@ function readBuySellListPagination(
       ? (root.pagination as Record<string, unknown>)
       : {};
 
+  console.log("[DEBUG] readBuySellListPagination root keys:", Object.keys(root));
+  console.log("[DEBUG] readBuySellListPagination nested keys:", Object.keys(nested));
+  if (root.data && typeof root.data === "object") {
+    console.log("[DEBUG] readBuySellListPagination root.data keys:", Object.keys(root.data as Record<string, unknown>));
+    console.log("[DEBUG] readBuySellListPagination root.data.total:", (root.data as Record<string, unknown>).total);
+    console.log("[DEBUG] readBuySellListPagination root.data.pagination:", (root.data as Record<string, unknown>).pagination);
+  }
+
   const num = (v: unknown, d: number) =>
     typeof v === "number" && Number.isFinite(v) ? v : d;
 
-  const limit = num(nested.limit, num(root.limit, fallback.limit));
-  const page = num(nested.page, num(root.page, fallback.page));
-  const total = num(nested.total, num(root.total, fallback.itemCount));
+  let limit = num(nested.limit, num(root.limit, fallback.limit));
+  let page = num(nested.page, num(root.page, fallback.page));
+  let total = num(nested.total, num(root.total, fallback.itemCount));
+
+  if (total === fallback.itemCount && root.data && typeof root.data === "object") {
+    const dataRecord = root.data as Record<string, unknown>;
+    const dataPagination =
+      dataRecord.pagination && typeof dataRecord.pagination === "object"
+        ? (dataRecord.pagination as Record<string, unknown>)
+        : {};
+    limit = num(dataPagination.limit, num(dataRecord.limit, limit));
+    page = num(dataPagination.page, num(dataRecord.page, page));
+    total = num(dataPagination.total, num(dataRecord.total, total));
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / Math.max(1, limit)));
+
+  console.log("[DEBUG] readBuySellListPagination result:", { total, limit, page, totalPages });
 
   return { total, page, limit, totalPages };
 }
@@ -506,12 +528,14 @@ export async function getBuySellListPage(
           body: JSON.stringify(body),
           signal: options?.signal,
         });
+        console.log("[DEBUG] getBuySellListPage raw payload:", JSON.stringify(payload).slice(0, 500));
         const items = unwrapBuySellListResponse(payload);
         const meta = readBuySellListPagination(payload, {
           page: body.page,
           limit: body.limit,
           itemCount: items.length,
         });
+        console.log("[DEBUG] getBuySellListPage meta:", meta);
         return { items, ...meta };
       },
       options?.signal ? 0 : 15_000,

@@ -119,40 +119,22 @@ function FilterFields({
         />
       </Box>
 
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
-        <TextField
-          size="small"
-          label="Min owners"
-          type="number"
-          value={values.no_of_owners_min}
-          onChange={(e) => onChange({ no_of_owners_min: e.target.value })}
-        />
-        <TextField
-          size="small"
-          label="Max owners"
-          type="number"
-          value={values.no_of_owners_max}
-          onChange={(e) => onChange({ no_of_owners_max: e.target.value })}
-        />
-      </Box>
-
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
-        <TextField
-          size="small"
-          label="Min KM"
-          type="number"
-          value={values.km_min}
-          onChange={(e) => onChange({ km_min: e.target.value })}
-        />
-        <TextField
-          size="small"
-          label="Max KM"
-          type="number"
-          value={values.km_max}
-          onChange={(e) => onChange({ km_max: e.target.value })}
-        />
-      </Box>
-
+     <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
+  <TextField
+    size="small"
+    label="Max owners"
+    type="number"
+    value={values.no_of_owners_max}
+    onChange={(e) => onChange({ no_of_owners_max: e.target.value })}
+  />
+  <TextField
+    size="small"
+    label="Max KM"
+    type="number"
+    value={values.km_max}
+    onChange={(e) => onChange({ km_max: e.target.value })}
+  />
+</Box>
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
         <TextField
           size="small"
@@ -170,13 +152,7 @@ function FilterFields({
         />
       </Box>
 
-      <TextField
-        size="small"
-        label="Search"
-        value={values.search}
-        onChange={(e) => onChange({ search: e.target.value })}
-        placeholder="Description, address, listing ID…"
-      />
+     
 
       <Button
         variant="contained"
