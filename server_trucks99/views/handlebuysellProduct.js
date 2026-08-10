@@ -3617,15 +3617,15 @@ buySellRouter.post("/purchase-list", async (req, res) => {
       if (id) filter.subcategory_id = id;
     }
     if (country_id) {
-      const id = toObjectId(country_id);
+      const id = await resolveLocationMongoId(LocationCountry, country_id);
       if (id) filter.country_id = id;
     }
     if (state_id) {
-      const id = toObjectId(state_id);
+      const id = await resolveLocationMongoId(LocationState, state_id);
       if (id) filter.state_id = id;
     }
     if (city_id) {
-      const id = toObjectId(city_id);
+      const id = await resolveLocationMongoId(LocationCity, city_id);
       if (id) filter.city_id = id;
     }
 
