@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
@@ -11,6 +12,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import { SearchableSelect, type SelectOption } from "@/components/common/SearchableSelect";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 import { useCategorySubcategories } from "@/hooks/useCategorySubcategories";
+import { getLocationCitiesByState } from "@/model/services/location";
 import {
   EMPTY_FILTERS,
   type FilterState,
@@ -46,6 +48,55 @@ function FilterFields({
     categoryId: values.category_id || "",
   });
 
+  const [cityOptions, setCityOptions] = useState<SelectOption[]>([]);
+  const [cityLoading, setCityLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+
+    (async () => {
+      setCityLoading(true);
+      try {
+        const result = await getLocationCitiesByState("69c60e80e9c7314beecc1f9c", {
+          limit: 2000,
+        });
+        if (!cancelled && !controller.signal.aborted) {
+          const rawItems = Array.isArray(result?.items) ? result.items : [];
+          const cities = rawItems.filter((item): item is { _id?: string; id?: string; uuid?: string; externalId?: number; name?: string; stateExternalId?: number } =>
+            Boolean(item.name)
+          );
+          setCityOptions(
+            cities.map((city) => ({
+              value: city._id || city.id || city.uuid || String(city.externalId ?? ""),
+              label: city.name || "",
+            }))
+          );
+        }
+      } catch {
+        if (!cancelled && !controller.signal.aborted) {
+          setCityOptions([]);
+        }
+      } finally {
+        if (!cancelled && !controller.signal.aborted) {
+          setCityLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, []);
+
+  const handleCityChange = useCallback(
+    (value: string) => {
+      onChange({ city_id: value });
+    },
+    [onChange],
+  );
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       <Typography sx={{ fontWeight: 700, fontSize: 16, color: T.color.textPrimary }}>
@@ -67,6 +118,15 @@ function FilterFields({
         onChange={(v) => onChange({ subcategory_id: v })}
         options={subcategoryOptions}
         placeholder="All subcategories"
+      />
+
+      <SearchableSelect
+        label="City"
+        value={values.city_id}
+        onChange={handleCityChange}
+        options={cityOptions}
+        placeholder="All cities"
+        loading={cityLoading}
       />
 
       <SearchableSelect

@@ -20,6 +20,7 @@ export function toBuySellListPayload(
     | "km_max"
     | "make_year_min"
     | "make_year_max"
+    | "city_id"
   >,
 ): BuySellListFilter {
   const minPrice = filters.min_price ? Number(filters.min_price) : undefined;
@@ -32,6 +33,8 @@ export function toBuySellListPayload(
   const kmMax = filters.km_max ? Number(filters.km_max) : undefined;
   const makeYearMin = filters.make_year_min ? Number(filters.make_year_min) : undefined;
   const makeYearMax = filters.make_year_max ? Number(filters.make_year_max) : undefined;
+
+  const cityId = filters.city_id || undefined;
 
   return {
     status: filters.status || undefined,
@@ -60,6 +63,7 @@ export function toBuySellListPayload(
     ...(makeYearMax !== undefined && !Number.isNaN(makeYearMax)
       ? { make_year_max: makeYearMax }
       : {}),
+    ...(cityId ? { city_id: cityId, country_id: "69c60d5a50d03d49adb72bc3", state_id: "69c60e80e9c7314beecc1f9c" } : {}),
   };
 }
 

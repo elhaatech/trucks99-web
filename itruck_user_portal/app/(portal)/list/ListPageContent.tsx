@@ -45,6 +45,7 @@ function filtersFromSearchParams(searchParams: URLSearchParams): VehicleFilterVa
     km_max: searchParams.get("km_max") ?? "",
     make_year_min: searchParams.get("make_year_min") ?? "",
     make_year_max: searchParams.get("make_year_max") ?? "",
+    city_id: searchParams.get("city_id") ?? "",
     search: searchParams.get("q") ?? "",
     usear_type: "buy",
   };
@@ -63,6 +64,7 @@ function filtersToQuery(filters: VehicleFilterValues): Record<string, string> {
   if (filters.km_max) query.km_max = filters.km_max;
   if (filters.make_year_min) query.make_year_min = filters.make_year_min;
   if (filters.make_year_max) query.make_year_max = filters.make_year_max;
+  if (filters.city_id) query.city_id = filters.city_id;
   if (filters.search.trim()) query.q = filters.search.trim();
   return query;
 }
