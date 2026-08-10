@@ -417,9 +417,6 @@ function SellVehicleContent() {
               onFeaturePayNow={openFeaturePlansForProduct}
               emptyTitle="No listings yet"
               emptyDescription='Tap "List new vehicle" to create your first ad. It only takes a few minutes.'
-              page={page}
-              totalPages={totalPages}
-              onPageChange={setPage}
             />
           )}
 

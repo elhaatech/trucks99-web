@@ -2,13 +2,15 @@
 
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import Pagination from "@mui/material/Pagination";
+import CircularProgress from "@mui/material/CircularProgress";
 import { EmptyState } from "@/components/ui/EmptyState";
 import SearchOffOutlinedIcon from "@mui/icons-material/SearchOffOutlined";
 import { getBuySellRowId, type BuySellProduct } from "@/model/services/buysellapi";
 import { VehicleCard } from "./VehicleCard";
 import { VehicleGridSkeleton } from "./LoadingSkeleton";
 import { PRODUCT_THEME as T } from "@/lib/theme";
+
+export type { BuySellProduct };
 
 type VehicleGridProps = {
   products: BuySellProduct[];
@@ -25,9 +27,10 @@ type VehicleGridProps = {
   emptyDescription?: string;
   showOwnerFeaturedControls?: boolean;
   onFeaturePayNow?: (productId: string) => void;
-  page?: number;
-  totalPages?: number;
-  onPageChange?: (page: number) => void;
+  isLoadingMore?: boolean;
+  hasMore?: boolean;
+  sentinelRef?: (node: HTMLDivElement | null) => void;
+  endMessage?: string;
 };
 
 const PAGE_SIZE = 12;
@@ -47,9 +50,10 @@ export function VehicleGrid({
   emptyDescription = "Try adjusting your filters or search query.",
   showOwnerFeaturedControls = false,
   onFeaturePayNow,
-  page = 1,
-  totalPages = 1,
-  onPageChange,
+  isLoadingMore = false,
+  hasMore,
+  sentinelRef,
+  endMessage = "You've reached the end",
 }: VehicleGridProps) {
   if (loading) {
     return <VehicleGridSkeleton count={6} />;
@@ -100,14 +104,17 @@ export function VehicleGrid({
         })}
       </Box>
 
-      {totalPages > 1 && onPageChange ? (
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-          <Pagination
-            count={totalPages}
-            page={page}
-            onChange={(_, p) => onPageChange(p)}
-            color="primary"
-          />
+      {hasMore !== undefined ? (
+        <Box sx={{ textAlign: "center", py: 3 }}>
+          {isLoadingMore ? (
+            <CircularProgress size={32} />
+          ) : hasMore ? (
+            <Box ref={sentinelRef} sx={{ height: 1 }} />
+          ) : (
+            <Typography sx={{ color: T.color.textMuted, fontSize: 13 }}>
+              {endMessage}
+            </Typography>
+          )}
         </Box>
       ) : null}
     </Box>

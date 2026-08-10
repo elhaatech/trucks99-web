@@ -9,6 +9,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { ToastProvider } from "@/lib/toast";
 import { appTheme } from "@/lib/createAppTheme";
 import { AppErrorBoundary } from "@/providers/AppErrorBoundary";
+import { FirebasePushProvider } from "@/providers/FirebasePushProvider";
 
 /**
  * Root MUI + Emotion + toast providers.
@@ -49,7 +50,9 @@ export default function ThemeRegistry({
       <ThemeProvider theme={appTheme}>
         <CssBaseline />
         <AppErrorBoundary>
-          <ToastProvider>{children}</ToastProvider>
+          <ToastProvider>
+            <FirebasePushProvider>{children}</FirebasePushProvider>
+          </ToastProvider>
         </AppErrorBoundary>
       </ThemeProvider>
     </CacheProvider>

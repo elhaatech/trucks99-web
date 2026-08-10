@@ -297,9 +297,6 @@ export default function FeaturedVehiclesMarketplacePage() {
             favoriteIds={new Set()}
             togglingFavoriteIds={new Set()}
             onProductClick={(id) => void handleViewProduct(id)}
-            page={page}
-            totalPages={totalPages}
-            onPageChange={(p) => handlePageChange(null as unknown as React.ChangeEvent<unknown>, p)}
           />
         </>
       ) : null}

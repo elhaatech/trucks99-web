@@ -62,9 +62,6 @@ export function BuySellShell({ children }: BuySellShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
-  const isHeroFlush =
-    pathname === "/" ||
-    pathname === userProductRoutes.dashboard();
 
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0, behavior: "auto" });
@@ -88,6 +85,7 @@ export function BuySellShell({ children }: BuySellShellProps) {
         sx={{
           flexShrink: 0,
           width: "100%",
+          position: "relative",
           zIndex: Z_INDEX.navbar,
           lineHeight: 0,
         }}
@@ -188,7 +186,7 @@ export function BuySellShell({ children }: BuySellShellProps) {
           flex: 1,
           minHeight: 0,
           width: "100%",
-          pt: isHeroFlush ? 0 : LAYOUT.pageGutterTop,
+          pt: { xs: `${LAYOUT.navbarHeight}px`, md: `${LAYOUT.navbarHeight}px` },
           pb: { xs: 2.5, md: 3 },
         }}
       >
