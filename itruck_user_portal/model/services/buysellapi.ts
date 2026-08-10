@@ -250,6 +250,8 @@ export type BuySellDashboardStatsResponse = {
     marketplace: BuySellDashboardMetrics;
     mySell: BuySellDashboardMetrics | null;
   };
+  totalUsers: number; // ← new
+
 };
 
 export type BuySellCreatePayload = {
