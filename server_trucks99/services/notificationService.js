@@ -50,7 +50,7 @@ const DEFAULT_TEMPLATES = [
         body: 'Hi {{userName}}, your {{planName}} premium plan is active until {{expiryDate}}. Paid: ₹{{amount}}. Ref: {{transactionId}}',
       },
       sms: {
-        body: 'iTruck: {{planName}} activated until {{expiryDate}}. Paid Rs.{{amount}}.',
+        body: 'TRUCKS99: {{planName}} activated until {{expiryDate}}. Paid Rs.{{amount}}.',
       },
       email: {
         subject: 'Premium plan activated — {{planName}}',
@@ -73,7 +73,7 @@ const DEFAULT_TEMPLATES = [
         body: 'Hi {{userName}}, your {{planName}} plan expires on {{expiryDate}}. Renew to keep access.',
       },
       whatsapp: {
-        body: 'Hi {{userName}}, your {{planName}} plan on iTruck expires on {{expiryDate}}. Renew now to avoid interruption.',
+        body: 'Hi {{userName}}, your {{planName}} plan on TRUCKS99 expires on {{expiryDate}}. Renew now to avoid interruption.',
       },
       push: { title: 'Premium expiring', body: '{{planName}} expires {{expiryDate}}' },
     },
@@ -148,7 +148,7 @@ const DEFAULT_TEMPLATES = [
         body: 'Payment of ₹{{amount}} could not be completed. Ref: {{transactionId}}.',
       },
       whatsapp: {
-        body: 'iTruck: Payment of ₹{{amount}} failed. Please retry. Ref: {{transactionId}}.',
+        body: 'TRUCKS99: Payment of ₹{{amount}} failed. Please retry. Ref: {{transactionId}}.',
       },
     },
   },
@@ -176,7 +176,7 @@ const DEFAULT_TEMPLATES = [
         body: 'EMI payment of ₹{{amount}} received. Ref: {{transactionId}}.',
       },
       whatsapp: {
-        body: 'iTruck: EMI payment of ₹{{amount}} received. Ref: {{transactionId}}.',
+        body: 'TRUCKS99: EMI payment of ₹{{amount}} received. Ref: {{transactionId}}.',
       },
     },
   },
@@ -205,7 +205,7 @@ const DEFAULT_TEMPLATES = [
         body: 'Your offer of ₹{{amount}} on {{productName}} was accepted.',
       },
       whatsapp: {
-        body: 'iTruck: Your offer of ₹{{amount}} on {{productName}} was accepted.',
+        body: 'TRUCKS99: Your offer of ₹{{amount}} on {{productName}} was accepted.',
       },
       push: { title: 'Offer accepted', body: '{{productName}} — ₹{{amount}}' },
     },
@@ -220,7 +220,7 @@ const DEFAULT_TEMPLATES = [
         body: 'Your offer of ₹{{amount}} was not accepted.',
       },
       whatsapp: {
-        body: 'iTruck: Your offer of ₹{{amount}} was not accepted at this time.',
+        body: 'TRUCKS99: Your offer of ₹{{amount}} was not accepted at this time.',
       },
     },
   },
@@ -235,7 +235,7 @@ const DEFAULT_TEMPLATES = [
         body: 'Your {{postType}} post received a new request from {{userName}}.',
       },
       whatsapp: {
-        body: 'iTruck: Your {{postType}} post received a new request from {{userName}}.',
+        body: 'TRUCKS99: Your {{postType}} post received a new request from {{userName}}.',
       },
       push: {
         title: 'New request received',
@@ -254,7 +254,7 @@ const DEFAULT_TEMPLATES = [
         body: 'Your request for this {{postType}} has been accepted by the post owner.',
       },
       whatsapp: {
-        body: 'iTruck: Your request for this {{postType}} has been accepted by the post owner.',
+        body: 'TRUCKS99: Your request for this {{postType}} has been accepted by the post owner.',
       },
       push: {
         title: 'Request accepted',
@@ -273,7 +273,7 @@ const DEFAULT_TEMPLATES = [
         body: 'Your request for this {{postType}} has been rejected by the post owner.',
       },
       whatsapp: {
-        body: 'iTruck: Your request for this {{postType}} has been rejected by the post owner.',
+        body: 'TRUCKS99: Your request for this {{postType}} has been rejected by the post owner.',
       },
       push: {
         title: 'Request declined',
@@ -305,7 +305,7 @@ const DEFAULT_TEMPLATES = [
         body: 'Hi {{userName}}, your listing {{productName}} may need attention. Consider updating or relisting.',
       },
       whatsapp: {
-        body: 'Hi {{userName}}, reminder to update or relist {{productName}} on iTruck for better visibility.',
+        body: 'Hi {{userName}}, reminder to update or relist {{productName}} on TRUCKS99 for better visibility.',
       },
     },
   },
@@ -316,10 +316,10 @@ const DEFAULT_TEMPLATES = [
     templates: {
       in_app: {
         title: 'Boost your listing',
-        body: 'Feature {{productName}} to reach more buyers on iTruck.',
+        body: 'Feature {{productName}} to reach more buyers on TRUCKS99.',
       },
       whatsapp: {
-        body: 'Boost {{productName}} with a featured listing on iTruck to get more enquiries.',
+        body: 'Boost {{productName}} with a featured listing on TRUCKS99 to get more enquiries.',
       },
     },
   },
@@ -330,7 +330,7 @@ const DEFAULT_TEMPLATES = [
     templates: {
       in_app: { title: 'Announcement', body: '{{message}}' },
       whatsapp: { body: 'Hi {{userName}}, {{message}}' },
-      sms: { body: 'iTruck: {{message}}' },
+      sms: { body: 'TRUCKS99: {{message}}' },
     },
   },
 ];

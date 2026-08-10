@@ -1,6 +1,6 @@
 # Firebase Push Notifications (FCM) Implementation
 
-This document outlines the architecture, flow, and integration of Firebase Cloud Messaging (FCM) push notifications across the TRUCKS99 platform, specifically focusing on the Truck/Load Request (Bid) flow.
+This document outlines the architecture, flow, and integration of Firebase Cloud Messaging (FCM) push notifications across the iTruck platform, specifically focusing on the Truck/Load Request (Bid) flow.
 
 ## 1. Architecture Overview
 
