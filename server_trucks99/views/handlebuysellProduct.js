@@ -3885,7 +3885,15 @@ buySellRouter.post("/products/owner/:ownerId", async (req, res) => {
       { status: { $nin: SELLER_PRODUCTS_EXCLUDED_STATUSES } },
     ];
 
-    const { excludeProductId, page: pageRaw, limit: limitRaw } = req.body || {};
+    const {
+      excludeProductId,
+      page: pageRaw,
+      limit: limitRaw,
+      country_id,
+      state_id,
+      city_id,
+    } = req.body || {};
+
     if (excludeProductId) {
       const excluded = await findByIdOrUuid(
         BuySellProduct,
@@ -3894,6 +3902,20 @@ buySellRouter.post("/products/owner/:ownerId", async (req, res) => {
       if (excluded?._id) {
         andConditions.push({ _id: { $ne: excluded._id } });
       }
+    }
+
+    // ── location filters (same resolution as /list and /purchase-list) ──
+    if (country_id) {
+      const id = await resolveLocationMongoId(LocationCountry, country_id);
+      if (id) andConditions.push({ country_id: id });
+    }
+    if (state_id) {
+      const id = await resolveLocationMongoId(LocationState, state_id);
+      if (id) andConditions.push({ state_id: id });
+    }
+    if (city_id) {
+      const id = await resolveLocationMongoId(LocationCity, city_id);
+      if (id) andConditions.push({ city_id: id });
     }
 
     const filter = { $and: andConditions };
