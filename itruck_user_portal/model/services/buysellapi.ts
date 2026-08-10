@@ -26,6 +26,7 @@ export type BuySellProductStatus =
   | "sold";
 
 export type BuySellProduct = {
+  profileImage(profileImage: any): string | null | undefined;
   bsNumber: string | null | undefined;
   is_favorite: unknown;
   _id: string;
