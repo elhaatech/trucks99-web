@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
@@ -12,7 +11,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import { SearchableSelect, type SelectOption } from "@/components/common/SearchableSelect";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 import { useCategorySubcategories } from "@/hooks/useCategorySubcategories";
-import { getLocationCitiesByState, getLocationStatesByCountry } from "@/model/services/location";
+import { CityFilterDropdown } from "./CityFilterDropdown";
 import {
   EMPTY_FILTERS,
   type FilterState,
@@ -48,75 +47,6 @@ function FilterFields({
     categoryId: values.category_id || "",
   });
 
-  const [cityOptions, setCityOptions] = useState<SelectOption[]>([]);
-  const [cityLoading, setCityLoading] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    const controller = new AbortController();
-
-    (async () => {
-      setCityLoading(true);
-      try {
-        const statesRes = await getLocationStatesByCountry("69c60d5a50d03d49adb72bc3", {
-          limit: 2000,
-        });
-        if (cancelled || controller.signal.aborted) return;
-
-        const states = Array.isArray(statesRes?.items) ? statesRes.items : [];
-        const tamilNadu = states.find((s) => s.name === "Tamil Nadu");
-        const stateId = tamilNadu?._id || tamilNadu?.id || tamilNadu?.uuid || "";
-
-        console.log("[VehicleFilterPanel] states count:", states.length, "Tamil Nadu stateId:", stateId);
-
-        if (!stateId) {
-          console.warn("[VehicleFilterPanel] Tamil Nadu not found in states response");
-          setCityOptions([]);
-          return;
-        }
-
-        const result = await getLocationCitiesByState(stateId, {
-          limit: 2000,
-        });
-        if (cancelled || controller.signal.aborted) return;
-
-        console.log("[VehicleFilterPanel] cities items count:", Array.isArray(result?.items) ? result.items.length : 0);
-
-        const rawItems = Array.isArray(result?.items) ? result.items : [];
-        const cities = rawItems.filter((item): item is { _id?: string; id?: string; uuid?: string; externalId?: number; name?: string; stateExternalId?: number } =>
-          Boolean(item.name)
-        );
-        setCityOptions(
-          cities.map((city) => ({
-            value: city._id || city.id || city.uuid || String(city.externalId ?? ""),
-            label: city.name || "",
-          }))
-        );
-      } catch (err) {
-        if (!cancelled && !controller.signal.aborted) {
-          console.error("[VehicleFilterPanel] Failed to load cities:", err);
-          setCityOptions([]);
-        }
-      } finally {
-        if (!cancelled && !controller.signal.aborted) {
-          setCityLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, []);
-
-  const handleCityChange = useCallback(
-    (value: string) => {
-      onChange({ city_id: value });
-    },
-    [onChange],
-  );
-
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       <Typography sx={{ fontWeight: 700, fontSize: 16, color: T.color.textPrimary }}>
@@ -140,13 +70,11 @@ function FilterFields({
         placeholder="All subcategories"
       />
 
-      <SearchableSelect
+      <CityFilterDropdown
         label="City"
         value={values.city_id}
-        onChange={handleCityChange}
-        options={cityOptions}
+        onChange={(v) => onChange({ city_id: v })}
         placeholder="All cities"
-        loading={cityLoading}
       />
 
       <SearchableSelect

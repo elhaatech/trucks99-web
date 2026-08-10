@@ -31,7 +31,7 @@ import {
 import { getCategories, type Category } from "@/model/services/category";
 import { addFavorite, removeFavorite } from "@/model/services/favoriteapi";
 import { useNotification } from "@/hooks/useNotification";
-import { ensureLoggedInToViewProduct, getMarketplaceLoginPath } from "@/lib/requireMarketplaceLogin";
+import { ensureLoggedInToViewProduct } from "@/lib/requireMarketplaceLogin";
 import type { MarketplaceStats } from "@/app/common/components/buysell/utils";
 import { EMPTY_FILTERS } from "@/app/admin/portal/buysell/_components/interface/buysell_interface";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
@@ -188,13 +188,6 @@ export default function UserProductDashboardPage() {
   useEffect(() => {
     if (!authReady) return;
 
-    if (!isLoggedIn) {
-      setFeaturedVehicles([]);
-      setFeaturedError("");
-      setFeaturedLoading(false);
-      return;
-    }
-
     let cancelled = false;
     setFeaturedLoading(true);
     setFeaturedError("");
@@ -223,10 +216,9 @@ export default function UserProductDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [authReady, isLoggedIn]);
+  }, [authReady]);
 
   const loadFeaturedVehicles = useCallback(() => {
-    if (!isLoggedIn) return;
     setFeaturedLoading(true);
     setFeaturedError("");
     void getBuySellFeaturedVehicles(MARKETPLACE.FEATURED_SECTION_LIMIT)
@@ -235,7 +227,7 @@ export default function UserProductDashboardPage() {
         setFeaturedError(toErrorMessage(err, "Failed to load featured vehicles")),
       )
       .finally(() => setFeaturedLoading(false));
-  }, [isLoggedIn]);
+  }, []);
 
   const handleExplorePageChange = useCallback(
     async (page: number) => {
@@ -423,29 +415,7 @@ export default function UserProductDashboardPage() {
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Premium listings with paid featured visibility on TRUCKS99.
         </Typography>
-        {!authReady ? (
-          <FeaturedVehiclesGrid products={[]} loading onViewDetails={() => {}} />
-        ) : !isLoggedIn ? (
-          <Alert
-            severity="info"
-            sx={{ mb: 2, borderRadius: 2 }}
-            action={
-              <Button
-                color="inherit"
-                size="small"
-                onClick={() =>
-                  router.push(
-                    getMarketplaceLoginPath(userProductRoutes.dashboard()),
-                  )
-                }
-              >
-                Sign in
-              </Button>
-            }
-          >
-            Sign in to view featured vehicles and premium listings.
-          </Alert>
-        ) : (
+        {authReady ? (
           <FeaturedVehiclesGrid
             products={featuredVehicles}
             loading={featuredLoading}
@@ -455,6 +425,8 @@ export default function UserProductDashboardPage() {
             onBrowseAll={() => router.push(userProductRoutes.list())}
             emptyDescription="No featured listings yet. Browse all vehicles or feature yours from your listing page."
           />
+        ) : (
+          <FeaturedVehiclesGrid products={[]} loading onViewDetails={() => {}} />
         )}
       </Box>
       <Box sx={{ mt: 5 }}>

@@ -19,6 +19,7 @@ import { addFavorite, removeFavorite } from "@/model/services/favoriteapi";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 import { VehicleCard } from "@/app/common/components/buysell/VehicleCard";
+import { CityFilterDropdown } from "@/app/common/components/buysell/CityFilterDropdown";
 
 type UserRelatedProductsSectionProps = {
   sellerId: string;
@@ -67,6 +68,7 @@ export function UserRelatedProductsSection({
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [subcategoryFilter, setSubcategoryFilter] = useState<SubcategoryFilterValue>(null);
+  const [cityFilter, setCityFilter] = useState("");
 
   const filteredProducts = subcategoryFilter?.id
     ? products.filter((product) => {
@@ -85,7 +87,15 @@ export function UserRelatedProductsSection({
     }
     setLoading(true);
     setError("");
-    postBuySellProductsByOwner({ ownerId: sellerId, excludeProductId, page: 1, limit: 12 })
+    postBuySellProductsByOwner({
+      ownerId: sellerId,
+      excludeProductId,
+      page: 1,
+      limit: 12,
+      cityId: cityFilter || undefined,
+      countryId: "69c60d5a50d03d49adb72bc3",
+      stateId: "69c60e80e9c7314beecc1fbb",
+    })
       .then((data) => {
         const items = data.products ?? [];
         setProducts(items);
@@ -97,7 +107,7 @@ export function UserRelatedProductsSection({
         setError(err instanceof Error ? err.message : "Could not load related listings"),
       )
       .finally(() => setLoading(false));
-  }, [sellerId, excludeProductId, isLoggedIn]);
+  }, [sellerId, excludeProductId, isLoggedIn, cityFilter]);
 
   const handleFavorite = useCallback(
     async (productId: string) => {
@@ -172,6 +182,18 @@ export function UserRelatedProductsSection({
           </Button>
         ) : null}
       </Box>
+
+      {isOwnerView ? (
+        <Box sx={{ mb: 2 }}>
+          <CityFilterDropdown
+            label="City"
+            value={cityFilter}
+            onChange={setCityFilter}
+            placeholder="All cities"
+            sx={{ maxWidth: 240 }}
+          />
+        </Box>
+      ) : null}
 
       {categoryId ? (
         <Box sx={{ mb: 2 }}>

@@ -686,14 +686,14 @@ export async function removeFeaturedVehicleAdmin(
   }
 }
 
-/** POST /api/buy-sell/featured-vehicles/list — active paid featured marketplace listings (requires login). */
+/** POST /api/buy-sell/featured-vehicles/list — public featured marketplace listings. */
 export async function getBuySellFeaturedVehicles(limit = 8): Promise<BuySellProduct[]> {
   try {
     const safeLimit = Math.min(Math.max(limit, 1), 24);
     return await cachedRequest(
       `buy-sell-featured:${safeLimit}`,
       async () => {
-        const payload = await api<BuySellRecentVehiclesResponse>(
+        const payload = await publicApi<BuySellRecentVehiclesResponse>(
           "/api/buy-sell/featured-vehicles/list",
           {
             method: "POST",
@@ -845,12 +845,18 @@ export type BuySellOwnerProductsParams = {
   excludeProductId?: string;
   page?: number;
   limit?: number;
+  cityId?: string;
+  countryId?: string;
+  stateId?: string;
 };
 
 export type BuySellOwnerProductsBody = {
   excludeProductId?: string;
   page?: number;
   limit?: number;
+  city_id?: string;
+  country_id?: string;
+  state_id?: string;
 };
 
 /** POST /api/buy-sell/products/owner/:ownerId — seller's other active listings. */
@@ -858,11 +864,14 @@ export async function postBuySellProductsByOwner(
   params: BuySellOwnerProductsParams,
 ): Promise<BuySellOwnerProductsResponse["data"]> {
   try {
-    const { ownerId, excludeProductId, page = 1, limit = 12 } = params;
+    const { ownerId, excludeProductId, page = 1, limit = 12, cityId, countryId, stateId } = params;
     const body: BuySellOwnerProductsBody = {
       excludeProductId,
       page,
       limit,
+      ...(cityId ? { city_id: cityId } : {}),
+      ...(countryId ? { country_id: countryId } : {}),
+      ...(stateId ? { state_id: stateId } : {}),
     };
 
     const res = await api<BuySellOwnerProductsResponse>(
