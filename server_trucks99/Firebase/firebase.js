@@ -36,12 +36,9 @@ if (!admin.apps.length) {
   firebaseReady = true;
 }
 
-// FCM error codes that mean the token is dead and should be deactivated.
 const INVALID_TOKEN_CODES = [
   "messaging/registration-token-not-registered",
-  "messaging/invalid-registration-token",
-  "messaging/invalid-argument",
-  "messaging/mismatched-credential",
+  "messaging/invalid-registration-token"
 ];
 
 const isInvalidTokenError = (code) => INVALID_TOKEN_CODES.includes(code);
@@ -65,11 +62,6 @@ const sendNotification = async (token, title, body, options = {}) => {
   } = options || {};
   try {
     const message = {
-      // Send both notification + data so web gets tray notifications even when app is closed.
-      notification: {
-        title: String(title ?? ""),
-        body: String(body ?? ""),
-      },
       data: {
         type: String(type || "GENERAL"),
         id: String(id || postId || ""),
@@ -78,27 +70,39 @@ const sendNotification = async (token, title, body, options = {}) => {
         postType: String(postType || ""),
         status: String(status || ""),
         route: String(route || "/admin/portal"),
-        title: String(title ?? ""),
-        body: String(body ?? ""),
+        title: String(title || ""),
+        body: String(body || ""),
       },
-      webpush: {
+      token,
+    };
+
+    if (title || body) {
+      message.notification = {
+        title: String(title || ""),
+        body: String(body || ""),
+      };
+      message.webpush = {
         notification: {
-          title: String(title ?? ""),
-          body: String(body ?? ""),
+          title: String(title || ""),
+          body: String(body || ""),
           requireInteraction: false,
         },
         fcmOptions: {
           link: String(route || "/admin/portal"),
         },
-      },
-      token,
-    };
+      };
+    }
 
     const response = await admin.messaging().send(message);
-    console.log("Notification sent:", response);
+    console.log("[Firebase] Notification successfully sent to mobile device.");
+    console.log("[Firebase] Message ID:", response);
+    console.log("[Firebase] Payload sent:", JSON.stringify(message, null, 2));
     return { success: true, message: response };
   } catch (error) {
-    console.error("Error sending notification:", error?.code || error?.message || error);
+    console.error("[Firebase] Error sending notification to mobile!");
+    console.error("[Firebase] Token attempted:", token);
+    console.error("[Firebase] Error details:", error?.code || error?.message || error);
+    console.error("[Firebase] Full payload that failed:", JSON.stringify(message, null, 2));
     return {
       success: false,
       message: error?.message || "Error sending notification",

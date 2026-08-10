@@ -29,11 +29,21 @@ const firebaseSendMessage = async (req, res) => {
 
 
 firebaseSendMessageRouter.post("/firebase/save-token", async (req, res) => {
+    console.log("[FCM] /firebase/save-token called!");
+    console.log("[FCM] req.body:", req.body);
+    console.log("[FCM] req.user:", req.user ? req.user._id : "User is not logged in!");
+
     try {
         const { token, device, platform } = req.body;
-        const userId = req.user._id;
+        const userId = req.user?._id;
+
+        if (!userId) {
+             console.error("[FCM] Missing user ID! Request not authenticated.");
+             return res.status(401).json({ message: "Unauthorized: Missing user ID" });
+        }
 
         if (!token) {
+            console.error("[FCM] Token missing from request body!");
             return res.status(400).json({ message: "Token missing" });
         }
 
@@ -42,8 +52,8 @@ firebaseSendMessageRouter.post("/firebase/save-token", async (req, res) => {
             {
                 $set: {
                     userId,
-                    device: device || "web",
-                    platform: platform || "web",
+                    device: device || "mobile",
+                    platform: platform || "mobile",
                     isActive: true,
                     lastUsed: new Date(),
                 },
@@ -54,14 +64,15 @@ firebaseSendMessageRouter.post("/firebase/save-token", async (req, res) => {
             }
         );
 
+        console.log("[FCM] Token saved successfully in DB:", updatedToken.token.substring(0, 10) + "...");
         res.json({
             message: "Token saved successfully",
             data: updatedToken,
         });
 
     } catch (error) {
-        console.error("Save token error:", error);
-        res.status(500).json({ message: "Server error" });
+        console.error("[FCM] Save token error:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
     }
 });
 
