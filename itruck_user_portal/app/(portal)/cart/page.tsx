@@ -169,9 +169,6 @@ export default function UserProductFavoritesPage() {
             onProductClick={(id) => router.push(userProductRoutes.view(id))}
             emptyTitle="No favourites"
             emptyDescription="Your saved vehicles will appear here."
-            page={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
           />
 
           <Box

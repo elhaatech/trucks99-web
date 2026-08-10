@@ -37,6 +37,7 @@ import {
   PRIMARY,
   SHADOW,
   TRANSITION,
+  Z_INDEX,
 } from "@/lib/theme";
 import { isSellHubPath, userProductRoutes } from "@/lib/userProductRoutes";
 import { getBuySellImageUrl } from "@/lib/buysellUtils";
@@ -119,21 +120,22 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
 
   return (
     <AppBar
-      position="sticky"
+      position="fixed"
       elevation={0}
       sx={{
-        bgcolor: alpha("#FFFFFF", 0.92),
+        top: 0,
+        bgcolor: "#ffffff",
         color: T.color.textPrimary,
-        backdropFilter: "blur(12px)",
         borderBottom: `1px solid ${T.color.border}`,
         boxShadow: `${SHADOW.navbar} !important`,
+        zIndex: Z_INDEX.navbar,
       }}
     >
       <Toolbar
         disableGutters
         sx={{
           minHeight: `${LAYOUT.navbarHeight}px !important`,
-          maxHeight: LAYOUT.navbarHeight,
+          maxHeight: `${LAYOUT.navbarHeight}px`,
           width: "100%",
           maxWidth: LAYOUT.contentMaxWidth,
           mx: "auto",

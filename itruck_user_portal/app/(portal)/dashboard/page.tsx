@@ -31,13 +31,13 @@ import {
 import { getCategories, type Category } from "@/model/services/category";
 import { addFavorite, removeFavorite } from "@/model/services/favoriteapi";
 import { useNotification } from "@/hooks/useNotification";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { ensureLoggedInToViewProduct, getMarketplaceLoginPath } from "@/lib/requireMarketplaceLogin";
 import type { MarketplaceStats } from "@/app/common/components/buysell/utils";
 import { EMPTY_FILTERS } from "@/app/admin/portal/buysell/_components/interface/buysell_interface";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { MARKETPLACE } from "@/constants/marketplace";
 import { toErrorMessage } from "@/lib/errors";
-import { isAbortError } from "@/lib/apiCache";
 
 const EMPTY_STATS: MarketplaceStats = {
   totalListings: 0,
@@ -66,9 +66,6 @@ export default function UserProductDashboardPage() {
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
-  const [exploreVehicles, setExploreVehicles] = useState<BuySellProduct[]>([]);
-  const [explorePage, setExplorePage] = useState(1);
-  const [exploreTotalPages, setExploreTotalPages] = useState(1);
   const [featuredVehicles, setFeaturedVehicles] = useState<BuySellProduct[]>([]);
   const [recentVehicles, setRecentVehicles] = useState<BuySellProduct[]>([]);
   const [dashboardData, setDashboardData] = useState<
@@ -76,21 +73,18 @@ export default function UserProductDashboardPage() {
   >(null);
   const [statsError, setStatsError] = useState("");
   const [statsUpdatedAt, setStatsUpdatedAt] = useState<Date | null>(null);
-  const [listError, setListError] = useState("");
   const [featuredError, setFeaturedError] = useState("");
   const [recentVehiclesError, setRecentVehiclesError] = useState("");
-  const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const [featuredLoading, setFeaturedLoading] = useState(true);
   const [recentVehiclesLoading, setRecentVehiclesLoading] = useState(true);
-  const [exploreLoading, setExploreLoading] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const favoriteIdsRef = useRef(favoriteIds);
   favoriteIdsRef.current = favoriteIds;
 
   const loadExplorePage = useCallback(
-    async (page: number, signal?: AbortSignal) => {
+    async (page: number, signal: AbortSignal) => {
       const result = await getBuySellListPage(
         {
           ...toBuySellListPayload({ ...EMPTY_FILTERS, usear_type: "all" }),
@@ -99,43 +93,46 @@ export default function UserProductDashboardPage() {
         },
         { signal },
       );
-      return result;
+      return {
+        items: result.items ?? [],
+        total: result.total ?? 0,
+        totalPages: result.totalPages ?? 1,
+        page: result.page ?? page,
+      };
     },
     [],
   );
+
+  const exploreList = useInfiniteScroll(loadExplorePage);
+
+  useEffect(() => {
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      for (const p of exploreList.items) {
+        if (p.is_favorite) next.add(getBuySellRowId(p));
+      }
+      return next;
+    });
+  }, [exploreList.items]);
+
+  useEffect(() => {
+    if (exploreList.error && exploreList.items.length === 0) {
+      notifyRef.current({
+        type: "error",
+        message: exploreList.error.message,
+      });
+    }
+  }, [exploreList.error, exploreList.items.length]);
 
   /** Critical path first (explore), then stats/featured/categories — don't block first paint. */
   useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
 
-    setLoading(true);
     setStatsLoading(true);
     setRecentVehiclesLoading(true);
     setStatsError("");
-    setListError("");
     setRecentVehiclesError("");
-
-    void (async () => {
-      try {
-        const exploreResult = await loadExplorePage(1, signal);
-        if (signal.aborted) return;
-        setExploreVehicles(exploreResult.items ?? []);
-        setExplorePage(exploreResult.page ?? 1);
-        setExploreTotalPages(exploreResult.totalPages ?? 1);
-        setFavoriteIds(seedFavoritesFromProducts(exploreResult.items ?? []));
-        if ((exploreResult.items?.length ?? 0) === 0) {
-          setListError("No vehicles to show yet. List a vehicle or check back soon.");
-        }
-      } catch (err) {
-        if (isAbortError(err) || signal.aborted) return;
-        const message = toErrorMessage(err, "Failed to load vehicles");
-        setListError(message);
-        notifyRef.current({ type: "error", message });
-      } finally {
-        if (!signal.aborted) setLoading(false);
-      }
-    })();
 
     void getCategories({ activeOnly: true })
       .then((cats) => {
@@ -183,7 +180,7 @@ export default function UserProductDashboardPage() {
     return () => {
       controller.abort();
     };
-  }, [loadExplorePage]);
+  }, []);
 
   useEffect(() => {
     if (!authReady) return;
@@ -236,36 +233,6 @@ export default function UserProductDashboardPage() {
       )
       .finally(() => setFeaturedLoading(false));
   }, [isLoggedIn]);
-
-  const handleExplorePageChange = useCallback(
-    async (page: number) => {
-      setExploreLoading(true);
-      setListError("");
-      try {
-        const result = await loadExplorePage(page);
-        setExploreVehicles(result.items ?? []);
-        setExplorePage(result.page ?? page);
-        setExploreTotalPages(result.totalPages ?? 1);
-        setFavoriteIds((prev) => {
-          const next = new Set(prev);
-          for (const p of result.items ?? []) {
-            if (p.is_favorite) next.add(getBuySellRowId(p));
-          }
-          return next;
-        });
-        if ((result.items?.length ?? 0) === 0) {
-          setListError("No vehicles to show yet. List a vehicle or check back soon.");
-        }
-      } catch (err) {
-        setListError(
-          err instanceof Error ? err.message : "Failed to load vehicles",
-        );
-      } finally {
-        setExploreLoading(false);
-      }
-    },
-    [loadExplorePage],
-  );
 
   const marketplaceStats = useMemo(() => {
     if (dashboardData?.marketplace) {
@@ -531,26 +498,27 @@ export default function UserProductDashboardPage() {
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Browse every active listing on TRUCKS99
-          {!loading && exploreVehicles.length > 0
-            ? ` · page ${explorePage} of ${exploreTotalPages}`
+          {!exploreList.loading && exploreList.items.length > 0
+            ? ` · ${exploreList.total.toLocaleString("en-IN")} vehicle${exploreList.total !== 1 ? "s" : ""}`
             : ""}
           .
         </Typography>
-        {listError && !loading && exploreVehicles.length === 0 ? (
+        {exploreList.error && exploreList.items.length === 0 ? (
           <Alert severity="info" sx={{ mb: 2 }}>
-            {listError}
+            {exploreList.error.message ||
+              "No vehicles to show yet. List a vehicle or check back soon."}
           </Alert>
         ) : null}
         <VehicleGrid
-          products={exploreVehicles}
-          loading={loading || exploreLoading}
+          products={exploreList.items}
+          loading={exploreList.loading}
+          isLoadingMore={exploreList.loadingMore}
+          hasMore={exploreList.hasMore}
+          sentinelRef={exploreList.sentinelRef}
           favoriteIds={favoriteIds}
           togglingFavoriteIds={togglingIds}
           onFavoriteToggle={handleFavoriteToggle}
           onProductClick={(id) => void handleViewProduct(id)}
-          page={explorePage}
-          totalPages={exploreTotalPages}
-          onPageChange={(page) => void handleExplorePageChange(page)}
           emptyDescription="No vehicles to explore yet. Be the first to list on TRUCKS99."
         />
       </Box>
