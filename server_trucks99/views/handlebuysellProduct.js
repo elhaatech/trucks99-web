@@ -188,9 +188,7 @@ function getActor(req) {
   const user = req.user || {};
   const roleId = user.roleId;
   const roleNameFromRef =
-    roleId && typeof roleId === "object"
-      ? roleId.name || roleId.status
-      : null;
+    roleId && typeof roleId === "object" ? roleId.name || roleId.status : null;
 
   return {
     id: user._id || user.id || null,
@@ -399,7 +397,11 @@ function assertProductAvailableForPurchase(product, actor) {
     err.statusCode = 400;
     throw err;
   }
-  if (product.bookedBy && actor && !isSameUserAsActor(product.bookedBy, actor)) {
+  if (
+    product.bookedBy &&
+    actor &&
+    !isSameUserAsActor(product.bookedBy, actor)
+  ) {
     const err = new Error("Booking already exists.");
     err.statusCode = 403;
     throw err;
@@ -427,7 +429,10 @@ function assertProductAvailableForSold(product) {
 function sendRouteError(res, error, fallbackMessage) {
   // Log full error for server-side debugging
   try {
-    console.error("[buysell route error]", error && error.stack ? error.stack : error);
+    console.error(
+      "[buysell route error]",
+      error && error.stack ? error.stack : error,
+    );
   } catch (e) {
     // ignore logging errors
   }
@@ -449,7 +454,8 @@ async function generateNextBsNumber() {
     { upsert: true, returnDocument: "after" },
   );
 
-  let seq = res && res.value && typeof res.value.seq === "number" ? res.value.seq : 1;
+  let seq =
+    res && res.value && typeof res.value.seq === "number" ? res.value.seq : 1;
 
   // Ensure counter is at least above any existing bsNumber numeric suffix to avoid duplicates.
   // Be tolerant of legacy or malformed bsNumber values while still preserving uniqueness.
@@ -476,11 +482,17 @@ async function generateNextBsNumber() {
         { $max: { seq: newSeq } },
         { returnDocument: "after" },
       );
-      seq = updated && updated.value && typeof updated.value.seq === "number" ? updated.value.seq : newSeq;
+      seq =
+        updated && updated.value && typeof updated.value.seq === "number"
+          ? updated.value.seq
+          : newSeq;
     }
   } catch (e) {
     // If aggregation or lookup fails, fall back to current seq — log for debugging
-    console.error("[generateNextBsNumber] failed to compute max existing bsNumber:", e && e.stack ? e.stack : e);
+    console.error(
+      "[generateNextBsNumber] failed to compute max existing bsNumber:",
+      e && e.stack ? e.stack : e,
+    );
   }
 
   const today = new Date();
@@ -491,7 +503,6 @@ async function generateNextBsNumber() {
 
   return `${dateStr} - BS${String(seq).padStart(3, "0")}`;
 }
-
 
 /** Format bsNumber with creation date for response (converts old format to new format) */
 function formatBsNumberWithDate(bsNumber, createdAt) {
@@ -614,7 +625,13 @@ function enrichBitRecordForResponse(record, contactMap) {
   };
 }
 
-function enrichProductListItem(item, contactMap, favoriteSet, bitRecords, bidSummary) {
+function enrichProductListItem(
+  item,
+  contactMap,
+  favoriteSet,
+  bitRecords,
+  bidSummary,
+) {
   const sellerContact = contactFromMap(contactMap, item.userid);
   const sellerName =
     resolvePersonName(sellerContact.name, item.sellerName, item.created_by) ||
@@ -637,6 +654,7 @@ function enrichProductListItem(item, contactMap, favoriteSet, bitRecords, bidSum
 
   return {
     ...item,
+    images: Array.isArray(item.images) ? item.images : [], // ← ADDED
     bsNumber: formatBsNumberWithDate(item.bsNumber, item.createdAt) || null,
     seller_mobile: sellerContact.mobile || null,
     sellerName,
@@ -647,7 +665,7 @@ function enrichProductListItem(item, contactMap, favoriteSet, bitRecords, bidSum
     highest_bid,
     accepted_bid,
     featured: item.featured || null,
-    isFeatured: item.featured ? item.featured.expiryStatus === 'Active' : false,
+    isFeatured: item.featured ? item.featured.expiryStatus === "Active" : false,
   };
 }
 
@@ -745,19 +763,24 @@ async function getBidSummaryByProductIds(productIds) {
 
 // ─── SHARED ENRICHMENT HELPER ──────────────────────────────────────────────────
 async function buildEnrichedResponse(data) {
-  const [countryDoc, stateDoc, cityDoc, sellerContactMap, featuredDoc] = await Promise.all([
-    data.country_id
-      ? LocationCountry.findById(data.country_id).select("name sortname").lean()
-      : null,
-    data.state_id
-      ? LocationState.findById(data.state_id).select("name").lean()
-      : null,
-    data.city_id
-      ? LocationCity.findById(data.city_id).select("name").lean()
-      : null,
-    getUsersContactMap([data.userid].filter(Boolean)),
-    BuySellFeaturedVehicle.findOne({ productId: data._id }).sort({ createdAt: -1 }).lean(),
-  ]);
+  const [countryDoc, stateDoc, cityDoc, sellerContactMap, featuredDoc] =
+    await Promise.all([
+      data.country_id
+        ? LocationCountry.findById(data.country_id)
+            .select("name sortname")
+            .lean()
+        : null,
+      data.state_id
+        ? LocationState.findById(data.state_id).select("name").lean()
+        : null,
+      data.city_id
+        ? LocationCity.findById(data.city_id).select("name").lean()
+        : null,
+      getUsersContactMap([data.userid].filter(Boolean)),
+      BuySellFeaturedVehicle.findOne({ productId: data._id })
+        .sort({ createdAt: -1 })
+        .lean(),
+    ]);
   const sellerContact = contactFromMap(sellerContactMap, data.userid);
   const sellerMobile = sellerContact.mobile;
   const sellerName =
@@ -839,33 +862,40 @@ async function buildEnrichedResponse(data) {
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
     __v: data.__v,
-    ...(featuredDoc ? (() => {
-      const nowMs = Date.now();
-      const expiresMs = featuredDoc.expiresAt ? new Date(featuredDoc.expiresAt).getTime() : 0;
-      const remainingDays = expiresMs > nowMs ? Math.ceil((expiresMs - nowMs) / (1000 * 60 * 60 * 24)) : 0;
-      let expiryStatus = 'Expired';
-      if (expiresMs > nowMs) {
-        expiryStatus = remainingDays <= 3 ? 'Expiring Soon' : 'Active';
-      }
-      return {
-        featured: {
-          featuredPlacementId: featuredDoc._id,
-          packageId: featuredDoc.packageId,
-          packageName: featuredDoc.packageName,
-          packageType: featuredDoc.packageType,
-          price: featuredDoc.price,
-          durationDays: featuredDoc.durationDays,
-          paymentId: featuredDoc.paymentId,
-          orderId: featuredDoc.orderId,
-          featuredStatus: featuredDoc.status,
-          featuredAt: featuredDoc.createdAt,
-          expiresAt: featuredDoc.expiresAt,
-          remainingDays,
-          expiryStatus,
-        },
-        isFeatured: expiryStatus === 'Active',
-      };
-    })() : { featured: null, isFeatured: false }),
+    ...(featuredDoc
+      ? (() => {
+          const nowMs = Date.now();
+          const expiresMs = featuredDoc.expiresAt
+            ? new Date(featuredDoc.expiresAt).getTime()
+            : 0;
+          const remainingDays =
+            expiresMs > nowMs
+              ? Math.ceil((expiresMs - nowMs) / (1000 * 60 * 60 * 24))
+              : 0;
+          let expiryStatus = "Expired";
+          if (expiresMs > nowMs) {
+            expiryStatus = remainingDays <= 3 ? "Expiring Soon" : "Active";
+          }
+          return {
+            featured: {
+              featuredPlacementId: featuredDoc._id,
+              packageId: featuredDoc.packageId,
+              packageName: featuredDoc.packageName,
+              packageType: featuredDoc.packageType,
+              price: featuredDoc.price,
+              durationDays: featuredDoc.durationDays,
+              paymentId: featuredDoc.paymentId,
+              orderId: featuredDoc.orderId,
+              featuredStatus: featuredDoc.status,
+              featuredAt: featuredDoc.createdAt,
+              expiresAt: featuredDoc.expiresAt,
+              remainingDays,
+              expiryStatus,
+            },
+            isFeatured: expiryStatus === "Active",
+          };
+        })()
+      : { featured: null, isFeatured: false }),
   };
 }
 
@@ -1015,12 +1045,20 @@ async function enrichBuySellSpecifications(items) {
 
   const [specDocs, valueDocs] = await Promise.all([
     specIds.size
-      ? Specification.find({ _id: { $in: [...specIds].map((id) => new mongoose.Types.ObjectId(id)) } })
+      ? Specification.find({
+          _id: {
+            $in: [...specIds].map((id) => new mongoose.Types.ObjectId(id)),
+          },
+        })
           .select("specification_name type is_required")
           .lean()
       : [],
     valueIds.size
-      ? SpecificationValue.find({ _id: { $in: [...valueIds].map((id) => new mongoose.Types.ObjectId(id)) } })
+      ? SpecificationValue.find({
+          _id: {
+            $in: [...valueIds].map((id) => new mongoose.Types.ObjectId(id)),
+          },
+        })
           .select("specification_value_name")
           .lean()
       : [],
@@ -1048,7 +1086,10 @@ async function enrichBuySellSpecifications(items) {
       const specValueId = String(spec?.specification_value || "");
       const specValueInfo =
         specInfoDoc?.type === "selectable" && valueMap[specValueId]
-          ? { specification_value_name: valueMap[specValueId].specification_value_name }
+          ? {
+              specification_value_name:
+                valueMap[specValueId].specification_value_name,
+            }
           : null;
 
       return {
@@ -1076,20 +1117,21 @@ async function enrichBuySellListItems(items, actor, options = {}) {
   const lite = options.lite === true;
   const allProductIds = items.map((item) => item._id);
 
-  const favoritePromise =
-    actor?.id
-      ? Favorite.find({
-          entity: "buySell",
-          entityId: { $in: allProductIds },
-          userId: String(actor.id),
-        })
-          .select("entityId")
-          .lean()
-      : Promise.resolve([]);
+  const favoritePromise = actor?.id
+    ? Favorite.find({
+        entity: "buySell",
+        entityId: { $in: allProductIds },
+        userId: String(actor.id),
+      })
+        .select("entityId")
+        .lean()
+    : Promise.resolve([]);
 
   const featuredPromise = BuySellFeaturedVehicle.find({
     productId: { $in: allProductIds },
-  }).sort({ createdAt: -1 }).lean();
+  })
+    .sort({ createdAt: -1 })
+    .lean();
 
   const [userFavorites, featuredResult] = await Promise.all([
     favoritePromise,
@@ -1101,11 +1143,16 @@ async function enrichBuySellListItems(items, actor, options = {}) {
     for (const placement of featuredResult) {
       if (!featuredMetaByProductId.has(String(placement.productId))) {
         const nowMs = Date.now();
-        const expiresMs = placement.expiresAt ? new Date(placement.expiresAt).getTime() : 0;
-        const remainingDays = expiresMs > nowMs ? Math.ceil((expiresMs - nowMs) / (1000 * 60 * 60 * 24)) : 0;
-        let expiryStatus = 'Expired';
+        const expiresMs = placement.expiresAt
+          ? new Date(placement.expiresAt).getTime()
+          : 0;
+        const remainingDays =
+          expiresMs > nowMs
+            ? Math.ceil((expiresMs - nowMs) / (1000 * 60 * 60 * 24))
+            : 0;
+        let expiryStatus = "Expired";
         if (expiresMs > nowMs) {
-          expiryStatus = remainingDays <= 3 ? 'Expiring Soon' : 'Active';
+          expiryStatus = remainingDays <= 3 ? "Expiring Soon" : "Active";
         }
 
         featuredMetaByProductId.set(String(placement.productId), {
@@ -1136,7 +1183,9 @@ async function enrichBuySellListItems(items, actor, options = {}) {
     );
     const emptyContact = {};
     return items.map((item) => {
-      const featured = featuredMetaByProductId ? featuredMetaByProductId.get(String(item._id)) : null;
+      const featured = featuredMetaByProductId
+        ? featuredMetaByProductId.get(String(item._id))
+        : null;
       if (featured) item.featured = featured;
       return enrichProductListItem(
         item,
@@ -1157,9 +1206,7 @@ async function enrichBuySellListItems(items, actor, options = {}) {
 
   const bidsResult = await bidsPromise;
 
-  const favoriteSet = new Set(
-    userFavorites.map((fav) => String(fav.entityId)),
-  );
+  const favoriteSet = new Set(userFavorites.map((fav) => String(fav.entityId)));
 
   let bitRecordsByProductId = {};
   let bidSummaryByProductId = {};
@@ -1242,10 +1289,14 @@ buySellRouter.put("/bit/accept/:id", async (req, res) => {
       });
     }
     if (bitRecord.status === "accepeted") {
-      return res.status(400).json({ message: "This offer is already accepted." });
+      return res
+        .status(400)
+        .json({ message: "This offer is already accepted." });
     }
     if (bitRecord.status === "reject") {
-      return res.status(400).json({ message: "This offer was already rejected." });
+      return res
+        .status(400)
+        .json({ message: "This offer was already rejected." });
     }
 
     // Only the seller (product owner) may accept an offer on their own product.
@@ -1482,11 +1533,15 @@ buySellRouter.post("/list", async (req, res) => {
 
     const withLocation = await enrichBuySellProductsWithLocation(trimmedList);
     const withSpecifications = await enrichBuySellSpecifications(withLocation);
-    const enrichedList = await enrichBuySellListItems(withSpecifications, actor, {
-      // Match getById: bring back bit_records/bid_count/highest_bid/accepted_bid
-      // so the frontend never needs a per-item detail call.
-      includeBitRecords: true,
-    });
+    const enrichedList = await enrichBuySellListItems(
+      withSpecifications,
+      actor,
+      {
+        // Match getById: bring back bit_records/bid_count/highest_bid/accepted_bid
+        // so the frontend never needs a per-item detail call.
+        includeBitRecords: true,
+      },
+    );
 
     // Legacy clients expect a bare array; paginated clients send page/limit.
     if (pagination) {
@@ -1667,10 +1722,7 @@ buySellRouter.post(
             userid: actor.id,
             created_by: actor.name,
             updated_by: actor.name,
-            status: resolveCreateStatus(
-              row["Status"],
-              isAdminActor(actor),
-            ),
+            status: resolveCreateStatus(row["Status"], isAdminActor(actor)),
           });
         } catch (rowErr) {
           result.skipped++;
@@ -1791,7 +1843,16 @@ buySellRouter.get("/dashboard-stats", async (req, res) => {
     }
 
     const marketplaceFilter = {
-      status: { $in: ["pending", "accepeted", "booking", "sold", "purchased", "rejected"] },
+      status: {
+        $in: [
+          "pending",
+          "accepeted",
+          "booking",
+          "sold",
+          "purchased",
+          "rejected",
+        ],
+      },
     };
 
     const [marketplace, mySell] = await Promise.all([
@@ -1823,7 +1884,9 @@ buySellRouter.get("/dashboard-stats", async (req, res) => {
 
 function parseDashboardVehicleLimit(raw) {
   const parsedLimit = parseInt(String(raw ?? "8"), 10);
-  return Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 24) : 8;
+  return Number.isFinite(parsedLimit)
+    ? Math.min(Math.max(parsedLimit, 1), 24)
+    : 8;
 }
 
 /** Marketplace listings shown on the user dashboard (all sellers, newest/featured). */
@@ -1876,7 +1939,9 @@ function getFeaturedListCacheKey(body) {
   return JSON.stringify({
     page: body.page ?? 1,
     limit: body.limit ?? 12,
-    search: String(body.search ?? body.q ?? "").trim().toLowerCase(),
+    search: String(body.search ?? body.q ?? "")
+      .trim()
+      .toLowerCase(),
     sort: String(body.sort || "newest").toLowerCase(),
     actor: body.__actorKey || "anon",
   });
@@ -1887,7 +1952,10 @@ function getFeaturedListCacheKey(body) {
 buySellRouter.post("/featured-vehicles/list", async (req, res) => {
   try {
     const actor = getActor(req);
-    const body = { ...(req.body || {}), __actorKey: actor.id ? String(actor.id) : "anon" };
+    const body = {
+      ...(req.body || {}),
+      __actorKey: actor.id ? String(actor.id) : "anon",
+    };
     const cacheKey = getFeaturedListCacheKey(body);
     const cached = featuredListCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
@@ -1951,11 +2019,16 @@ buySellRouter.post("/featured-vehicles/list", async (req, res) => {
       if (!product) continue;
       orderedProducts.push(product);
       const nowMs = Date.now();
-      const expiresMs = placement.expiresAt ? new Date(placement.expiresAt).getTime() : 0;
-      const remainingDays = expiresMs > nowMs ? Math.ceil((expiresMs - nowMs) / (1000 * 60 * 60 * 24)) : 0;
-      let expiryStatus = 'Expired';
+      const expiresMs = placement.expiresAt
+        ? new Date(placement.expiresAt).getTime()
+        : 0;
+      const remainingDays =
+        expiresMs > nowMs
+          ? Math.ceil((expiresMs - nowMs) / (1000 * 60 * 60 * 24))
+          : 0;
+      let expiryStatus = "Expired";
       if (expiresMs > nowMs) {
-        expiryStatus = remainingDays <= 3 ? 'Expiring Soon' : 'Active';
+        expiryStatus = remainingDays <= 3 ? "Expiring Soon" : "Active";
       }
 
       featuredMetaByProductId.set(String(product._id), {
@@ -2040,9 +2113,13 @@ buySellRouter.post("/featured-vehicles/list", async (req, res) => {
 
     // Lite enrich — skip bid agg, seller User lookups, and location lookups
     // (cards fall back to address/pincode for location).
-    const enrichedList = await enrichBuySellListItems(withSpecifications, actor, {
-      lite: true,
-    });
+    const enrichedList = await enrichBuySellListItems(
+      withSpecifications,
+      actor,
+      {
+        lite: true,
+      },
+    );
 
     const data = toResponseList(enrichedList).map((item) => {
       const key = item._id || item.id;
@@ -2087,13 +2164,8 @@ buySellRouter.post("/featured-vehicles", async (req, res) => {
       });
     }
 
-    const {
-      productId,
-      orderId,
-      paymentId,
-      subscriptionItemId,
-      packageName,
-    } = req.body || {};
+    const { productId, orderId, paymentId, subscriptionItemId, packageName } =
+      req.body || {};
 
     if (!productId) {
       return res.status(400).json({
@@ -2174,29 +2246,38 @@ buySellRouter.put("/status/:id", async (req, res) => {
     const actor = getActor(req);
     const resolvedId = await resolveToObjectId(BuySellProduct, req.params.id);
     if (!resolvedId) {
-      return res.status(404).json({ success: false, message: "Product not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
     }
 
     const product = await BuySellProduct.findById(resolvedId).lean();
     if (!product) {
-      return res.status(404).json({ success: false, message: "Product not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
     }
 
     const nextStatus = normaliseStatus(req.body?.status, null);
     if (!nextStatus) {
-      return res.status(400).json({ success: false, message: "Invalid product status." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid product status." });
     }
 
     const lifecycleStatuses = ["booking", "purchased", "sold"];
     if (lifecycleStatuses.includes(nextStatus)) {
       return res.status(400).json({
         success: false,
-        message: "Use the booking, purchase, or sold API for this status change.",
+        message:
+          "Use the booking, purchase, or sold API for this status change.",
       });
     }
 
     if (product.status === "sold") {
-      return res.status(400).json({ success: false, message: "Product is already sold." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Product is already sold." });
     }
 
     const isAdmin = isAdminActor(actor);
@@ -2248,12 +2329,16 @@ buySellRouter.post("/book/:id", async (req, res) => {
   try {
     const actor = getActor(req);
     if (!actor.id) {
-      return res.status(401).json({ success: false, message: "Unauthorized user" });
+      return res
+        .status(401)
+        .json({ success: false, message: "Unauthorized user" });
     }
 
     const resolvedId = await resolveToObjectId(BuySellProduct, req.params.id);
     if (!resolvedId) {
-      return res.status(404).json({ success: false, message: "Product not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
     }
 
     const product = await BuySellProduct.findById(resolvedId).lean();
@@ -2304,7 +2389,7 @@ buySellRouter.post("/book/:id", async (req, res) => {
 
     const pName = productLabel(updated);
     const bookingId = updated.id || String(updated._id);
-    const buyerName = actor.name || 'Buyer';
+    const buyerName = actor.name || "Buyer";
     notify({
       userId: actor.id,
       event: NOTIFICATION_EVENTS.PRODUCT_BOOKING,
@@ -2329,9 +2414,12 @@ buySellRouter.post("/book/:id", async (req, res) => {
           amount: advanceAmount,
           bookingId,
         },
-        metadata: { productId: updated._id, role: 'seller' },
+        metadata: { productId: updated._id, role: "seller" },
       }).catch((err) =>
-        console.error("[buysell book] seller notification failed:", err.message),
+        console.error(
+          "[buysell book] seller notification failed:",
+          err.message,
+        ),
       );
     }
 
@@ -2359,12 +2447,16 @@ buySellRouter.post("/purchase/:id", async (req, res) => {
   try {
     const actor = getActor(req);
     if (!actor.id) {
-      return res.status(401).json({ success: false, message: "Unauthorized user" });
+      return res
+        .status(401)
+        .json({ success: false, message: "Unauthorized user" });
     }
 
     const resolvedId = await resolveToObjectId(BuySellProduct, req.params.id);
     if (!resolvedId) {
-      return res.status(404).json({ success: false, message: "Product not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
     }
 
     const product = await BuySellProduct.findById(resolvedId).lean();
@@ -2413,7 +2505,7 @@ buySellRouter.post("/purchase/:id", async (req, res) => {
     });
 
     const pName = productLabel(updated);
-    const buyerName = actor.name || 'Buyer';
+    const buyerName = actor.name || "Buyer";
     notify({
       userId: actor.id,
       event: NOTIFICATION_EVENTS.PRODUCT_PURCHASED,
@@ -2438,7 +2530,10 @@ buySellRouter.post("/purchase/:id", async (req, res) => {
         },
         metadata: { productId: updated._id },
       }).catch((err) =>
-        console.error("[buysell purchase] sold notification failed:", err.message),
+        console.error(
+          "[buysell purchase] sold notification failed:",
+          err.message,
+        ),
       );
     }
 
@@ -2466,7 +2561,9 @@ buySellRouter.put("/mark-sold/:id", async (req, res) => {
     const actor = getActor(req);
     const resolvedId = await resolveToObjectId(BuySellProduct, req.params.id);
     if (!resolvedId) {
-      return res.status(404).json({ success: false, message: "Product not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
     }
 
     const product = await BuySellProduct.findById(resolvedId).lean();
@@ -2529,7 +2626,9 @@ buySellRouter.get("/cart", async (req, res) => {
   try {
     const actor = getActor(req);
     if (!actor.id) {
-      return res.status(401).json({ success: false, message: "Unauthorized user" });
+      return res
+        .status(401)
+        .json({ success: false, message: "Unauthorized user" });
     }
 
     const userOid = toObjectId(actor.id);
@@ -2576,18 +2675,24 @@ buySellRouter.post("/cart/add", async (req, res) => {
   try {
     const actor = getActor(req);
     if (!actor.id) {
-      return res.status(401).json({ success: false, message: "Unauthorized user" });
+      return res
+        .status(401)
+        .json({ success: false, message: "Unauthorized user" });
     }
 
     const productIdRaw = req.body?.productId || req.body?.id;
     const resolvedId = await resolveToObjectId(BuySellProduct, productIdRaw);
     if (!resolvedId) {
-      return res.status(404).json({ success: false, message: "Product not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
     }
 
     const product = await BuySellProduct.findById(resolvedId).lean();
     if (!product) {
-      return res.status(404).json({ success: false, message: "Product not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
     }
     if (product.status !== "pending" && product.status !== "accepeted") {
       return res.status(400).json({
@@ -2641,13 +2746,17 @@ buySellRouter.delete("/cart/remove", async (req, res) => {
   try {
     const actor = getActor(req);
     if (!actor.id) {
-      return res.status(401).json({ success: false, message: "Unauthorized user" });
+      return res
+        .status(401)
+        .json({ success: false, message: "Unauthorized user" });
     }
 
     const productIdRaw = req.body?.productId || req.body?.id;
     const resolvedId = await resolveToObjectId(BuySellProduct, productIdRaw);
     if (!resolvedId) {
-      return res.status(404).json({ success: false, message: "Product not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
     }
 
     const userOid = toObjectId(actor.id);
@@ -2666,10 +2775,16 @@ buySellRouter.post("/payment/create-order", async (req, res) => {
   try {
     const actor = getActor(req);
     if (!actor.id) {
-      return res.status(401).json({ success: false, message: "Unauthorized user" });
+      return res
+        .status(401)
+        .json({ success: false, message: "Unauthorized user" });
     }
 
-    const { productId, paymentType = "advance", amount: bodyAmount } = req.body || {};
+    const {
+      productId,
+      paymentType = "advance",
+      amount: bodyAmount,
+    } = req.body || {};
     const type = String(paymentType).toLowerCase().trim();
     if (!["advance", "remaining", "full"].includes(type)) {
       return res.status(400).json({
@@ -2680,12 +2795,16 @@ buySellRouter.post("/payment/create-order", async (req, res) => {
 
     const resolvedId = await resolveToObjectId(BuySellProduct, productId);
     if (!resolvedId) {
-      return res.status(404).json({ success: false, message: "Product not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
     }
 
     const product = await BuySellProduct.findById(resolvedId).lean();
     if (!product) {
-      return res.status(404).json({ success: false, message: "Product not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
     }
     if (isSameUserAsActor(product.userid, actor)) {
       return res.status(400).json({
@@ -2765,7 +2884,9 @@ buySellRouter.post("/payment/verify", async (req, res) => {
   try {
     const actor = getActor(req);
     if (!actor.id) {
-      return res.status(401).json({ success: false, message: "Unauthorized user" });
+      return res
+        .status(401)
+        .json({ success: false, message: "Unauthorized user" });
     }
 
     const {
@@ -2809,7 +2930,9 @@ buySellRouter.post("/payment/verify", async (req, res) => {
       productId || tx?.orderDetails?.productId || tx?.packageId,
     );
     if (!resolvedProductId) {
-      return res.status(404).json({ success: false, message: "Product not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
     }
 
     const type = String(
@@ -2911,7 +3034,10 @@ buySellRouter.post("/payment/verify", async (req, res) => {
         type,
       );
     } catch (txErr) {
-      console.error("[buysell payment verify] income/expense error:", txErr.message);
+      console.error(
+        "[buysell payment verify] income/expense error:",
+        txErr.message,
+      );
     }
 
     const message =
@@ -2929,7 +3055,7 @@ buySellRouter.post("/payment/verify", async (req, res) => {
     const pName = productLabel(updated);
     const bookingId = updated.id || String(updated._id);
     const txnId = razorpay_payment_id;
-    const buyerName = actor.name || 'Buyer';
+    const buyerName = actor.name || "Buyer";
 
     if (type === "advance") {
       notify({
@@ -2944,7 +3070,10 @@ buySellRouter.post("/payment/verify", async (req, res) => {
         },
         metadata: { productId: updated._id, orderId: razorpay_order_id },
       }).catch((err) =>
-        console.error("[buysell verify] booking notification failed:", err.message),
+        console.error(
+          "[buysell verify] booking notification failed:",
+          err.message,
+        ),
       );
 
       if (updated.userid && String(updated.userid) !== String(actor.id)) {
@@ -2958,9 +3087,16 @@ buySellRouter.post("/payment/verify", async (req, res) => {
             bookingId,
             transactionId: txnId,
           },
-          metadata: { productId: updated._id, orderId: razorpay_order_id, role: 'seller' },
+          metadata: {
+            productId: updated._id,
+            orderId: razorpay_order_id,
+            role: "seller",
+          },
         }).catch((err) =>
-          console.error("[buysell verify] seller booking notification failed:", err.message),
+          console.error(
+            "[buysell verify] seller booking notification failed:",
+            err.message,
+          ),
         );
       }
     } else {
@@ -2975,7 +3111,10 @@ buySellRouter.post("/payment/verify", async (req, res) => {
         },
         metadata: { productId: updated._id, orderId: razorpay_order_id },
       }).catch((err) =>
-        console.error("[buysell verify] purchase notification failed:", err.message),
+        console.error(
+          "[buysell verify] purchase notification failed:",
+          err.message,
+        ),
       );
 
       if (updated.userid) {
@@ -2989,7 +3128,10 @@ buySellRouter.post("/payment/verify", async (req, res) => {
           },
           metadata: { productId: updated._id },
         }).catch((err) =>
-          console.error("[buysell verify] sold notification failed:", err.message),
+          console.error(
+            "[buysell verify] sold notification failed:",
+            err.message,
+          ),
         );
       }
     }
@@ -3005,7 +3147,10 @@ buySellRouter.post("/payment/verify", async (req, res) => {
       },
       metadata: { productId: updated._id, orderId: razorpay_order_id },
     }).catch((err) =>
-      console.error("[buysell verify] payment notification failed:", err.message),
+      console.error(
+        "[buysell verify] payment notification failed:",
+        err.message,
+      ),
     );
 
     if (updated.userid && String(updated.userid) !== String(actor.id)) {
@@ -3018,17 +3163,23 @@ buySellRouter.post("/payment/verify", async (req, res) => {
           amount: payAmount,
           transactionId: txnId,
         },
-        metadata: { productId: updated._id, orderId: razorpay_order_id, role: 'seller' },
+        metadata: {
+          productId: updated._id,
+          orderId: razorpay_order_id,
+          role: "seller",
+        },
       }).catch((err) =>
-        console.error("[buysell verify] seller payment notification failed:", err.message),
+        console.error(
+          "[buysell verify] seller payment notification failed:",
+          err.message,
+        ),
       );
     }
 
     res.json({
       success: true,
       message,
-      subMessage:
-        type === "advance" ? "Advance payment received." : undefined,
+      subMessage: type === "advance" ? "Advance payment received." : undefined,
       data: {
         _id: updated._id,
         id: updated.id,
@@ -3071,7 +3222,9 @@ buySellRouter.post("/add", upload.array("images", 10), async (req, res) => {
 
     const numericPrice = Number(price);
     if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
-      return res.status(400).json({ message: "A valid price greater than zero is required." });
+      return res
+        .status(400)
+        .json({ message: "A valid price greater than zero is required." });
     }
 
     let bodyImages = [];
@@ -3103,11 +3256,17 @@ buySellRouter.post("/add", upload.array("images", 10), async (req, res) => {
     }
 
     // Location refs must be Mongo ObjectIds. Clients may send externalId / uuid / _id.
-    let resolvedCountryId = await resolveLocationMongoId(LocationCountry, country_id);
+    let resolvedCountryId = await resolveLocationMongoId(
+      LocationCountry,
+      country_id,
+    );
     if (!resolvedCountryId) {
       resolvedCountryId = await resolveDefaultIndiaCountryId();
     }
-    const resolvedStateId = await resolveLocationMongoId(LocationState, state_id);
+    const resolvedStateId = await resolveLocationMongoId(
+      LocationState,
+      state_id,
+    );
     const resolvedCityId = await resolveLocationMongoId(LocationCity, city_id);
 
     if (!resolvedCountryId) {
@@ -3155,7 +3314,10 @@ buySellRouter.post("/add", upload.array("images", 10), async (req, res) => {
           (err.code === 11000 || String(err.code) === "11000") &&
           message.includes("bsNumber_1")
         ) {
-          console.warn("[buy-sell add] duplicate bsNumber detected, retrying create", message);
+          console.warn(
+            "[buy-sell add] duplicate bsNumber detected, retrying create",
+            message,
+          );
           continue;
         }
         throw err;
@@ -3163,7 +3325,12 @@ buySellRouter.post("/add", upload.array("images", 10), async (req, res) => {
     }
 
     if (!item) {
-      throw lastError || new Error("Failed to create BuySell product after retrying bsNumber generation.");
+      throw (
+        lastError ||
+        new Error(
+          "Failed to create BuySell product after retrying bsNumber generation.",
+        )
+      );
     }
 
     await Log.create({
@@ -3206,11 +3373,17 @@ buySellRouter.put("/edit/:id", upload.array("images", 10), async (req, res) => {
 
     // Only owner or admin may edit
     if (!canManageBuySellProduct(existing, actor)) {
-      return res.status(403).json({ message: "You do not have permission to edit this product." });
+      return res
+        .status(403)
+        .json({ message: "You do not have permission to edit this product." });
     }
 
     let bodyImages = null;
-    if (req.body.images !== undefined && req.body.images !== null && req.body.images !== "") {
+    if (
+      req.body.images !== undefined &&
+      req.body.images !== null &&
+      req.body.images !== ""
+    ) {
       try {
         const parsed = Array.isArray(req.body.images)
           ? req.body.images
@@ -3248,7 +3421,9 @@ buySellRouter.put("/edit/:id", upload.array("images", 10), async (req, res) => {
     // Prefer `images` (frontend URL list from /api/upload), then `existing_images`,
     // then keep DB images when only multipart files are added.
     const hasImageUpdate =
-      bodyImages !== null || existingImages !== null || uploadedImages.length > 0;
+      bodyImages !== null ||
+      existingImages !== null ||
+      uploadedImages.length > 0;
     let mergedImages;
     if (hasImageUpdate) {
       const base =
@@ -3302,7 +3477,10 @@ buySellRouter.put("/edit/:id", upload.array("images", 10), async (req, res) => {
     }
     // Never wipe location with empty strings from a partially hydrated form.
     if (req.body.country_id !== undefined) {
-      const id = await resolveLocationMongoId(LocationCountry, req.body.country_id);
+      const id = await resolveLocationMongoId(
+        LocationCountry,
+        req.body.country_id,
+      );
       if (id) updatePayload.country_id = id;
       else delete updatePayload.country_id;
     }
@@ -3319,7 +3497,9 @@ buySellRouter.put("/edit/:id", upload.array("images", 10), async (req, res) => {
     if (req.body.price !== undefined) {
       const numericPrice = Number(req.body.price);
       if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
-        return res.status(400).json({ message: "A valid price greater than zero is required." });
+        return res
+          .status(400)
+          .json({ message: "A valid price greater than zero is required." });
       }
       updatePayload.price = numericPrice;
     }
@@ -3338,7 +3518,8 @@ buySellRouter.put("/edit/:id", upload.array("images", 10), async (req, res) => {
       const lifecycleStatuses = ["booking", "purchased", "sold", "accepeted"];
       if (lifecycleStatuses.includes(nextStatus)) {
         return res.status(400).json({
-          message: "Use the bid-accept, booking, or purchase API for this status change.",
+          message:
+            "Use the bid-accept, booking, or purchase API for this status change.",
         });
       }
 
@@ -3436,15 +3617,15 @@ buySellRouter.post("/purchase-list", async (req, res) => {
       if (id) filter.subcategory_id = id;
     }
     if (country_id) {
-      const id = toObjectId(country_id);
+      const id = await resolveLocationMongoId(LocationCountry, country_id);
       if (id) filter.country_id = id;
     }
     if (state_id) {
-      const id = toObjectId(state_id);
+      const id = await resolveLocationMongoId(LocationState, state_id);
       if (id) filter.state_id = id;
     }
     if (city_id) {
-      const id = toObjectId(city_id);
+      const id = await resolveLocationMongoId(LocationCity, city_id);
       if (id) filter.city_id = id;
     }
 
@@ -3566,7 +3747,9 @@ buySellRouter.delete("/delete", async (req, res) => {
     const resolvedIds = await resolveIdsToObjectIds(BuySellProduct, idList);
 
     if (!resolvedIds.length) {
-      return res.status(400).json({ message: "No valid product ids provided." });
+      return res
+        .status(400)
+        .json({ message: "No valid product ids provided." });
     }
 
     const products = await BuySellProduct.find({ _id: { $in: resolvedIds } })
@@ -3578,8 +3761,7 @@ buySellRouter.delete("/delete", async (req, res) => {
     );
     if (blocked.length) {
       return res.status(400).json({
-        message:
-          "Cannot delete products that are booked, purchased, or sold.",
+        message: "Cannot delete products that are booked, purchased, or sold.",
         blockedIds: blocked.map((p) => p._id),
       });
     }
@@ -3686,12 +3868,16 @@ buySellRouter.post("/products/owner/:ownerId", async (req, res) => {
     const actor = getActor(req);
     const ownerUser = await findUserByEitherId(req.params.ownerId);
     if (!ownerUser) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     const ownerUserFilter = buildBuySellUseridFilter(ownerUser);
     if (!ownerUserFilter) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     const andConditions = [
@@ -3713,10 +3899,7 @@ buySellRouter.post("/products/owner/:ownerId", async (req, res) => {
     const filter = { $and: andConditions };
 
     const page = Math.max(1, parseInt(pageRaw, 10) || 1);
-    const limit = Math.min(
-      100,
-      Math.max(1, parseInt(limitRaw, 10) || 12),
-    );
+    const limit = Math.min(100, Math.max(1, parseInt(limitRaw, 10) || 12));
     const skip = (page - 1) * limit;
 
     const [list, total] = await Promise.all([
@@ -3793,7 +3976,10 @@ buySellRouter.get("/:id", async (req, res) => {
     );
     response.bid_count = bitRecords.length;
     response.highest_bid = bitRecords.length
-      ? bitRecords.reduce((max, r) => (Number(r.bit) > max ? Number(r.bit) : max), 0)
+      ? bitRecords.reduce(
+          (max, r) => (Number(r.bit) > max ? Number(r.bit) : max),
+          0,
+        )
       : null;
     response.accepted_bid =
       response.bit_records.find((r) => r.status === "accepeted") || null;
@@ -3804,8 +3990,11 @@ buySellRouter.get("/:id", async (req, res) => {
       data.userid,
     );
     response.sellerName =
-      resolvePersonName(sellerContact.name, response.sellerName, response.created_by) ||
-      "Seller";
+      resolvePersonName(
+        sellerContact.name,
+        response.sellerName,
+        response.created_by,
+      ) || "Seller";
     if (isPlaceholderPersonName(response.created_by)) {
       response.created_by = response.sellerName;
     }
