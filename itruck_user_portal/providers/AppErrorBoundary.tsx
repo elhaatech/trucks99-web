@@ -32,7 +32,7 @@ export class AppErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     if (process.env.NODE_ENV !== "production") {
-      // eslint-disable-next-line no-console
+       
       console.error("[AppErrorBoundary]", error, info.componentStack);
     }
   }
