@@ -67,6 +67,7 @@ const PUBLIC_METHOD_PATHS = [
   { method: "GET", path: "/api/buysell/dashboard-stats" },
   { method: "POST", path: "/api/buy-sell/recent-vehicles" },
   { method: "POST", path: "/api/buysell/recent-vehicles" },
+  {"method": "POST", "path": "/api/buy-sell/featured-vehicles/list"},
 ];
 
 const { isPublicBuySellMarketplaceRoute } = require("./buySellPublicRoutes");
