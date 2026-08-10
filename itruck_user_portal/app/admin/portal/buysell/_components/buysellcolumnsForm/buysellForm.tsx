@@ -50,7 +50,10 @@ import {
 } from "@/model/services/buysellapi";
 import { EMPTY_FORM, FormState } from "../interface/buysell_interface";
 import { uploadFile } from "@/model/services/uploadapi";
-import LocationSelector, { EMPTY_LOCATION_VALUE, LocationValue } from "@/components/common/Locationselector";
+import LocationSelector, {
+  EMPTY_LOCATION_VALUE,
+  LocationValue,
+} from "@/components/common/Locationselector";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -82,9 +85,7 @@ const STATUS_OPTIONS: {
   value: BuySellStatus;
   label: string;
   color: "warning" | "default" | "success";
-}[] = [
-  { value: "draft", label: "Draft", color: "default" },
-];
+}[] = [{ value: "draft", label: "Draft", color: "default" }];
 
 const STEPS = [
   "Category & Brand",
@@ -181,7 +182,9 @@ function SpecField({
                 : spec.specification_name
           }
           value={value}
-          onChange={(v) => onChange(typeof v === "string" ? v : ((v as any)?.value ?? ""))}
+          onChange={(v) =>
+            onChange(typeof v === "string" ? v : ((v as any)?.value ?? ""))
+          }
           options={values.map((sv) => ({
             value: sv._id,
             label: sv.specification_value_name,
@@ -361,21 +364,31 @@ export function BuySellForm({
     lastBrandSubcategoryRef.current = subId;
 
     setBrandLoading(true);
-    getSpecificationValues({ specification_id: brandSpec._id, subcategory_id: subId })
+    getSpecificationValues({
+      specification_id: brandSpec._id,
+      subcategory_id: subId,
+    })
       .then((fetched) => {
-        setSpecValueMap((prev) => ({ ...prev, [brandSpec._id]: fetched ?? [] }));
+        setSpecValueMap((prev) => ({
+          ...prev,
+          [brandSpec._id]: fetched ?? [],
+        }));
         // The brand chosen for a different sub category is no longer valid.
         const idx = values.specifications.findIndex(
           (s) => s.specification_id === brandSpec._id,
         );
         const stillValid =
           idx >= 0 &&
-          (fetched ?? []).some((v) => v._id === values.specifications[idx].specification_value);
+          (fetched ?? []).some(
+            (v) => v._id === values.specifications[idx].specification_value,
+          );
         if (idx >= 0 && !stillValid) {
           updateSpecValue(brandSpec._id, "");
         }
       })
-      .catch(() => setSpecValueMap((prev) => ({ ...prev, [brandSpec._id]: [] })))
+      .catch(() =>
+        setSpecValueMap((prev) => ({ ...prev, [brandSpec._id]: [] })),
+      )
       .finally(() => setBrandLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brandSpec, values.subcategory_id]);
@@ -388,7 +401,10 @@ export function BuySellForm({
     specsInitializedRef.current = true;
 
     const existingMap = new Map(
-      values.specifications.map((s) => [s.specification_id, s.specification_value]),
+      values.specifications.map((s) => [
+        s.specification_id,
+        s.specification_value,
+      ]),
     );
 
     const merged = specifications.map((spec) => ({
@@ -405,7 +421,10 @@ export function BuySellForm({
       const idx = values.specifications.findIndex(
         (s) => s.specification_id === specId,
       );
-      return { idx, value: idx >= 0 ? values.specifications[idx].specification_value : "" };
+      return {
+        idx,
+        value: idx >= 0 ? values.specifications[idx].specification_value : "",
+      };
     },
     [values.specifications],
   );
@@ -505,7 +524,24 @@ export function BuySellForm({
   const handleImageFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
-    const newEntries: ImageEntry[] = files.map((file) => ({
+
+    const remainingSlots = 4 - imageEntries.length;
+    if (remainingSlots <= 0) {
+      setError("You can upload a maximum of 4 images.");
+      e.target.value = "";
+      return;
+    }
+
+    const filesToAdd = files.slice(0, remainingSlots);
+    if (files.length > remainingSlots) {
+      setError(
+        `Only ${remainingSlots} more image(s) can be added (max 4 total).`,
+      );
+    } else {
+      setError("");
+    }
+
+    const newEntries: ImageEntry[] = filesToAdd.map((file) => ({
       kind: "new" as const,
       file,
       preview: URL.createObjectURL(file),
@@ -530,6 +566,8 @@ export function BuySellForm({
         if (!values.subcategory_id) return "Sub category is required";
         if (!values.price || isNaN(Number(values.price)))
           return "Valid price is required";
+        if (Number(values.price) < 10000)
+          return "Price must be at least ₹10,000";
         return null;
       }
       if (step === 2) {
@@ -538,9 +576,22 @@ export function BuySellForm({
         if (!location.cityId) return "City is required";
         return null;
       }
+      if (step === 3) {
+        if (imageEntries.length === 0) return "At least one image is required";
+        if (imageEntries.length > 4)
+          return "You can upload a maximum of 4 images";
+        return null;
+      }
       return null;
     },
-    [values.category_id, values.subcategory_id, values.price, location.countryId, location.stateId, location.cityId],
+    [
+      values.category_id,
+      values.subcategory_id,
+      values.price,
+      location.countryId,
+      location.stateId,
+      location.cityId,
+    ],
   );
 
   const handleNext = () => {
@@ -615,7 +666,10 @@ export function BuySellForm({
 
       const originalStatus = String(product?.status ?? "").toLowerCase();
       const canTogglePublish =
-        !isEdit || originalStatus === "draft" || originalStatus === "active" || originalStatus === "inactive";
+        !isEdit ||
+        originalStatus === "draft" ||
+        originalStatus === "active" ||
+        originalStatus === "inactive";
 
       const payload: BuySellCreatePayload = {
         category_id: values.category_id,
@@ -689,8 +743,12 @@ export function BuySellForm({
     >
       <Button
         variant="outlined"
-        onClick={activeStep === 0 ? () => router.push(cancelTarget) : handleBack}
-        startIcon={activeStep !== 0 ? <ArrowBackIcon sx={{ fontSize: 14 }} /> : undefined}
+        onClick={
+          activeStep === 0 ? () => router.push(cancelTarget) : handleBack
+        }
+        startIcon={
+          activeStep !== 0 ? <ArrowBackIcon sx={{ fontSize: 14 }} /> : undefined
+        }
         disabled={submitting}
       >
         {activeStep === 0 ? "Cancel" : "Back"}
@@ -710,7 +768,11 @@ export function BuySellForm({
           formId={FORM_ID}
           submitting={submitting}
           submitLabel={
-            isEdit ? "Update listing" : isMarketplace ? "Publish listing" : "Create"
+            isEdit
+              ? "Update listing"
+              : isMarketplace
+                ? "Publish listing"
+                : "Create"
           }
           submittingLabel={
             uploadingImages
@@ -733,7 +795,11 @@ export function BuySellForm({
       <Alert
         severity="warning"
         action={
-          <Button color="inherit" size="small" onClick={() => router.push(loginHref)}>
+          <Button
+            color="inherit"
+            size="small"
+            onClick={() => router.push(loginHref)}
+          >
             Log in
           </Button>
         }
@@ -780,347 +846,373 @@ export function BuySellForm({
       onSubmit={handleSubmit}
       sx={{ minHeight: 320, "& > *": { minWidth: 0 } }}
     >
-          {/* ── Step 0: Category, Sub Category & Brand ─────────────────── */}
-          {activeStep === 0 && (
-            <Box>
-              <StepIntro
-                title="What are you listing?"
-                subtitle="Pick a category, sub category and brand to get started."
+      {/* ── Step 0: Category, Sub Category & Brand ─────────────────── */}
+      {activeStep === 0 && (
+        <Box>
+          <StepIntro
+            title="What are you listing?"
+            subtitle="Pick a category, sub category and brand to get started."
+          />
+          <FormGrid>
+            <CategorySubcategorySelector
+              variant="form"
+              categoryId={values.category_id}
+              subcategoryId={values.subcategory_id}
+              onCategoryChange={(id) => setFieldValue("category_id", id)}
+              onSubcategoryChange={(id) => setFieldValue("subcategory_id", id)}
+              required
+            />
+
+            {brandSpec && (
+              <SpecField
+                spec={brandSpec}
+                value={getSpecEntry(brandSpec._id).value}
+                onChange={(v) => updateSpecValue(brandSpec._id, v)}
+                values={specValueMap[brandSpec._id] ?? []}
+                loading={brandLoading}
+                disabled={!values.subcategory_id}
               />
-              <FormGrid>
-                <CategorySubcategorySelector
-                  variant="form"
-                  categoryId={values.category_id}
-                  subcategoryId={values.subcategory_id}
-                  onCategoryChange={(id) => setFieldValue("category_id", id)}
-                  onSubcategoryChange={(id) =>
-                    setFieldValue("subcategory_id", id)
-                  }
-                  required
+            )}
+
+            <FormTextField
+              label="Price (₹)"
+              value={values.price}
+              onChange={(v) => setFieldValue("price", v)}
+              required
+            />
+
+            <FormGridFull>
+              <FormTextField
+                label="Description"
+                value={values.description}
+                onChange={(v) => setFieldValue("description", v)}
+                multiline
+                rows={3}
+              />
+            </FormGridFull>
+          </FormGrid>
+        </Box>
+      )}
+
+      {/* ── Step 1: Vehicle Details (remaining specifications) ─────── */}
+      {activeStep === 1 && (
+        <Box>
+          <StepIntro
+            title="Vehicle Details"
+            subtitle="Fill in the details you know — you can leave the rest blank."
+          />
+          {vehicleDetailSpecs.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              No additional details are configured for this category.
+            </Typography>
+          ) : (
+            <FormGrid>
+              {vehicleDetailSpecs.map((spec) => (
+                <SpecField
+                  key={spec._id}
+                  spec={spec}
+                  value={getSpecEntry(spec._id).value}
+                  onChange={(v) => updateSpecValue(spec._id, v)}
+                  values={specValueMap[spec._id] ?? []}
+                  loading={!!specValueLoadingMap[spec._id]}
                 />
-
-                {brandSpec && (
-                  <SpecField
-                    spec={brandSpec}
-                    value={getSpecEntry(brandSpec._id).value}
-                    onChange={(v) => updateSpecValue(brandSpec._id, v)}
-                    values={specValueMap[brandSpec._id] ?? []}
-                    loading={brandLoading}
-                    disabled={!values.subcategory_id}
-                  />
-                )}
-
-                <FormTextField
-                  label="Price (₹)"
-                  value={values.price}
-                  onChange={(v) => setFieldValue("price", v)}
-                  required
-                />
-
-                <FormGridFull>
-                  <FormTextField
-                    label="Description"
-                    value={values.description}
-                    onChange={(v) => setFieldValue("description", v)}
-                    multiline
-                    rows={3}
-                  />
-                </FormGridFull>
-              </FormGrid>
-            </Box>
+              ))}
+            </FormGrid>
           )}
+        </Box>
+      )}
 
-          {/* ── Step 1: Vehicle Details (remaining specifications) ─────── */}
-          {activeStep === 1 && (
-            <Box>
-              <StepIntro
-                title="Vehicle Details"
-                subtitle="Fill in the details you know — you can leave the rest blank."
+      {/* ── Step 2: Location ─────────────────────────────────────────── */}
+      {activeStep === 2 && (
+        <Box>
+          <StepIntro
+            title="Where is it located?"
+            subtitle="Buyers use this to filter listings near them."
+          />
+          <FormGrid>
+            <LocationSelector
+              value={location}
+              onChange={setLocation}
+              disabled={submitting}
+              required
+            />
+
+            <FormGridFull>
+              <FormTextField
+                label="Address"
+                value={values.address}
+                onChange={(v) => setFieldValue("address", v)}
               />
-              {vehicleDetailSpecs.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  No additional details are configured for this category.
-                </Typography>
-              ) : (
-                <FormGrid>
-                  {vehicleDetailSpecs.map((spec) => (
-                    <SpecField
-                      key={spec._id}
-                      spec={spec}
-                      value={getSpecEntry(spec._id).value}
-                      onChange={(v) => updateSpecValue(spec._id, v)}
-                      values={specValueMap[spec._id] ?? []}
-                      loading={!!specValueLoadingMap[spec._id]}
+            </FormGridFull>
+
+            <FormTextField
+              label="Pincode"
+              value={values.pincode}
+              onChange={(v) => setFieldValue("pincode", v)}
+            />
+          </FormGrid>
+        </Box>
+      )}
+
+      {/* ── Step 3: Images & Status ──────────────────────────────────── */}
+      {activeStep === 3 && (
+        <Box>
+          <StepIntro
+            title="Photos & Listing Status"
+            subtitle="Add a few photos and choose whether to publish now or save as a draft."
+          />
+
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            multiple
+            style={{ display: "none" }}
+            onChange={handleImageFilePick}
+          />
+
+          <Button
+            variant="outlined"
+            startIcon={<CloudUploadIcon />}
+            disabled={submitting || imageEntries.length >= 4}
+            onClick={() => imageInputRef.current?.click()}
+            sx={{ mb: 2 }}
+          >
+            {imageEntries.length === 0
+              ? "Upload Images"
+              : imageEntries.length >= 4
+                ? "Maximum 4 images reached"
+                : "Add More Images"}{" "}
+          </Button>
+
+          {imageEntries.length > 0 ? (
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+                gap: 1.5,
+                mb: 3,
+              }}
+            >
+              {imageEntries.map((entry, idx) => {
+                const src =
+                  entry.kind === "existing"
+                    ? getBuySellImageUrl(entry.url)
+                    : entry.preview;
+                const isNew = entry.kind === "new";
+                return (
+                  <Box
+                    key={idx}
+                    sx={{
+                      position: "relative",
+                      borderRadius: 1,
+                      overflow: "hidden",
+                      border: "1px solid",
+                      borderColor: isNew ? "primary.main" : "divider",
+                      aspectRatio: "1 / 1",
+                      bgcolor: "grey.100",
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={src}
+                      alt={`Image ${idx + 1}`}
+                      onError={(e) => {
+                        const img = e.currentTarget;
+                        img.style.display = "none";
+                        const fallback =
+                          img.nextElementSibling as HTMLElement | null;
+                        if (fallback) fallback.style.display = "flex";
+                      }}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        display: "block",
+                      }}
                     />
-                  ))}
-                </FormGrid>
-              )}
-            </Box>
-          )}
-
-          {/* ── Step 2: Location ─────────────────────────────────────────── */}
-          {activeStep === 2 && (
-            <Box>
-              <StepIntro
-                title="Where is it located?"
-                subtitle="Buyers use this to filter listings near them."
-              />
-              <FormGrid>
-                <LocationSelector
-                  value={location}
-                  onChange={setLocation}
-                  disabled={submitting}
-                  required
-                />
-
-                <FormGridFull>
-                  <FormTextField
-                    label="Address"
-                    value={values.address}
-                    onChange={(v) => setFieldValue("address", v)}
-                  />
-                </FormGridFull>
-
-                <FormTextField
-                  label="Pincode"
-                  value={values.pincode}
-                  onChange={(v) => setFieldValue("pincode", v)}
-                />
-              </FormGrid>
-            </Box>
-          )}
-
-          {/* ── Step 3: Images & Status ──────────────────────────────────── */}
-          {activeStep === 3 && (
-            <Box>
-              <StepIntro
-                title="Photos & Listing Status"
-                subtitle="Add a few photos and choose whether to publish now or save as a draft."
-              />
-
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                multiple
-                style={{ display: "none" }}
-                onChange={handleImageFilePick}
-              />
-
-              <Button
-                variant="outlined"
-                startIcon={<CloudUploadIcon />}
-                disabled={submitting}
-                onClick={() => imageInputRef.current?.click()}
-                sx={{ mb: 2 }}
-              >
-                {imageEntries.length === 0 ? "Upload Images" : "Add More Images"}
-              </Button>
-
-              {imageEntries.length > 0 ? (
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-                    gap: 1.5,
-                    mb: 3,
-                  }}
-                >
-                  {imageEntries.map((entry, idx) => {
-                    const src =
-                      entry.kind === "existing"
-                        ? getBuySellImageUrl(entry.url)
-                        : entry.preview;
-                    const isNew = entry.kind === "new";
-                    return (
+                    <Box
+                      sx={{
+                        display: "none",
+                        position: "absolute",
+                        inset: 0,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexDirection: "column",
+                        gap: 0.5,
+                        bgcolor: "grey.100",
+                        px: 1,
+                        textAlign: "center",
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: "block", mb: 1 }}
+                      >
+                        {imageEntries.length}/4 images added
+                      </Typography>
+                    </Box>
+                    {isNew && (
                       <Box
-                        key={idx}
                         sx={{
-                          position: "relative",
-                          borderRadius: 1,
-                          overflow: "hidden",
-                          border: "1px solid",
-                          borderColor: isNew ? "primary.main" : "divider",
-                          aspectRatio: "1 / 1",
-                          bgcolor: "grey.100",
+                          position: "absolute",
+                          bottom: 4,
+                          left: 4,
+                          bgcolor: "primary.main",
+                          color: "primary.contrastText",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          px: 0.5,
+                          borderRadius: 0.5,
+                          lineHeight: 1.6,
                         }}
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={src}
-                          alt={`Image ${idx + 1}`}
-                          onError={(e) => {
-                            const img = e.currentTarget;
-                            img.style.display = "none";
-                            const fallback = img.nextElementSibling as HTMLElement | null;
-                            if (fallback) fallback.style.display = "flex";
-                          }}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            display: "block",
-                          }}
-                        />
-                        <Box
-                          sx={{
-                            display: "none",
-                            position: "absolute",
-                            inset: 0,
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexDirection: "column",
-                            gap: 0.5,
-                            bgcolor: "grey.100",
-                            px: 1,
-                            textAlign: "center",
-                          }}
-                        >
-                          <Typography variant="caption" color="text.secondary">
-                            Image missing — re-upload
-                          </Typography>
-                        </Box>
-                        {isNew && (
-                          <Box
-                            sx={{
-                              position: "absolute",
-                              bottom: 4,
-                              left: 4,
-                              bgcolor: "primary.main",
-                              color: "primary.contrastText",
-                              fontSize: 10,
-                              fontWeight: 700,
-                              px: 0.5,
-                              borderRadius: 0.5,
-                              lineHeight: 1.6,
-                            }}
-                          >
-                            NEW
-                          </Box>
-                        )}
-                        <IconButton
-                          size="small"
-                          disabled={submitting}
-                          onClick={() => handleRemoveImage(idx)}
-                          sx={{
-                            position: "absolute",
-                            top: 2,
-                            right: 2,
-                            bgcolor: "rgba(0,0,0,0.55)",
-                            color: "#fff",
-                            p: 0.25,
-                            "&:hover": { bgcolor: "error.main" },
-                          }}
-                        >
-                          <CloseIcon sx={{ fontSize: 14 }} />
-                        </IconButton>
+                        NEW
                       </Box>
-                    );
-                  })}
-                </Box>
-              ) : (
-                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 3 }}>
-                  No images added yet. Click "Upload Images" to pick files from
-                  your device.
-                </Typography>
-              )}
-
-              <Typography
-                variant="caption"
-                sx={{
-                  color: "text.secondary",
-                  fontWeight: 600,
-                  fontSize: "0.68rem",
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                  display: "block",
-                  mb: 1,
-                }}
-              >
-                Status
-              </Typography>
-
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: !isEdit ? 1.5 : 0 }}>
-                {STATUS_OPTIONS.map((s) => {
-                  const originalStatus = String(product?.status ?? "").toLowerCase();
-                  const statusLocked =
-                    isEdit &&
-                    originalStatus !== "draft" &&
-                    originalStatus !== "active" &&
-                    originalStatus !== "inactive";
-                  const isSelected = values.status === s.value;
-                  return (
-                    <Chip
-                      key={s.value}
-                      label={s.label}
-                      color={s.color}
-                      variant={isSelected ? "filled" : "outlined"}
-                      disabled={statusLocked || submitting}
-                      onClick={() => {
-                        if (statusLocked) return;
-                        setFieldValue("status", s.value);
-                        setIsDraft(s.value === "draft");
-                      }}
+                    )}
+                    <IconButton
+                      size="small"
+                      disabled={submitting}
+                      onClick={() => handleRemoveImage(idx)}
                       sx={{
-                        cursor: statusLocked ? "not-allowed" : "pointer",
-                        fontWeight: isSelected ? 600 : 400,
-                        fontSize: 13,
-                        borderRadius: 5,
-                        px: 0.5,
-                        transition: "all 0.15s",
-                        "&:hover": { opacity: statusLocked ? 1 : 0.85 },
+                        position: "absolute",
+                        top: 2,
+                        right: 2,
+                        bgcolor: "rgba(0,0,0,0.55)",
+                        color: "#fff",
+                        p: 0.25,
+                        "&:hover": { bgcolor: "error.main" },
                       }}
-                    />
-                  );
-                })}
-              </Box>
+                    >
+                      <CloseIcon sx={{ fontSize: 14 }} />
+                    </IconButton>
+                  </Box>
+                );
+              })}
+            </Box>
+          ) : (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: "block", mb: 3 }}
+            >
+              No images added yet. Click "Upload Images" to pick files from your
+              device.
+            </Typography>
+          )}
 
-              {isEdit &&
-              !["draft", "active", "inactive"].includes(String(product?.status ?? "").toLowerCase()) ? (
-                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-                  Current status: <strong>{String(product?.status)}</strong> (managed by system —
-                  details can still be updated).
-                </Typography>
-              ) : null}
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              fontWeight: 600,
+              fontSize: "0.68rem",
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              display: "block",
+              mb: 1,
+            }}
+          >
+            Status
+          </Typography>
 
-              {!isEdit && (
-                <Box
-                  sx={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 1,
-                    px: 1.5,
-                    py: 0.75,
-                    border: "1px solid",
-                    borderColor: isDraft ? "primary.main" : "divider",
-                    borderRadius: 2,
-                    bgcolor: isDraft ? "action.selected" : "transparent",
-                    cursor: "pointer",
-                    transition: "all 0.15s",
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 1,
+              mb: !isEdit ? 1.5 : 0,
+            }}
+          >
+            {STATUS_OPTIONS.map((s) => {
+              const originalStatus = String(
+                product?.status ?? "",
+              ).toLowerCase();
+              const statusLocked =
+                isEdit &&
+                originalStatus !== "draft" &&
+                originalStatus !== "active" &&
+                originalStatus !== "inactive";
+              const isSelected = values.status === s.value;
+              return (
+                <Chip
+                  key={s.value}
+                  label={s.label}
+                  color={s.color}
+                  variant={isSelected ? "filled" : "outlined"}
+                  disabled={statusLocked || submitting}
+                  onClick={() => {
+                    if (statusLocked) return;
+                    setFieldValue("status", s.value);
+                    setIsDraft(s.value === "draft");
                   }}
-                  onClick={() => setIsDraft((prev) => !prev)}
-                >
-                  <Checkbox
-                    checked={isDraft}
-                    onChange={(e) => setIsDraft(e.target.checked)}
-                    size="small"
-                    sx={{ p: 0 }}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <Typography variant="body2" fontWeight={isDraft ? 600 : 400}>
-                    Save as Draft
-                  </Typography>
-                  <Chip
-                    label={isDraft ? "Draft" : "Pending"}
-                    size="small"
-                    color={isDraft ? "default" : "warning"}
-                    variant="filled"
-                    sx={{ fontSize: 11, height: 20, pointerEvents: "none" }}
-                  />
-                </Box>
-              )}
+                  sx={{
+                    cursor: statusLocked ? "not-allowed" : "pointer",
+                    fontWeight: isSelected ? 600 : 400,
+                    fontSize: 13,
+                    borderRadius: 5,
+                    px: 0.5,
+                    transition: "all 0.15s",
+                    "&:hover": { opacity: statusLocked ? 1 : 0.85 },
+                  }}
+                />
+              );
+            })}
+          </Box>
+
+          {isEdit &&
+          !["draft", "active", "inactive"].includes(
+            String(product?.status ?? "").toLowerCase(),
+          ) ? (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: "block", mb: 1 }}
+            >
+              Current status: <strong>{String(product?.status)}</strong>{" "}
+              (managed by system — details can still be updated).
+            </Typography>
+          ) : null}
+
+          {!isEdit && (
+            <Box
+              sx={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 1,
+                px: 1.5,
+                py: 0.75,
+                border: "1px solid",
+                borderColor: isDraft ? "primary.main" : "divider",
+                borderRadius: 2,
+                bgcolor: isDraft ? "action.selected" : "transparent",
+                cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+              onClick={() => setIsDraft((prev) => !prev)}
+            >
+              <Checkbox
+                checked={isDraft}
+                onChange={(e) => setIsDraft(e.target.checked)}
+                size="small"
+                sx={{ p: 0 }}
+                onClick={(e) => e.stopPropagation()}
+              />
+              <Typography variant="body2" fontWeight={isDraft ? 600 : 400}>
+                Save as Draft
+              </Typography>
+              <Chip
+                label={isDraft ? "Draft" : "Pending"}
+                size="small"
+                color={isDraft ? "default" : "warning"}
+                variant="filled"
+                sx={{ fontSize: 11, height: 20, pointerEvents: "none" }}
+              />
             </Box>
           )}
+        </Box>
+      )}
     </Box>
   );
 
@@ -1146,7 +1238,9 @@ export function BuySellForm({
           {formAlerts}
           {formFields}
         </Box>
-        <Box sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 2, sm: 3 } }}>{stepFooter}</Box>
+        <Box sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 2, sm: 3 } }}>
+          {stepFooter}
+        </Box>
       </Box>
     );
   }
@@ -1164,7 +1258,9 @@ export function BuySellForm({
         { label: "Buy / Sell", href: routes.buysell.list() },
         { label: isEdit ? "Edit" : "Create" },
       ]}
-      backButton={<BackButton fallback={cancelTarget} label={backButtonLabel} />}
+      backButton={
+        <BackButton fallback={cancelTarget} label={backButtonLabel} />
+      }
       footer={stepFooter}
     >
       {stepper}
