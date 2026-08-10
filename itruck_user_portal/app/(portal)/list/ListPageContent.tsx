@@ -28,6 +28,7 @@ import {
 } from "@/model/services/buysellapi";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { useNotification } from "@/hooks/useNotification";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { isAbortError } from "@/lib/apiCache";
 import { toErrorMessage } from "@/lib/errors";
 
@@ -87,90 +88,65 @@ export default function UserProductListContent() {
 
   const [filters, setFilters] = useState<VehicleFilterValues>(urlFilters);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
-  const [layout, setLayout] = useState<"grid" | "list">("list");
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
+  const [layout, setLayout] = useState<"grid" | "list">("grid");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [products, setProducts] = useState<BuySellProduct[]>([]);
-  const [loading, setLoading] = useState(true);
   const [applyLoading, setApplyLoading] = useState(false);
 
   const { favoriteIds, togglingIds, syncFromProducts, toggleFavorite } =
     useBuySellFavorites(notify);
 
+  const loadPage = useCallback(
+    async (page: number, signal: AbortSignal) => {
+      const payload = {
+        ...toBuySellListPayload(urlFilters),
+        search: urlFilters.search.trim() || undefined,
+        sort: sortBy,
+        page,
+        limit: VEHICLE_PAGE_SIZE,
+      };
+      const result = await getBuySellListPage(payload, {
+        signal,
+      });
+      return {
+        items: result.items ?? [],
+        total: result.total ?? 0,
+        totalPages: result.totalPages ?? 1,
+        page: result.page ?? page,
+      };
+    },
+    [urlKey, urlFilters, sortBy],
+  );
+
+  const list = useInfiniteScroll(loadPage);
+
+  useEffect(() => {
+    syncFromProducts(list.items);
+  }, [list.items, syncFromProducts]);
+
+  useEffect(() => {
+    if (applyLoading && !list.loading) {
+      setApplyLoading(false);
+    }
+  }, [applyLoading, list.loading]);
+
+  useEffect(() => {
+    if (list.error) {
+      notify({
+        type: "error",
+        message: toErrorMessage(list.error, "Failed to load vehicles"),
+      });
+    }
+  }, [list.error, notify]);
+
   useEffect(() => {
     setFilters(urlFilters);
-    setPage(1);
   }, [urlKey]); // eslint-disable-line react-hooks/exhaustive-deps -- sync when URL filter key changes
 
-  useEffect(() => {
-    const controller = new AbortController();
-    let cancelled = false;
-
-    (async () => {
-      setLoading(true);
-      try {
-        const payload = {
-          ...toBuySellListPayload(urlFilters),
-          search: urlFilters.search.trim() || undefined,
-          sort: sortBy,
-          page,
-          limit: VEHICLE_PAGE_SIZE,
-        };
-        const result = await getBuySellListPage(payload, {
-          signal: controller.signal,
-        });
-        if (cancelled || controller.signal.aborted) return;
-        const items = result.items ?? [];
-        setProducts(items);
-        setTotal(result.total ?? items.length);
-        setTotalPages(result.totalPages ?? 1);
-        syncFromProducts(items);
-      } catch (err) {
-        if (cancelled || isAbortError(err)) return;
-        notify({
-          type: "error",
-          message: toErrorMessage(err, "Failed to load vehicles"),
-        });
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [urlKey, urlFilters, sortBy, page, notify, syncFromProducts]);
-
-  const handleApplyFilters = async () => {
+  const handleApplyFilters = () => {
     const next = { ...filters, usear_type: "buy" as const };
     setApplyLoading(true);
     setMobileFiltersOpen(false);
-    setPage(1);
-
-    try {
-      const payload = {
-        ...toBuySellListPayload(next),
-        page: 1,
-        limit: VEHICLE_PAGE_SIZE,
-        sort: sortBy,
-      };
-      const result = await getBuySellListPage(payload);
-      setProducts(result.items ?? []);
-      setTotal(result.total ?? 0);
-      setTotalPages(result.totalPages ?? 1);
-      setPage((result.page ?? 1) - 1);
-      router.replace(userProductRoutes.list(filtersToQuery(next)), { scroll: false });
-    } catch (err) {
-      notify({
-        type: "error",
-        message: toErrorMessage(err, "Failed to apply filters"),
-      });
-    } finally {
-      setApplyLoading(false);
-    }
+    router.replace(userProductRoutes.list(filtersToQuery(next)), { scroll: false });
   };
 
   const handleClearFilters = () => {
@@ -181,7 +157,6 @@ export default function UserProductListContent() {
       km_min: "10000",
     };
     setFilters(cleared);
-    setPage(1);
     setMobileFiltersOpen(false);
     router.replace(userProductRoutes.list(), { scroll: false });
   };
@@ -208,7 +183,6 @@ export default function UserProductListContent() {
 
   const handleSortChange = useCallback((v: SortOption) => {
     setSortBy(v);
-    setPage(1);
   }, []);
 
   return (
@@ -223,7 +197,11 @@ export default function UserProductListContent() {
           mb: 3,
         }}
       >
-        <VehicleListHeader count={total} title="All Vehicles" loading={loading} />
+        <VehicleListHeader
+          count={list.total}
+          title="All Vehicles"
+          loading={list.loading}
+        />
 
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, alignItems: "center" }}>
           <SortDropdown value={sortBy} onChange={handleSortChange} />
@@ -263,16 +241,16 @@ export default function UserProductListContent() {
         />
 
         <VehicleGrid
-          products={products}
-          loading={loading}
+          products={list.items}
+          loading={list.loading}
+          isLoadingMore={list.loadingMore}
+          hasMore={list.hasMore}
+          sentinelRef={list.sentinelRef}
           layout={layout}
           favoriteIds={favoriteIds}
           togglingFavoriteIds={togglingIds}
           onFavoriteToggle={handleFavoriteToggle}
           onProductClick={(id) => void handleViewProduct(id)}
-          page={page}
-          totalPages={totalPages}
-          onPageChange={setPage}
         />
       </Box>
     </Box>
