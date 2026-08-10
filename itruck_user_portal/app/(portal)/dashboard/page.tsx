@@ -32,7 +32,6 @@ import { getCategories, type Category } from "@/model/services/category";
 import { addFavorite, removeFavorite } from "@/model/services/favoriteapi";
 import { useNotification } from "@/hooks/useNotification";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
-import { ensureLoggedInToViewProduct, getMarketplaceLoginPath } from "@/lib/requireMarketplaceLogin";
 import { ensureLoggedInToViewProduct } from "@/lib/requireMarketplaceLogin";
 import type { MarketplaceStats } from "@/app/common/components/buysell/utils";
 import { EMPTY_FILTERS } from "@/app/admin/portal/buysell/_components/interface/buysell_interface";
