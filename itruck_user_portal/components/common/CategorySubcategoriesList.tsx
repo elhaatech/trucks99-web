@@ -23,7 +23,7 @@ export type SubcategoryFilterValue = {
 export type CategorySubcategoriesListProps = {
   categoryId: string;
   categoryName?: string;
-  currentSubcategoryId?: string;
+  currentSubcategoryId?: string | null;
   currentSubcategoryName?: string;
   selectedFilter?: SubcategoryFilterValue;
   onFilterChange?: (filter: SubcategoryFilterValue) => void;

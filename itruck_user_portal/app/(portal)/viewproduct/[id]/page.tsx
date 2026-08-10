@@ -458,18 +458,30 @@ export default function UserProductViewPage() {
           ) : null}
 
           {relatedOwnerId ? (
-            <UserRelatedProductsSection
-              sellerId={relatedOwnerId}
-              sellerName={
-                isOwner
-                  ? currentUser?.name ?? getSellerDisplayName(item)
-                  : getSellerDisplayName(item)
-              }
-              excludeProductId={id}
-              isLoggedIn={authReady && Boolean(currentUserId)}
+             <UserRelatedProductsSection
+               sellerId={relatedOwnerId}
+               sellerName={
+                 isOwner
+                   ? currentUser?.name ?? getSellerDisplayName(item)
+                   : getSellerDisplayName(item)
+               }
+               excludeProductId={id}
+               isLoggedIn={authReady && Boolean(currentUserId)}
                isOwnerView={isOwner}
                onAddVehicle={() => router.push(userProductRoutes.sellVehicle("create"))}
                onNotify={notify}
+               categoryId={extractId(item.category_id)}
+               categoryName={
+                 typeof item.category_id === "object" && item.category_id
+                   ? (item.category_id as { category_name?: string }).category_name
+                   : undefined
+               }
+               currentSubcategoryId={extractId(item.subcategory_id)}
+               currentSubcategoryName={
+                 typeof item.subcategory_id === "object" && item.subcategory_id
+                   ? (item.subcategory_id as { sub_category_name?: string }).sub_category_name
+                   : undefined
+               }
              />
           ) : null}
         </Box>

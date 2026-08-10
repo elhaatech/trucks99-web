@@ -9,6 +9,7 @@ import Skeleton from "@mui/material/Skeleton";
 import Alert from "@mui/material/Alert";
 import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
 
+import { CategorySubcategoriesList, type SubcategoryFilterValue } from "@/components/common";
 import {
   BuySellProduct,
   getBuySellRowId,
@@ -28,6 +29,10 @@ type UserRelatedProductsSectionProps = {
   isOwnerView?: boolean;
   onAddVehicle?: () => void;
   onNotify?: (payload: { type: "success" | "error"; message: string }) => void;
+  categoryId?: string | null;
+  categoryName?: string;
+  currentSubcategoryId?: string | null;
+  currentSubcategoryName?: string;
 };
 
 function RelatedCardSkeleton() {
@@ -50,6 +55,10 @@ export function UserRelatedProductsSection({
   isOwnerView = false,
   onAddVehicle,
   onNotify,
+  categoryId,
+  categoryName,
+  currentSubcategoryId,
+  currentSubcategoryName,
 }: UserRelatedProductsSectionProps) {
   const router = useRouter();
   const [products, setProducts] = useState<BuySellProduct[]>([]);
@@ -57,6 +66,17 @@ export function UserRelatedProductsSection({
   const [error, setError] = useState("");
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
+  const [subcategoryFilter, setSubcategoryFilter] = useState<SubcategoryFilterValue>(null);
+
+  const filteredProducts = subcategoryFilter?.id
+    ? products.filter((product) => {
+        const subId =
+          typeof product.subcategory_id === "object" && product.subcategory_id
+            ? product.subcategory_id._id
+            : String(product.subcategory_id ?? "");
+        return subId === subcategoryFilter.id;
+      })
+    : products;
 
   useEffect(() => {
     if (!isLoggedIn || !sellerId) {
@@ -65,7 +85,7 @@ export function UserRelatedProductsSection({
     }
     setLoading(true);
     setError("");
-    postBuySellProductsByOwner({ ownerId: sellerId, excludeProductId, limit: 12 })
+    postBuySellProductsByOwner({ ownerId: sellerId, excludeProductId, page: 1, limit: 12 })
       .then((data) => {
         const items = data.products ?? [];
         setProducts(items);
@@ -153,6 +173,20 @@ export function UserRelatedProductsSection({
         ) : null}
       </Box>
 
+      {categoryId ? (
+        <Box sx={{ mb: 2 }}>
+          <CategorySubcategoriesList
+            compact
+            categoryId={categoryId}
+            categoryName={categoryName}
+            currentSubcategoryId={currentSubcategoryId}
+            currentSubcategoryName={currentSubcategoryName}
+            selectedFilter={subcategoryFilter}
+            onFilterChange={setSubcategoryFilter}
+          />
+        </Box>
+      ) : null}
+
       {!isLoggedIn ? (
         <Alert severity="info" sx={{ borderRadius: T.radius.md }}>
           Please log in to see other listings from this seller.
@@ -189,23 +223,49 @@ export function UserRelatedProductsSection({
             </Button>
           ) : null}
         </Box>
+      ) : subcategoryFilter?.id && filteredProducts.length === 0 ? (
+        <Box
+          sx={{
+            textAlign: "center",
+            py: 3,
+            px: 2,
+            bgcolor: T.color.surfaceMuted,
+            borderRadius: T.radius.md,
+            border: `1px dashed ${T.color.border}`,
+          }}
+        >
+          <Typography sx={{ fontWeight: 600, color: T.color.textPrimary, mb: 0.5 }}>
+            No listings in {subcategoryFilter.name}
+          </Typography>
+          <Typography sx={{ fontSize: 13, color: T.color.textSecondary }}>
+            Try &quot;All types&quot; above to see every listing from this seller.
+          </Typography>
+        </Box>
       ) : (
-        <Grid container spacing={2}>
-          {products.map((product) => {
-            const productId = getBuySellRowId(product);
-            return (
-              <Grid key={productId} size={{ xs: 12, sm: 6, md: 4 }}>
-                <VehicleCard
-                  product={product}
-                  isFavorite={favoriteIds.has(productId)}
-                  favoriteLoading={togglingIds.has(productId)}
-                  onFavoriteToggle={() => void handleFavorite(productId)}
-                  onClick={() => router.push(userProductRoutes.view(productId))}
-                />
-              </Grid>
-            );
-          })}
-        </Grid>
+        <>
+          <Typography sx={{ fontSize: 12.5, color: T.color.textSecondary, mb: 1.5 }}>
+            Showing {filteredProducts.length} of {products.length} listing
+            {products.length === 1 ? "" : "s"}
+            {subcategoryFilter?.name ? ` in ${subcategoryFilter.name}` : ""}
+            {sellerName ? ` from ${sellerName}` : ""}.
+          </Typography>
+          <Grid container spacing={2}>
+            {filteredProducts.map((product) => {
+              const productId = getBuySellRowId(product);
+              return (
+                <Grid key={productId} size={{ xs: 12, sm: 6, md: 4 }}>
+                  <VehicleCard
+                    product={product}
+                    isFavorite={favoriteIds.has(productId)}
+                    favoriteLoading={togglingIds.has(productId)}
+                    onFavoriteToggle={() => void handleFavorite(productId)}
+                    onClick={() => router.push(userProductRoutes.view(productId))}
+                  />
+                </Grid>
+              );
+            })}
+          </Grid>
+        </>
       )}
     </Box>
   );

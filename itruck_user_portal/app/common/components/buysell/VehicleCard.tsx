@@ -6,14 +6,11 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
+import Tooltip from "@mui/material/Tooltip";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
-import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { alpha } from "@mui/material/styles";
 import { PRODUCT_THEME as T, INFO, SUCCESS } from "@/lib/theme";
 import { getBuySellImageUrl } from "@/lib/buysellUtils";
@@ -50,8 +47,6 @@ type VehicleCardProps = {
   onFeaturePayNow?: (productId: string) => void;
   /** Optional badge shown top-right (e.g. "Featured", "Expired"). */
   badge?: { label: string; color?: string };
-  /** When true, collapse owner actions (Pay Now, Edit, Delete) into a 3-dot menu. */
-  showOwnerActionsMenu?: boolean;
   /** Featured metadata for the featured-vehicles page. */
   featuredMeta?: {
     status?: string;
@@ -77,7 +72,6 @@ export const VehicleCard = memo(function VehicleCard({
   onFeaturePayNow,
   badge,
   featuredMeta,
-  showOwnerActionsMenu = false,
 }: VehicleCardProps) {
   const productId = getBuySellRowId(product);
   const featuredStatus = showOwnerFeaturedControls ? getFeaturedStatus(product) : null;
@@ -121,25 +115,6 @@ export const VehicleCard = memo(function VehicleCard({
   const handleFeaturePayNow = (e: React.MouseEvent) => {
     e.stopPropagation();
     onFeaturePayNow?.(productId);
-  };
-
-  const iconBtnSx = {
-    border: `1px solid ${T.color.border}`,
-    borderRadius: T.radius.md,
-    bgcolor: T.color.surface,
-    width: 36,
-    height: 36,
-    "&:hover": { bgcolor: T.color.surfaceMuted },
-  };
-
-  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
-  const menuOpen = Boolean(menuAnchor);
-  const handleMenuOpen = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setMenuAnchor(e.currentTarget as HTMLElement);
-  };
-  const handleMenuClose = () => {
-    setMenuAnchor(null);
   };
 
   return (
@@ -367,149 +342,102 @@ export const VehicleCard = memo(function VehicleCard({
               minWidth: isList ? 140 : undefined,
             }}
           >
-            <Typography
+            <Box
               sx={{
-                fontWeight: 800,
-                 fontSize: isList ? 20 : 16,
-                 color: isList ? SUCCESS : INFO,
-                textAlign: isList ? { sm: "right" } : "left",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 1,
+                width: "100%",
               }}
             >
-              {formatProductPrice(product.price)}
-            </Typography>
+              <Typography
+                sx={{
+                  fontWeight: 800,
+                   fontSize: isList ? 20 : 16,
+                   color: isList ? SUCCESS : INFO,
+                  textAlign: "left",
+                }}
+              >
+                {formatProductPrice(product.price)}
+              </Typography>
 
-            {showOwnerActionsMenu ? (
-              <>
-                {onClick && showViewAction ? (
-                  <Button
-                    size="small"
-                    variant="contained"
-                    onClick={handleView}
-                    sx={{
-                      textTransform: "none",
-                      fontWeight: 600,
-                      fontSize: 12,
-                      bgcolor: INFO,
-                      boxShadow: "none",
-                      width: "100%",
-                      minHeight: 32,
-                      "&:hover": { bgcolor: INFO, boxShadow: "none" },
-                    }}
-                  >
-                    {viewLabel}
-                  </Button>
-                ) : null}
-                <Box sx={{ display: "flex", justifyContent: isList ? { sm: "flex-end" } : "flex-end" }}>
-                  <IconButton
-                    size="small"
-                    aria-label="More actions"
-                    onClick={handleMenuOpen}
-                    sx={iconBtnSx}
-                  >
-                    <MoreVertIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-                <Menu
-                  anchorEl={menuAnchor}
-                  open={menuOpen}
-                  onClose={handleMenuClose}
-                  onClick={handleMenuClose}
-                  anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                  transformOrigin={{ vertical: "top", horizontal: "right" }}
-                >
-                  {showFeaturePayNow ? (
-                    <MenuItem onClick={handleFeaturePayNow}>
-                      {featuredUi?.payNowLabel || "Feature Now"}
-                    </MenuItem>
-                  ) : null}
+              {(onEdit || onDelete) ? (
+                <Box sx={{ display: "flex", gap: 0.5 }}>
                   {onEdit ? (
-                    <MenuItem onClick={handleEdit}>Edit</MenuItem>
+                    <Tooltip title="Edit">
+                      <IconButton
+                        size="small"
+                        onClick={handleEdit}
+                        aria-label="Edit"
+                        sx={{
+                          color: T.color.textPrimary,
+                          "&:hover": { color: INFO, bgcolor: alpha(INFO, 0.04) },
+                        }}
+                      >
+                        <EditOutlinedIcon sx={{ fontSize: 20 }} />
+                      </IconButton>
+                    </Tooltip>
                   ) : null}
                   {onDelete ? (
-                    <MenuItem onClick={handleDelete}>Delete</MenuItem>
-                  ) : null}
-                </Menu>
-              </>
-            ) : (
-              <>
-                {/* Hide Pay Now when is_favorite / isFeatured / actively featured. */}
-                {showFeaturePayNow ? (
-                  <Button
-                    size="small"
-                    variant="contained"
-                    onClick={handleFeaturePayNow}
-                    sx={{
-                      textTransform: "none",
-                      fontWeight: 700,
-                      fontSize: 12,
-                      bgcolor: "#f97316",
-                      boxShadow: "none",
-                      width: isList ? "auto" : "100%",
-                      minHeight: 32,
-                      "&:hover": { bgcolor: "#ea580c", boxShadow: "none" },
-                    }}
-                  >
-                    {featuredUi?.payNowLabel || "Feature Now"}
-                  </Button>
-                ) : null}
-
-                {onClick && showViewAction ? (
-                  <Button
-                    size="small"
-                    variant="contained"
-                    startIcon={<VisibilityOutlinedIcon sx={{ fontSize: 18 }} />}
-                    onClick={handleView}
-                    sx={{
-                      textTransform: "none",
-                      fontWeight: 600,
-                      fontSize: 12,
-                      minHeight: 32,
-                      bgcolor: INFO,
-                      boxShadow: "none",
-                      ...(isList
-                        ? { whiteSpace: "nowrap" }
-                        : { width: "100%" }),
-                      "&:hover": { bgcolor: INFO, boxShadow: "none" },
-                    }}
-                  >
-                    {viewLabel}
-                  </Button>
-                ) : null}
-
-                {onEdit || onDelete ? (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      gap: 1.5,
-                      justifyContent: isList ? "flex-end" : "center",
-                      width: "100%",
-                    }}
-                  >
-                    {onEdit ? (
+                    <Tooltip title="Delete">
                       <IconButton
                         size="small"
-                        aria-label="Edit listing"
-                        onClick={handleEdit}
-                        sx={iconBtnSx}
-                      >
-                        <EditOutlinedIcon fontSize="small" sx={{ color: INFO }} />
-                      </IconButton>
-                    ) : null}
-                    {onDelete ? (
-                      <IconButton
-                        size="small"
-                        aria-label="Delete listing"
-                        disabled={deleteLoading}
                         onClick={handleDelete}
-                        sx={{ ...iconBtnSx, borderColor: "rgba(239,68,68,0.35)" }}
+                        disabled={deleteLoading}
+                        aria-label="Delete"
+                        sx={{
+                          color: T.color.danger,
+                          "&:hover": { color: T.color.danger, bgcolor: "rgba(239,68,68,0.04)" },
+                        }}
                       >
-                        <DeleteOutlineIcon fontSize="small" sx={{ color: T.color.danger }} />
+                        <DeleteOutlineIcon sx={{ fontSize: 20 }} />
                       </IconButton>
-                    ) : null}
-                  </Box>
-                ) : null}
-              </>
-            )}
+                    </Tooltip>
+                  ) : null}
+                </Box>
+              ) : null}
+            </Box>
+
+            {onClick && showViewAction ? (
+              <Button
+                size="small"
+                variant="contained"
+                onClick={handleView}
+                sx={{
+                  textTransform: "none",
+                  fontWeight: 600,
+                  fontSize: 12,
+                  bgcolor: INFO,
+                  boxShadow: "none",
+                  width: isList ? "auto" : "100%",
+                  minHeight: 32,
+                  "&:hover": { bgcolor: INFO, boxShadow: "none" },
+                }}
+              >
+                {viewLabel}
+              </Button>
+            ) : null}
+
+            {showFeaturePayNow ? (
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={handleFeaturePayNow}
+                sx={{
+                  textTransform: "none",
+                  fontWeight: 600,
+                  fontSize: 12,
+                  borderColor: "#f97316",
+                  color: "#f97316",
+                  width: isList ? "auto" : "100%",
+                  minHeight: 32,
+                  "&:hover": { borderColor: "#ea580c", color: "#ea580c", bgcolor: "rgba(249, 115, 22, 0.04)" },
+                }}
+              >
+                {featuredUi?.payNowLabel || "Feature Now"}
+              </Button>
+            ) : null}
           </Box>
         </Box>
       </Box>
