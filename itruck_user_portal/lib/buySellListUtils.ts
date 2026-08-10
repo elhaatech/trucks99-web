@@ -63,7 +63,7 @@ export function toBuySellListPayload(
     ...(makeYearMax !== undefined && !Number.isNaN(makeYearMax)
       ? { make_year_max: makeYearMax }
       : {}),
-    ...(cityId ? { city_id: cityId, country_id: "69c60d5a50d03d49adb72bc3", state_id: "69c60e80e9c7314beecc1f9c" } : {}),
+    ...(cityId ? { city_id: cityId, country_id: "69c60d5a50d03d49adb72bc3", state_id: "69c60e80e9c7314beecc1fbb" } : {}),
   };
 }
 

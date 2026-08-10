@@ -12,7 +12,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import { SearchableSelect, type SelectOption } from "@/components/common/SearchableSelect";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 import { useCategorySubcategories } from "@/hooks/useCategorySubcategories";
-import { getLocationCitiesByState } from "@/model/services/location";
+import { getLocationCitiesByState, getLocationStatesByCountry } from "@/model/services/location";
 import {
   EMPTY_FILTERS,
   type FilterState,
@@ -58,23 +58,43 @@ function FilterFields({
     (async () => {
       setCityLoading(true);
       try {
-        const result = await getLocationCitiesByState("69c60e80e9c7314beecc1f9c", {
+        const statesRes = await getLocationStatesByCountry("69c60d5a50d03d49adb72bc3", {
           limit: 2000,
         });
-        if (!cancelled && !controller.signal.aborted) {
-          const rawItems = Array.isArray(result?.items) ? result.items : [];
-          const cities = rawItems.filter((item): item is { _id?: string; id?: string; uuid?: string; externalId?: number; name?: string; stateExternalId?: number } =>
-            Boolean(item.name)
-          );
-          setCityOptions(
-            cities.map((city) => ({
-              value: city._id || city.id || city.uuid || String(city.externalId ?? ""),
-              label: city.name || "",
-            }))
-          );
+        if (cancelled || controller.signal.aborted) return;
+
+        const states = Array.isArray(statesRes?.items) ? statesRes.items : [];
+        const tamilNadu = states.find((s) => s.name === "Tamil Nadu");
+        const stateId = tamilNadu?._id || tamilNadu?.id || tamilNadu?.uuid || "";
+
+        console.log("[VehicleFilterPanel] states count:", states.length, "Tamil Nadu stateId:", stateId);
+
+        if (!stateId) {
+          console.warn("[VehicleFilterPanel] Tamil Nadu not found in states response");
+          setCityOptions([]);
+          return;
         }
-      } catch {
+
+        const result = await getLocationCitiesByState(stateId, {
+          limit: 2000,
+        });
+        if (cancelled || controller.signal.aborted) return;
+
+        console.log("[VehicleFilterPanel] cities items count:", Array.isArray(result?.items) ? result.items.length : 0);
+
+        const rawItems = Array.isArray(result?.items) ? result.items : [];
+        const cities = rawItems.filter((item): item is { _id?: string; id?: string; uuid?: string; externalId?: number; name?: string; stateExternalId?: number } =>
+          Boolean(item.name)
+        );
+        setCityOptions(
+          cities.map((city) => ({
+            value: city._id || city.id || city.uuid || String(city.externalId ?? ""),
+            label: city.name || "",
+          }))
+        );
+      } catch (err) {
         if (!cancelled && !controller.signal.aborted) {
+          console.error("[VehicleFilterPanel] Failed to load cities:", err);
           setCityOptions([]);
         }
       } finally {
