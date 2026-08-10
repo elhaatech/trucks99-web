@@ -25,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${jakarta.variable} antialiased`} suppressHydrationWarning>
+      <body className={`${jakarta.variable} antialiased`} suppressHydrationWarning style={{ overflowX: "hidden" }}>
         <ThemeRegistry>{children}</ThemeRegistry>
       </body>
     </html>

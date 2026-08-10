@@ -122,6 +122,7 @@ export function CategoryScroller({ children }: { children: React.ReactNode }) {
         display: "flex",
         gap: 1.75,
         overflowX: "auto",
+        maxWidth: "100%",
         pb: 1.25,
         pt: 0.25,
         "&::-webkit-scrollbar": { height: 6 },

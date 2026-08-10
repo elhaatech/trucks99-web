@@ -75,7 +75,7 @@ export function VehicleGrid({
           flexDirection: isList ? "column" : undefined,
           gridTemplateColumns: isList
             ? undefined
-            : { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)", xl: "repeat(4, 1fr)" },
+            : { xs: "minmax(0, 1fr)", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(0, 1fr))", xl: "repeat(4, minmax(0, 1fr))" },
           gap: 2.5,
         }}
       >

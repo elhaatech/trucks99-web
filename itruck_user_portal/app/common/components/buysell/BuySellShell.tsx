@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
+import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
@@ -10,6 +11,7 @@ import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
 import Divider from "@mui/material/Divider";
 import { useRouter, usePathname } from "next/navigation";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import DirectionsCarOutlinedIcon from "@mui/icons-material/DirectionsCarOutlined";
 import StarOutlineRoundedIcon from "@mui/icons-material/StarOutlineRounded";
 import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
@@ -71,10 +73,9 @@ export function BuySellShell({ children }: BuySellShellProps) {
   return (
     <Box
       sx={{
-        height: "100dvh",
+        minHeight: "100dvh",
         display: "flex",
         flexDirection: "column",
-        overflow: "hidden",
         bgcolor: T.color.bg,
         backgroundImage: `
           radial-gradient(ellipse 80% 50% at 50% -20%, ${alpha(PRIMARY, 0.07)}, transparent),
@@ -91,14 +92,14 @@ export function BuySellShell({ children }: BuySellShellProps) {
           lineHeight: 0,
         }}
       >
-        <BuySellHeader onMobileMenuToggle={() => setMobileOpen(true)} />
+        <BuySellHeader onMobileMenuToggle={() => setMobileOpen((prev) => !prev)} />
       </Box>
 
       <Drawer
         anchor="left"
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
-        sx={{ display: { md: "none" }, zIndex: Z_INDEX.drawer }}
+        sx={{ display: { lg: "none" }, zIndex: Z_INDEX.drawer }}
         PaperProps={{
           sx: {
             width: 300,
@@ -107,11 +108,23 @@ export function BuySellShell({ children }: BuySellShellProps) {
           },
         }}
       >
-        <Box sx={{ px: 2.5, pt: 3, pb: 2 }}>
-          <BrandLogo height={36} />
-          <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: "block", mt: 0.75 }}>
-            Marketplace navigation
-          </Typography>
+        <Box sx={{ px: 2.5, pt: 3, pb: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Box>
+            <BrandLogo height={36} />
+            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: "block", mt: 0.75 }}>
+              Marketplace navigation
+            </Typography>
+          </Box>
+          <IconButton
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close menu"
+            sx={{
+              border: `1px solid ${T.color.border}`,
+              borderRadius: 2,
+            }}
+          >
+            <CloseRoundedIcon sx={{ fontSize: 20 }} />
+          </IconButton>
         </Box>
         <Divider />
         <List sx={{ px: 1.5, py: 1.5 }}>
@@ -175,10 +188,6 @@ export function BuySellShell({ children }: BuySellShellProps) {
           flex: 1,
           minHeight: 0,
           width: "100%",
-          overflowY: "auto",
-          overflowX: "hidden",
-          WebkitOverflowScrolling: "touch",
-          px: LAYOUT.pageGutterX,
           pt: isHeroFlush ? 0 : LAYOUT.pageGutterTop,
           pb: { xs: 2.5, md: 3 },
         }}
@@ -188,6 +197,7 @@ export function BuySellShell({ children }: BuySellShellProps) {
             width: "100%",
             maxWidth: LAYOUT.contentMaxWidth,
             mx: "auto",
+            px: LAYOUT.pageGutterX,
             animation: "pageFadeIn 280ms ease-out",
             "@keyframes pageFadeIn": {
               from: { opacity: 0, transform: "translateY(6px)" },
@@ -199,16 +209,14 @@ export function BuySellShell({ children }: BuySellShellProps) {
           {children}
         </Box>
       </Box>
-
       <Box
         component="footer"
         sx={{
           flexShrink: 0,
           width: "100%",
-          zIndex: Z_INDEX.navbar - 1,
         }}
       >
-        <BuySellFooter  />
+        <BuySellFooter />
       </Box>
       <AssistantFab />
     </Box>

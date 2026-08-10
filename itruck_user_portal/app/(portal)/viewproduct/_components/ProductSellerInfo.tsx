@@ -9,9 +9,18 @@ import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 import { MetaIconLine, PhoneMetaLine } from "@/app/common/components/buysell/MetaIconLine";
 
+export const BUYSELL_API_BASE_URL = "http://truck.elhaa.com:3003";
+
+export function getBuySellImageUrl(path?: string | null): string | undefined {
+  if (!path) return undefined;
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${BUYSELL_API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 type ProductSellerInfoProps = {
   sellerName?: string;
   sellerMobile?: string | null;
+  sellerProfileImage?: string | null;
   location?: string;
   rating?: number;
   reviewCount?: number;
@@ -20,11 +29,14 @@ type ProductSellerInfoProps = {
 export function ProductSellerInfo({
   sellerName,
   sellerMobile,
+  sellerProfileImage,
   location,
   rating = 4.5,
   reviewCount,
 }: ProductSellerInfoProps) {
   if (!sellerName) return null;
+
+  const avatarSrc = getBuySellImageUrl(sellerProfileImage);
 
   return (
     <Box
@@ -42,24 +54,20 @@ export function ProductSellerInfo({
       </Typography>
 
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-        <Avatar sx={{ width: 52, height: 52, bgcolor: INFO, fontWeight: 700, fontSize: 20 }}>
+        <Avatar
+          src={avatarSrc}
+          sx={{ width: 52, height: 52, bgcolor: INFO, fontWeight: 700, fontSize: 20 }}
+        >
           {sellerName.charAt(0).toUpperCase()}
         </Avatar>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography sx={{ fontWeight: 700, fontSize: 16 }}>{sellerName}</Typography>
           {location ? (
-            <MetaIconLine
-              icon={<LocationOnOutlinedIcon />}
-              sx={{ mt: 0.5 }}
-            >
+            <MetaIconLine icon={<LocationOnOutlinedIcon />} sx={{ mt: 0.5 }}>
               {location}
             </MetaIconLine>
           ) : null}
-          <PhoneMetaLine
-            icon={<PhoneOutlinedIcon />}
-            mobile={sellerMobile}
-            sx={{ mt: 0.5 }}
-          />
+          <PhoneMetaLine icon={<PhoneOutlinedIcon />} mobile={sellerMobile} sx={{ mt: 0.5 }} />
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.35, mt: 0.75, color: "#f59e0b" }}>
             <StarIcon sx={{ fontSize: 17 }} />
             <Typography sx={{ fontWeight: 700, fontSize: 14, color: T.color.textPrimary }}>

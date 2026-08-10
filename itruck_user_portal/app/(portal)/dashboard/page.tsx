@@ -94,7 +94,6 @@ export default function UserProductDashboardPage() {
       const result = await getBuySellListPage(
         {
           ...toBuySellListPayload({ ...EMPTY_FILTERS, usear_type: "all" }),
-          statuses: [...MARKETPLACE.BROWSE_STATUSES],
           page,
           limit: MARKETPLACE.VEHICLE_PAGE_SIZE,
         },
@@ -351,8 +350,6 @@ export default function UserProductDashboardPage() {
         onCategoryChange={setCategoryId}
         onSearch={handleSearch}
       />
-
-  
 
       <Box sx={{ mt: 4 }}>
         {statsError && !statsLoading ? (

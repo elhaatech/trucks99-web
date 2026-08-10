@@ -35,6 +35,8 @@ import {
   BuySellProduct,
   getBuySellProduct,
   incrementMarketItemView,
+  postBuySellProductsByOwner,
+  type BuySellOwnerProductsOwner,
 } from "@/model/services/buysellapi";
 import { addFavorite, removeFavorite } from "@/model/services/favoriteapi";
 import { ProductLifecycleSection } from "@/app/admin/portal/buysell/view/[id]/_components/ProductLifecycleSection";
@@ -99,6 +101,7 @@ export default function UserProductViewPage() {
   const [offerRefreshKey, setOfferRefreshKey] = useState(0);
   const [featuredPlansOpen, setFeaturedPlansOpen] = useState(false);
   const [featuredActivated, setFeaturedActivated] = useState<SubscriptionItem | null>(null);
+  const [owner, setOwner] = useState<BuySellOwnerProductsOwner | null>(null);
 
   const currentUserId =
     extractId(
@@ -106,6 +109,10 @@ export default function UserProductViewPage() {
         (currentUser as { _id?: unknown; id?: unknown })?.id ??
         null,
     ) || marketplaceUserId || "";
+
+  // Computed early (independent of the `!item` guard below) so the owner-fetch
+  // effect can safely depend on it without violating rules of hooks.
+  const sellerId = extractId(item?.userid ?? null);
 
   const loadProduct = useCallback(() => {
     if (!id) return Promise.resolve();
@@ -160,6 +167,22 @@ export default function UserProductViewPage() {
     if (!item || !authReady) return;
     setOfferTab(isProductOwner(item, currentUser, currentUserId) ? "received" : "my");
   }, [item, currentUser, currentUserId, authReady]);
+
+  // Fetch the seller's owner details (name/mobile/profileImage) for ProductSellerInfo.
+  useEffect(() => {
+    if (!sellerId || !id) return;
+    let cancelled = false;
+    postBuySellProductsByOwner({ ownerId: sellerId, excludeProductId: id })
+      .then((data) => {
+        if (!cancelled && data?.owner) setOwner(data.owner);
+      })
+      .catch(() => {
+        /* fall back to item's own seller fields in the UI */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sellerId, id]);
 
   const openChat = (productId?: string) => {
     setChatProductId(productId ?? id);
@@ -217,7 +240,6 @@ export default function UserProductViewPage() {
   }
 
   const isOwner = authReady && isProductOwner(item, currentUser, currentUserId);
-  const sellerId = extractId(item.userid);
   const relatedOwnerId = isOwner ? currentUserId || sellerId || "" : sellerId || "";
   const canEdit = canEditBuySellProduct(item, currentUser, currentUserId);
   const canFeatureListing = canFeatureOwnBuySellListing(item, currentUser, currentUserId);
@@ -342,10 +364,11 @@ export default function UserProductViewPage() {
           />
 
           <ProductSellerInfo
-            sellerName={getSellerDisplayName(item)}
-            sellerMobile={item.seller_mobile}
+            sellerName={owner?.name || getSellerDisplayName(item)}
+            sellerMobile={owner?.mobile || item.seller_mobile || undefined}
             location={locationLabel || item.address || undefined}
-            reviewCount={106}
+            reviewCount={0}
+            sellerProfileImage={owner?.profileImage || undefined}
           />
 
           <ProductViewActionBar
@@ -458,20 +481,31 @@ export default function UserProductViewPage() {
           ) : null}
 
           {relatedOwnerId ? (
-            <UserRelatedProductsSection
-              sellerId={relatedOwnerId}
-              sellerName={
-                isOwner
-                  ? currentUser?.name ?? getSellerDisplayName(item)
-                  : getSellerDisplayName(item)
-              }
-              excludeProductId={id}
-              isLoggedIn={authReady && Boolean(currentUserId)}
-              isOwnerView={isOwner}
-              onAddVehicle={() => router.push(userProductRoutes.sellVehicle("create"))}
-              onChatProduct={(productId) => openChat(productId)}
-              onNotify={notify}
-            />
+             <UserRelatedProductsSection
+               sellerId={relatedOwnerId}
+               sellerName={
+                 isOwner
+                   ? currentUser?.name ?? getSellerDisplayName(item)
+                   : getSellerDisplayName(item)
+               }
+               excludeProductId={id}
+               isLoggedIn={authReady && Boolean(currentUserId)}
+               isOwnerView={isOwner}
+               onAddVehicle={() => router.push(userProductRoutes.sellVehicle("create"))}
+               onNotify={notify}
+               categoryId={extractId(item.category_id)}
+               categoryName={
+                 typeof item.category_id === "object" && item.category_id
+                   ? (item.category_id as { category_name?: string }).category_name
+                   : undefined
+               }
+               currentSubcategoryId={extractId(item.subcategory_id)}
+               currentSubcategoryName={
+                 typeof item.subcategory_id === "object" && item.subcategory_id
+                   ? (item.subcategory_id as { sub_category_name?: string }).sub_category_name
+                   : undefined
+               }
+             />
           ) : null}
         </Box>
 

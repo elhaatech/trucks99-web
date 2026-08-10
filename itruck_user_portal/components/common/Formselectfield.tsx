@@ -1,5 +1,4 @@
-import TextField from "@mui/material/TextField";
-import MenuItem from "@mui/material/MenuItem";
+import { SearchableSelect } from "./SearchableSelect";
 
 export interface SelectOption {
   value: string;
@@ -19,7 +18,7 @@ export interface FormSelectFieldProps {
 }
 
 /**
- * Standard dropdown / select input.
+ * Standard dropdown / select input with search support.
  *
  * Usage:
  *   <FormSelectField
@@ -41,23 +40,16 @@ export default function FormSelectField({
   helperText,
 }: FormSelectFieldProps) {
   return (
-    <TextField
-      size="small"
-      select
+    <SearchableSelect
       label={label}
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={onChange}
+      options={options}
+      placeholder={placeholder}
       required={required}
       fullWidth={fullWidth}
       disabled={disabled}
       helperText={helperText}
-    >
-      <MenuItem value="">{placeholder}</MenuItem>
-      {options.map((opt) => (
-        <MenuItem key={opt.value} value={opt.value}>
-          {opt.label}
-        </MenuItem>
-      ))}
-    </TextField>
+    />
   );
 }

@@ -121,12 +121,13 @@ function StatCard({
         </Box>
         <Box
           sx={{
-            width: { xs: 46, md: 52 },
-            height: { xs: 46, md: 52 },
+            width: 30,
+            height: 30,
             borderRadius: "14px",
             display: "grid",
             placeItems: "center",
-            bgcolor: `linear-gradient(135deg, ${alpha(accent.main, 0.18)} 0%, ${alpha(accent.main, 0.04)} 100%)`,
+            bgcolor: alpha(accent.main, 0.18),
+            backgroundImage: `linear-gradient(135deg, ${alpha(accent.main, 0.18)} 0%, ${alpha(accent.main, 0.04)} 100%)`,
             color: accent.main,
             flexShrink: 0,
             boxShadow: `0 12px 24px ${alpha(accent.main, 0.08)}`,
@@ -457,7 +458,6 @@ export function MarketplaceStatsCards({
             lg: "repeat(3, minmax(0, 1fr))",
             xl: "repeat(4, minmax(0, 1fr))",
           },
-          gridAutoRows: "1fr",
           alignItems: "stretch",
           gap: { xs: 1.5, md: 2 },
         }}
@@ -610,17 +610,12 @@ export function HeroSearchSection({
         mb: 4,
         ...(fullBleed
           ? {
-              // Bleed to shell edges so hero sits flush under the sticky header
-              mx: {
-                xs: -LAYOUT.pageGutterX.xs,
-                sm: -LAYOUT.pageGutterX.sm,
-                md: -LAYOUT.pageGutterX.md,
-              },
-              width: {
-                xs: `calc(100% + ${LAYOUT.pageGutterX.xs * 2 * 8}px)`,
-                sm: `calc(100% + ${LAYOUT.pageGutterX.sm * 2 * 8}px)`,
-                md: `calc(100% + ${LAYOUT.pageGutterX.md * 2 * 8}px)`,
-              },
+              width: "100vw",
+              position: "relative",
+              left: "50%",
+              right: "50%",
+              marginLeft: "-50vw",
+              marginRight: "-50vw",
               borderTopLeftRadius: 0,
               borderTopRightRadius: 0,
             }
@@ -673,7 +668,8 @@ export function HeroSearchSection({
             gap: 1.5,
             bgcolor: "rgba(255,255,255,0.98)",
             p: 1.5,
-            borderRadius: 0,
+            borderRadius: "16px",
+            overflow: "hidden",
             boxShadow: T.shadow.elevated,
             maxWidth: 760,
             mx: "auto",
@@ -719,7 +715,7 @@ export function HeroSearchSection({
             type="submit"
             sx={{
               border: "none",
-              borderRadius: 0,
+              borderRadius: "16px",
               bgcolor: INFO,
               color: "#fff",
               fontWeight: 700,

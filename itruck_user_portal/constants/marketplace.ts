@@ -9,8 +9,6 @@ export const MARKETPLACE = {
   FEATURED_SECTION_LIMIT: 8,
   /** Recent vehicles strip size on dashboard. */
   RECENT_SECTION_LIMIT: 8,
-  /** Browseable listing statuses on the public marketplace. */
-  BROWSE_STATUSES: ["active", "pending"] as const,
   /** Client TTL hints (ms) — mirrors lib/apiCache usage. */
   CACHE_TTL_MS: {
     LIST: 15_000,

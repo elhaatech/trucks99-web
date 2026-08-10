@@ -4,11 +4,11 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import TextField from "@mui/material/TextField";
-import MenuItem from "@mui/material/MenuItem";
 import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import CloseIcon from "@mui/icons-material/Close";
+import { SearchableSelect, type SelectOption } from "@/components/common/SearchableSelect";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 import { useCategorySubcategories } from "@/hooks/useCategorySubcategories";
 import {
@@ -16,16 +16,13 @@ import {
   type FilterState,
 } from "@/app/admin/portal/buysell/_components/interface/buysell_interface";
 
-const STATUS_OPTIONS = [
+const STATUS_OPTIONS: SelectOption[] = [
   { value: "", label: "All statuses" },
   { value: "active", label: "Active" },
   { value: "pending", label: "Pending" },
   { value: "booking", label: "Booked" },
   { value: "purchased", label: "Purchased" },
-  { value: "sold", label: "Sold" },
-  { value: "draft", label: "Draft" },
   { value: "inactive", label: "Inactive" },
-  { value: "rejected", label: "Rejected" },
 ];
 
 type VehicleFilterPanelProps = {
@@ -35,6 +32,7 @@ type VehicleFilterPanelProps = {
   onClear: () => void;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
+  applyLoading?: boolean;
 };
 
 function FilterFields({
@@ -42,6 +40,7 @@ function FilterFields({
   onChange,
   onApply,
   onClear,
+  applyLoading = false,
 }: Omit<VehicleFilterPanelProps, "mobileOpen" | "onMobileClose">) {
   const { categoryOptions, subcategoryOptions } = useCategorySubcategories({
     categoryId: values.category_id || "",
@@ -53,52 +52,30 @@ function FilterFields({
         Filters
       </Typography>
 
-      <TextField
-        select
-        size="small"
+      <SearchableSelect
         label="Category"
         value={values.category_id}
-        onChange={(e) =>
-          onChange({ category_id: e.target.value, subcategory_id: "" })
-        }
-      >
-        <MenuItem value="">All categories</MenuItem>
-        {categoryOptions.map((c) => (
-          <MenuItem key={c.value} value={c.value}>
-            {c.label}
-          </MenuItem>
-        ))}
-      </TextField>
+        onChange={(v) => onChange({ category_id: v, subcategory_id: "" })}
+        options={categoryOptions}
+        placeholder="All categories"
+      />
 
-      <TextField
-        select
-        size="small"
+      <SearchableSelect
         label="Subcategory"
         value={values.subcategory_id}
         disabled={!values.category_id}
-        onChange={(e) => onChange({ subcategory_id: e.target.value })}
-      >
-        <MenuItem value="">All subcategories</MenuItem>
-        {subcategoryOptions.map((s) => (
-          <MenuItem key={s.value} value={s.value}>
-            {s.label}
-          </MenuItem>
-        ))}
-      </TextField>
+        onChange={(v) => onChange({ subcategory_id: v })}
+        options={subcategoryOptions}
+        placeholder="All subcategories"
+      />
 
-      <TextField
-        select
-        size="small"
+      <SearchableSelect
         label="Status"
         value={values.status}
-        onChange={(e) => onChange({ status: e.target.value })}
-      >
-        {STATUS_OPTIONS.map((opt) => (
-          <MenuItem key={opt.value || "all"} value={opt.value}>
-            {opt.label}
-          </MenuItem>
-        ))}
-      </TextField>
+        onChange={(v) => onChange({ status: v })}
+        options={STATUS_OPTIONS}
+        placeholder="All statuses"
+      />
 
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
         <TextField
@@ -117,18 +94,50 @@ function FilterFields({
         />
       </Box>
 
-      <TextField
-        size="small"
-        label="Search"
-        value={values.search}
-        onChange={(e) => onChange({ search: e.target.value })}
-        placeholder="Description, address, listing ID…"
-      />
+     <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
+  <TextField
+    size="small"
+    label="Max owners"
+    type="number"
+    value={values.no_of_owners_max}
+    onChange={(e) => onChange({ no_of_owners_max: e.target.value })}
+  />
+  <TextField
+    size="small"
+    label="Max KM"
+    type="number"
+    value={values.km_max}
+    onChange={(e) => onChange({ km_max: e.target.value })}
+  />
+</Box>
+      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
+        <TextField
+          size="small"
+          label="Min year"
+          type="number"
+          value={values.make_year_min}
+          onChange={(e) => onChange({ make_year_min: e.target.value })}
+        />
+        <TextField
+          size="small"
+          label="Max year"
+          type="number"
+          value={values.make_year_max}
+          onChange={(e) => onChange({ make_year_max: e.target.value })}
+        />
+      </Box>
 
-      <Button variant="contained" onClick={onApply} sx={{ bgcolor: INFO }}>
-        Apply Filters
+     
+
+      <Button
+        variant="contained"
+        onClick={onApply}
+        disabled={applyLoading}
+        sx={{ bgcolor: INFO }}
+      >
+        {applyLoading ? "Applying…" : "Apply Filters"}
       </Button>
-      <Button variant="outlined" onClick={onClear}>
+      <Button variant="outlined" onClick={onClear} disabled={applyLoading}>
         Clear All
       </Button>
     </Box>
@@ -136,7 +145,7 @@ function FilterFields({
 }
 
 export function VehicleFilterPanel(props: VehicleFilterPanelProps) {
-  const { mobileOpen, onMobileClose, ...fieldProps } = props;
+  const { mobileOpen, onMobileClose, applyLoading, ...fieldProps } = props;
 
   return (
     <>
@@ -151,7 +160,7 @@ export function VehicleFilterPanel(props: VehicleFilterPanelProps) {
           top: 88,
         }}
       >
-        <FilterFields {...fieldProps} />
+        <FilterFields {...fieldProps} applyLoading={applyLoading} />
       </Box>
 
       {/* Keep drawer mounted but only mount FilterFields when open to avoid duplicate category fetches */}
@@ -169,7 +178,7 @@ export function VehicleFilterPanel(props: VehicleFilterPanelProps) {
               <CloseIcon />
             </IconButton>
           </Box>
-          {mobileOpen ? <FilterFields {...fieldProps} /> : null}
+          {mobileOpen ? <FilterFields {...fieldProps} applyLoading={applyLoading} /> : null}
         </Box>
       </Drawer>
     </>
@@ -198,20 +207,21 @@ export function SortDropdown({
   value: SortOption;
   onChange: (v: SortOption) => void;
 }) {
+  const sortOptions: SelectOption[] = [
+    { value: "newest", label: "Newest first" },
+    { value: "price_asc", label: "Price: Low to High" },
+    { value: "price_desc", label: "Price: High to Low" },
+    { value: "views", label: "Most viewed" },
+  ];
+
   return (
-    <TextField
-      select
-      size="small"
+    <SearchableSelect
       label="Sort by"
       value={value}
-      onChange={(e) => onChange(e.target.value as SortOption)}
+      onChange={(v) => onChange(v as SortOption)}
+      options={sortOptions}
       sx={{ minWidth: 180 }}
-    >
-      <MenuItem value="newest">Newest first</MenuItem>
-      <MenuItem value="price_asc">Price: Low to High</MenuItem>
-      <MenuItem value="price_desc">Price: High to Low</MenuItem>
-      <MenuItem value="views">Most viewed</MenuItem>
-    </TextField>
+    />
   );
 }
 

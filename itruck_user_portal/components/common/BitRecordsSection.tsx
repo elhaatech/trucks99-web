@@ -3,14 +3,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import CircularProgress from "@mui/material/CircularProgress";
 import TextField from "@mui/material/TextField";
-import MenuItem from "@mui/material/MenuItem";
-import Select from "@mui/material/Select";
-import InputLabel from "@mui/material/InputLabel";
-import FormControl from "@mui/material/FormControl";
 import Collapse from "@mui/material/Collapse";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
 import Popover from "@mui/material/Popover";
+import { SearchableSelect, type SelectOption } from "@/components/common/SearchableSelect";
 import {
   updateBitRecordStatus,
   createBitRecord,
@@ -955,32 +952,30 @@ function AddBidForm({
           <div>
             <div style={sectionLabel()}>{sectionCount.user}. User Details</div>
             {admin ? (
-              <FormControl fullWidth size="small">
-                <InputLabel>Bidding as</InputLabel>
-                <Select
-                  label="Bidding as"
-                  value={selectedUserId}
-                  onChange={(e) => setSelectedUserId(e.target.value)}
-                  disabled={usersLoading}
-                  sx={{ background: "#fff", fontSize: 13 }}
-                >
-                  {usersLoading ? (
-                    <MenuItem value="">
-                      <CircularProgress size={13} sx={{ mr: 1 }} /> Loading…
-                    </MenuItem>
-                  ) : (
-                    allUsers.map((u) => {
-                      const uid = getUserId(u);
-                      return (
-                        <MenuItem key={uid} value={uid} sx={{ fontSize: 13 }}>
-                          {u.name || "—"}
-                          {getRoleName(u) ? ` (${getRoleName(u)})` : ""}
-                        </MenuItem>
-                      );
-                    })
-                  )}
-                </Select>
-              </FormControl>
+              <SearchableSelect
+                label="Bidding as"
+                value={selectedUserId}
+                onChange={(v) => setSelectedUserId(v)}
+                options={
+                  usersLoading
+                    ? []
+                    : allUsers.map((u) => {
+                        const uid = getUserId(u);
+                        return {
+                          value: uid,
+                          label: `${u.name || "—"}${getRoleName(u) ? ` (${getRoleName(u)})` : ""}`,
+                        };
+                      })
+                }
+                disabled={usersLoading || !admin}
+                placeholder={usersLoading ? "Loading…" : "Select user"}
+                helperText={usersLoading ? "Loading users…" : undefined}
+                slotProps={{
+                  textfield: {
+                    sx: { background: "#fff", fontSize: 13 },
+                  },
+                }}
+              />
             ) : (
               <Box
                 sx={{
@@ -1046,44 +1041,34 @@ function AddBidForm({
                 {sectionCount.linked}. {linkedLabel}
               </div>
               <div ref={dropdownRef}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>{linkedPlaceholder}</InputLabel>
-                  <Select
-                    label={linkedPlaceholder}
-                    value={selectedLinkedId}
-                    onChange={(e) => handleLinkedChange(e.target.value)}
-                    disabled={linkedLoading}
-                    displayEmpty
-                    sx={{ background: "#fff", fontSize: 13 }}
-                  >
-                    <MenuItem value="" sx={{ fontSize: 13, color: "#94a3b8" }}>
-                      — None —
-                    </MenuItem>
-                    {linkedLoading ? (
-                      <MenuItem value="__loading__" disabled>
-                        <CircularProgress size={13} sx={{ mr: 1 }} /> Loading…
-                      </MenuItem>
-                    ) : filteredLinkedItems.length === 0 ? (
-                      <MenuItem
-                        value=""
-                        disabled
-                        sx={{ fontSize: 13, color: "#94a3b8" }}
-                      >
-                        No {type === "truck" ? "loads" : "trucks"} found
-                      </MenuItem>
-                    ) : (
-                      filteredLinkedItems.map((item) => (
-                        <MenuItem
-                          key={item.id}
-                          value={item.id}
-                          sx={{ fontSize: 13 }}
-                        >
-                          {item.label}
-                        </MenuItem>
-                      ))
-                    )}
-                  </Select>
-                </FormControl>
+                <SearchableSelect
+                  label={linkedPlaceholder}
+                  value={selectedLinkedId}
+                  onChange={(v) => handleLinkedChange(v)}
+                  options={
+                    linkedLoading
+                      ? []
+                      : [
+                          { value: "", label: "— None —" },
+                          ...filteredLinkedItems.map((item) => ({
+                            value: item.id,
+                            label: item.label,
+                          })),
+                        ]
+                  }
+                  disabled={linkedLoading}
+                  placeholder="— None —"
+                  noOptionsText={
+                    linkedLoading
+                      ? "Loading…"
+                      : `No ${type === "truck" ? "loads" : "trucks"} found`
+                  }
+                  slotProps={{
+                    textfield: {
+                      sx: { background: "#fff", fontSize: 13 },
+                    },
+                  }}
+                />
               </div>
               {selectedLinkedId && popoverItem && (
                 <Box
