@@ -36,6 +36,16 @@ if (!admin.apps.length) {
   firebaseReady = true;
 }
 
+// FCM error codes that mean the token is dead and should be deactivated.
+const INVALID_TOKEN_CODES = [
+  "messaging/registration-token-not-registered",
+  "messaging/invalid-registration-token",
+  "messaging/invalid-argument",
+  "messaging/mismatched-credential",
+];
+
+const isInvalidTokenError = (code) => INVALID_TOKEN_CODES.includes(code);
+
 // Send notification to a single device.
 // IMPORTANT: We use DATA-ONLY messages (no `notification` field) to avoid duplicates.
 // If we send both `notification` (OS auto tray) AND your app also displays via notifee,
@@ -48,6 +58,10 @@ const sendNotification = async (token, title, body, options = {}) => {
     route = "/admin/portal",
     type = "GENERAL",
     id = "",
+    postId = "",
+    requestId = "",
+    postType = "",
+    status = "",
   } = options || {};
   try {
     const message = {
@@ -58,7 +72,11 @@ const sendNotification = async (token, title, body, options = {}) => {
       },
       data: {
         type: String(type || "GENERAL"),
-        id: String(id || ""),
+        id: String(id || postId || ""),
+        postId: String(postId || id || ""),
+        requestId: String(requestId || ""),
+        postType: String(postType || ""),
+        status: String(status || ""),
         route: String(route || "/admin/portal"),
         title: String(title ?? ""),
         body: String(body ?? ""),
@@ -80,8 +98,13 @@ const sendNotification = async (token, title, body, options = {}) => {
     console.log("Notification sent:", response);
     return { success: true, message: response };
   } catch (error) {
-    console.error("Error sending notification:", error);
-    return { success: false, message: "Error sending notification" };
+    console.error("Error sending notification:", error?.code || error?.message || error);
+    return {
+      success: false,
+      message: error?.message || "Error sending notification",
+      code: error?.code || null,
+      invalidToken: isInvalidTokenError(error?.code),
+    };
   }
 };
 
@@ -116,6 +139,7 @@ const publishLoadBidEvent = async ({
 
 sendNotification.sendNotification = sendNotification;
 sendNotification.publishLoadBidEvent = publishLoadBidEvent;
+sendNotification.isInvalidTokenError = isInvalidTokenError;
 sendNotification.admin = admin;
 sendNotification.firebaseReady = firebaseReady;
 

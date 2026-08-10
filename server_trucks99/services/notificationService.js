@@ -28,6 +28,10 @@ const NOTIFICATION_EVENTS = {
   BID_PLACED: 'bid_placed',
   BID_ACCEPTED: 'bid_accepted',
   BID_REJECTED: 'bid_rejected',
+  // Load/Truck request flow (post owner <-> requesting user)
+  NEW_REQUEST: 'NEW_REQUEST',
+  REQUEST_ACCEPTED: 'REQUEST_ACCEPTED',
+  REQUEST_REJECTED: 'REQUEST_REJECTED',
   ADMIN_BULK: 'admin_bulk',
 };
 
@@ -221,6 +225,63 @@ const DEFAULT_TEMPLATES = [
     },
   },
   {
+    event: NOTIFICATION_EVENTS.NEW_REQUEST,
+    label: 'New Request',
+    description: 'Sent to a post owner when a load/truck post receives a new request.',
+    placeholders: ['userName', 'postType'],
+    templates: {
+      in_app: {
+        title: 'New request received',
+        body: 'Your {{postType}} post received a new request from {{userName}}.',
+      },
+      whatsapp: {
+        body: 'iTruck: Your {{postType}} post received a new request from {{userName}}.',
+      },
+      push: {
+        title: 'New request received',
+        body: 'Your {{postType}} post received a new request from {{userName}}.',
+      },
+    },
+  },
+  {
+    event: NOTIFICATION_EVENTS.REQUEST_ACCEPTED,
+    label: 'Request Accepted',
+    description: 'Sent to the requesting user when the post owner accepts their request.',
+    placeholders: ['postType'],
+    templates: {
+      in_app: {
+        title: 'Request accepted',
+        body: 'Your request for this {{postType}} has been accepted by the post owner.',
+      },
+      whatsapp: {
+        body: 'iTruck: Your request for this {{postType}} has been accepted by the post owner.',
+      },
+      push: {
+        title: 'Request accepted',
+        body: 'Your request for this {{postType}} has been accepted by the post owner.',
+      },
+    },
+  },
+  {
+    event: NOTIFICATION_EVENTS.REQUEST_REJECTED,
+    label: 'Request Rejected',
+    description: 'Sent to the requesting user when the post owner rejects their request.',
+    placeholders: ['postType'],
+    templates: {
+      in_app: {
+        title: 'Request declined',
+        body: 'Your request for this {{postType}} has been rejected by the post owner.',
+      },
+      whatsapp: {
+        body: 'iTruck: Your request for this {{postType}} has been rejected by the post owner.',
+      },
+      push: {
+        title: 'Request declined',
+        body: 'Your request for this {{postType}} has been rejected by the post owner.',
+      },
+    },
+  },
+  {
     event: NOTIFICATION_EVENTS.BOOKING_REMINDER,
     label: 'Booking Reminder',
     placeholders: ['userName', 'productName', 'bookingId'],
@@ -376,22 +437,40 @@ async function getTemplate(event) {
   return tpl;
 }
 
+// Sends a push message to every active device for a user (multi-device support).
+// Any token FCM reports as dead is flipped to isActive:false so it stops being used.
 async function sendPushToUser(userId, title, body, options = {}) {
   const oid = await resolveToObjectId(User, String(userId));
   if (!oid) return { sent: false, error: 'User not found' };
 
-  const tokenDoc = await FcmToken.findOne({ userId: oid, isActive: true })
+  const tokenDocs = await FcmToken.find({ userId: oid, isActive: true })
     .sort({ lastUsed: -1 })
     .lean();
 
-  if (!tokenDoc?.token) {
+  if (!tokenDocs.length) {
     return { sent: false, error: 'No FCM token' };
   }
 
-  const result = await sendNotification(tokenDoc.token, title, body, options);
-  return result?.success
-    ? { sent: true, messageId: result.message }
-    : { sent: false, error: result?.message || 'Push failed' };
+  const perToken = await Promise.all(
+    tokenDocs.map(async (tokenDoc) => {
+      const result = await sendNotification(tokenDoc.token, title, body, options);
+      if (!result?.success && result?.invalidToken) {
+        FcmToken.updateOne({ _id: tokenDoc._id }, { $set: { isActive: false } }).catch(
+          (err) => console.error('[notificationService] failed to deactivate dead token:', err.message),
+        );
+      } else if (result?.success) {
+        FcmToken.updateOne({ _id: tokenDoc._id }, { $set: { lastUsed: new Date() } }).catch(() => {});
+      }
+      return result;
+    }),
+  );
+
+  const anySent = perToken.some((r) => r?.success);
+  const firstError = perToken.find((r) => !r?.success);
+
+  return anySent
+    ? { sent: true, messageId: perToken.find((r) => r.success)?.message, deviceCount: perToken.length }
+    : { sent: false, error: firstError?.message || 'Push failed' };
 }
 
 /**
@@ -400,7 +479,7 @@ async function sendPushToUser(userId, title, body, options = {}) {
  * @param {string} params.userId - User id (ObjectId string or uuid)
  * @param {string} params.event - NOTIFICATION_EVENTS value
  * @param {object} [params.data] - Placeholder values
- * @param {object} [params.metadata] - Extra refs (productId, loadId, orderId, etc.)
+ * @param {object} [params.metadata] - Extra refs (postId, requestId, postType, status, productId, loadId, route, etc.)
  * @param {string} [params.dedupeKey] - Prevent duplicate sends within 24h
  * @param {string[]} [params.channelsOverride] - Force specific channels
  * @param {boolean} [params.skipDedupe]
@@ -457,12 +536,18 @@ async function notify({
     try {
       const doc = await Notification.create({
         userId: userOid,
+        senderId: metadata.senderId || undefined,
         title,
         message,
         event,
+        type: event,
         read: false,
+        isRead: false,
         loadId: metadata.loadId || undefined,
         productId: metadata.productId || undefined,
+        postId: metadata.postId || metadata.productId || metadata.loadId || metadata.truckId || undefined,
+        requestId: metadata.requestId || metadata.bitRecordId || undefined,
+        postType: metadata.postType || undefined,
         metadata,
       });
 
@@ -570,9 +655,13 @@ async function notify({
   if (activeChannels.includes('push') && userOid) {
     const title = renderTemplate(tpl.templates?.push?.title || tpl.templates?.in_app?.title || tpl.label, payload);
     const body = renderTemplate(tpl.templates?.push?.body || tpl.templates?.in_app?.body || '', payload);
+    // Structured data payload so the frontend/app can deep-link straight to the post/request.
     const push = await sendPushToUser(userOid, title, body, {
       type: event,
-      id: metadata.productId || metadata.loadId || '',
+      postId: metadata.postId || metadata.productId || metadata.loadId || metadata.truckId || '',
+      requestId: metadata.requestId || metadata.bitRecordId || '',
+      postType: metadata.postType || '',
+      status: metadata.status || '',
       route: metadata.route || '/admin/portal/notifications',
     });
     await logDelivery({
