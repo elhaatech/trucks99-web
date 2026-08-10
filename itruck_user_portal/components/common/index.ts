@@ -2,6 +2,8 @@ export { default as FormTextField } from "./Formtextfield";
 export type { FormTextFieldProps } from "./Formtextfield";
 export { default as FormSelectField } from "./Formselectfield";
 export type { SelectOption, FormSelectFieldProps } from "./Formselectfield";
+export { SearchableSelect } from "./SearchableSelect";
+export type { SelectOption as SearchableSelectOption } from "./SearchableSelect";
 export { default as FormAddressField } from "./Formaddressfield";
 export type { LatLng, FormAddressFieldProps } from "./Formaddressfield";
 export { default as FormDateTimePicker } from "./Formdatetimepicker";

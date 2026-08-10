@@ -44,8 +44,7 @@ export function VehicleSpecChips({
         display: "grid",
         gridTemplateColumns: "1fr 1fr",
         gap: dense ? 0.75 : 1,
-        mt: dense ? 1 : 1.25,
-        maxWidth: 360,
+        mt: dense ? 0.75 : 1.25,
       }}
     >
       {chips.map(({ key, caption, label }) => {
@@ -55,13 +54,13 @@ export function VehicleSpecChips({
             key={key}
             sx={{
               display: "flex",
-              alignItems: "flex-start",
+              alignItems: "center",
               gap: 0.75,
               minWidth: 0,
               bgcolor: T.color.surfaceMuted,
               borderRadius: 1.5,
-              px: dense ? 1 : 1.15,
-              py: dense ? 0.7 : 0.9,
+              px: dense ? 1 : 1.25,
+              py: dense ? 0.7 : 1,
             }}
           >
             <Icon sx={{ fontSize: dense ? 16 : 18, color, flexShrink: 0, mt: "1px" }} />
@@ -82,10 +81,12 @@ export function VehicleSpecChips({
                   fontSize: dense ? 12 : 12.5,
                   fontWeight: 700,
                   color: T.color.textPrimary,
-                  lineHeight: 1.25,
+                  lineHeight: 1.3,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
                 }}
                 title={label}
               >

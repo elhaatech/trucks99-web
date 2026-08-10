@@ -25,7 +25,7 @@ import {
   getBuySellRowId,
 } from "@/model/services/buysellapi";
 import { addFavorite, removeFavorite } from "@/model/services/favoriteapi";
-import { ProductCard } from "./ProductCard";
+import { VehicleCard } from "@/app/common/components/buysell/VehicleCard";
 
 type TabValue = "purchased" | "nonPurchased";
 
@@ -91,27 +91,26 @@ export function PurchasedProductsListPage() {
   }, [load, statusFilter]);
 
   const handleToggleFavorite = useCallback(
-    async (product: BuySellProduct) => {
-      const id = getBuySellRowId(product);
-      const isFav = favoriteIds.has(id);
+    async (productId: string) => {
+      const isFav = favoriteIds.has(productId);
 
-      setTogglingIds((prev) => new Set(prev).add(id));
+      setTogglingIds((prev) => new Set(prev).add(productId));
       setFavoriteIds((prev) => {
         const next = new Set(prev);
-        isFav ? next.delete(id) : next.add(id);
+        isFav ? next.delete(productId) : next.add(productId);
         return next;
       });
 
       try {
         if (isFav) {
-          await removeFavorite("buySell", id);
+          await removeFavorite("buySell", productId);
         } else {
-          await addFavorite("buySell", id);
+          await addFavorite("buySell", productId);
         }
       } catch (err) {
         setFavoriteIds((prev) => {
           const next = new Set(prev);
-          isFav ? next.add(id) : next.delete(id);
+          isFav ? next.add(productId) : next.delete(productId);
           return next;
         });
         const msg = err instanceof Error ? err.message : "Failed to update favourite";
@@ -119,7 +118,7 @@ export function PurchasedProductsListPage() {
       } finally {
         setTogglingIds((prev) => {
           const next = new Set(prev);
-          next.delete(id);
+          next.delete(productId);
           return next;
         });
       }
@@ -204,20 +203,21 @@ export function PurchasedProductsListPage() {
         />
       ) : (
         <Grid container spacing={2}>
-          {activeList.map((product) => (
-            <Grid key={getBuySellRowId(product)} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-              <ProductCard
-                product={product}
-                badge={tab === "purchased" ? "Purchased" : undefined}
-                isFavorite={favoriteIds.has(getBuySellRowId(product))}
-                favoriteDisabled={togglingIds.has(getBuySellRowId(product))}
-                onToggleFavorite={handleToggleFavorite}
-                onClick={(p) =>
-                  navigate(routes.buysell.view(getBuySellRowId(p)))
-                }
-              />
-            </Grid>
-          ))}
+          {activeList.map((product) => {
+            const id = getBuySellRowId(product);
+            return (
+              <Grid key={id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                <VehicleCard
+                  product={product}
+                  isFavorite={favoriteIds.has(id)}
+                  favoriteLoading={togglingIds.has(id)}
+                  onFavoriteToggle={() => void handleToggleFavorite(id)}
+                  onClick={() => navigate(routes.buysell.view(id))}
+                  badge={tab === "purchased" ? { label: "Purchased", color: "#16a34a" } : undefined}
+                />
+              </Grid>
+            );
+          })}
         </Grid>
       )}
     </ModulePageLayout>

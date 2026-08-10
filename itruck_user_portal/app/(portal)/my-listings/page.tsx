@@ -414,6 +414,7 @@ function SellVehicleContent() {
               onDelete={handleDeleteRequest}
               deletingIds={deletingIds}
               showOwnerFeaturedControls
+              showOwnerActionsMenu
               onFeaturePayNow={openFeaturePlansForProduct}
               emptyTitle="No listings yet"
               emptyDescription='Tap "List new vehicle" to create your first ad. It only takes a few minutes.'

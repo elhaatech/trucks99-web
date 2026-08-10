@@ -8,17 +8,14 @@ import Typography from "@mui/material/Typography";
 import Alert from "@mui/material/Alert";
 import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
-import Pagination from "@mui/material/Pagination";
 import SearchIcon from "@mui/icons-material/Search";
 import { PRODUCT_THEME as T } from "@/lib/theme";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import {
-  SortDropdown,
-  type SortOption,
   BuySellErrorState,
   VehicleGridSkeleton,
+  VehicleGrid,
 } from "@/app/common/components/buysell";
-import { FeaturedVehicleCard } from "@/app/common/components/buysell/FeaturedVehicleCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import SearchOffOutlinedIcon from "@mui/icons-material/SearchOffOutlined";
 import {
@@ -140,13 +137,6 @@ export default function FeaturedVehiclesMarketplacePage() {
     setSearch(q);
     setPage(1);
     syncUrl({ q, sort: sortBy, page: 1 });
-  };
-
-  const handleSortChange = (value: SortOption) => {
-    const next: FeaturedSortOption = isFeaturedSort(value) ? value : "newest";
-    setSortBy(next);
-    setPage(1);
-    syncUrl({ q: search, sort: next, page: 1 });
   };
 
   const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
@@ -301,38 +291,16 @@ export default function FeaturedVehiclesMarketplacePage() {
         />
       ) : !error ? (
         <>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "repeat(2, 1fr)",
-                lg: "repeat(3, 1fr)",
-                xl: "repeat(4, 1fr)",
-              },
-              gap: 2.5,
-            }}
-          >
-            {products.map((product) => (
-              <FeaturedVehicleCard
-                key={String(product._id || product.id)}
-                product={product}
-                onViewDetails={(id) => void handleViewProduct(id)}
-              />
-            ))}
-          </Box>
-
-          {totalPages > 1 ? (
-            <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-              <Pagination
-                count={totalPages}
-                page={page}
-                onChange={handlePageChange}
-                color="primary"
-                shape="rounded"
-              />
-            </Box>
-          ) : null}
+          <VehicleGrid
+            products={products}
+            loading={loading}
+            favoriteIds={new Set()}
+            togglingFavoriteIds={new Set()}
+            onProductClick={(id) => void handleViewProduct(id)}
+            page={page}
+            totalPages={totalPages}
+            onPageChange={(p) => handlePageChange(null as unknown as React.ChangeEvent<unknown>, p)}
+          />
         </>
       ) : null}
     </Box>

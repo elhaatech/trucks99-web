@@ -28,7 +28,6 @@ export { CartItemRow, CartSummary } from "./CartSummary";
 export { OfferTable, type OfferRow } from "./OfferTable";
 export { FeaturePlanCard } from "./FeaturePlanCard";
 export { FeaturedVehiclePromoCard } from "./FeaturedVehiclePromoCard";
-export { FeaturedVehicleCard } from "./FeaturedVehicleCard";
 export { FeaturedVehiclesGrid } from "./FeaturedVehiclesGrid";
 export { MarketplaceLoginPanel } from "./MarketplaceLoginPanel";
 export { MarketplaceChatSplit } from "./MarketplaceChatSplit";

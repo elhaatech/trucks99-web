@@ -5,7 +5,7 @@ import Button from "@mui/material/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import SearchOffOutlinedIcon from "@mui/icons-material/SearchOffOutlined";
 import { getBuySellRowId, type BuySellProduct } from "@/model/services/buysellapi";
-import { FeaturedVehicleCard } from "./FeaturedVehicleCard";
+import { VehicleCard } from "./VehicleCard";
 import { BuySellErrorState } from "./ErrorState";
 import { VehicleGridSkeleton } from "./LoadingSkeleton";
 
@@ -66,19 +66,22 @@ export function FeaturedVehiclesGrid({
       sx={{
         display: "grid",
         gridTemplateColumns: {
-          xs: "1fr",
-          sm: "repeat(2, 1fr)",
-          lg: "repeat(3, 1fr)",
-          xl: "repeat(4, 1fr)",
+          xs: "minmax(0, 1fr)",
+          sm: "repeat(2, minmax(0, 1fr))",
+          lg: "repeat(3, minmax(0, 1fr))",
+          xl: "repeat(4, minmax(0, 1fr))",
         },
         gap: 2.5,
       }}
     >
       {products.map((product) => (
-        <FeaturedVehicleCard
+        <VehicleCard
           key={getBuySellRowId(product)}
           product={product}
-          onViewDetails={onViewDetails}
+          onClick={onViewDetails}
+          showViewAction
+          viewLabel="View Details"
+          badge={{ label: "Featured", color: "#f97316" }}
         />
       ))}
     </Box>

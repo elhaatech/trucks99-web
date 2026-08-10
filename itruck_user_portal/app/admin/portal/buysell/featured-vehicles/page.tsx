@@ -4,10 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
-import MenuItem from "@mui/material/MenuItem";
 import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
 import Pagination from "@mui/material/Pagination";
+import { SearchableSelect, type SelectOption } from "@/components/common/SearchableSelect";
 import {
   DataTable,
   ModulePageLayout,
@@ -38,6 +38,13 @@ type Row = BuySellProduct & {
   expiryLabel: string;
   statusLabel: string;
 };
+
+const STATUS_FILTER_OPTIONS: SelectOption[] = [
+  { value: "all", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "expired", label: "Expired" },
+  { value: "cancelled", label: "Disabled" },
+];
 
 function formatDate(iso?: string | null): string {
   if (!iso) return "—";
@@ -218,22 +225,16 @@ export default function AdminFeaturedVehiclesPage() {
           }}
           sx={{ minWidth: 260, flex: 1 }}
         />
-        <TextField
-          select
-          size="small"
+        <SearchableSelect
           label="Filter"
           value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value as StatusFilter);
+          onChange={(v) => {
+            setStatusFilter(v as StatusFilter);
             setPage(1);
           }}
+          options={STATUS_FILTER_OPTIONS}
           sx={{ minWidth: 160 }}
-        >
-          <MenuItem value="all">All</MenuItem>
-          <MenuItem value="active">Active</MenuItem>
-          <MenuItem value="expired">Expired</MenuItem>
-          <MenuItem value="cancelled">Disabled</MenuItem>
-        </TextField>
+        />
         <Button
           variant="contained"
           onClick={() => {

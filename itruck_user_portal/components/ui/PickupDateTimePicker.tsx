@@ -1,16 +1,22 @@
 "use client";
 
 import * as React from "react";
-import TextField from "@mui/material/TextField";
-import MenuItem from "@mui/material/MenuItem";
 import Box from "@mui/material/Box";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import dayjs, { type Dayjs } from "dayjs";
+import { SearchableSelect, type SelectOption } from "@/components/common/SearchableSelect";
 
 import { DatePickerProvider } from "@/providers/DatePickerProvider";
 
-const PICKUP_OPTIONS = ["", "Now", "Today 2 PM", "Today 5 PM", "Schedule Later", "Schedule"] as const;
+const PICKUP_SELECT_OPTIONS: SelectOption[] = [
+  { value: "", label: "— Select —" },
+  { value: "Now", label: "Now" },
+  { value: "Today 2 PM", label: "Today 2 PM" },
+  { value: "Today 5 PM", label: "Today 5 PM" },
+  { value: "Schedule Later", label: "Schedule Later" },
+  { value: "Schedule", label: "Schedule" },
+];
 
 /** Convert ISO string to datetime-local value (YYYY-MM-DDTHH:mm). */
 export function isoToDatetimeLocal(iso: string): string {
@@ -57,7 +63,7 @@ export function pickupTimeToISO(
 }
 
 /** Detect which option an ISO value corresponds to (for initializing from server). */
-function isoToOption(iso: string): (typeof PICKUP_OPTIONS)[number] {
+function isoToOption(iso: string): string {
   if (!iso?.trim() || !/^\d{4}-\d{2}-\d{2}T/.test(iso)) return "";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "";
@@ -118,10 +124,6 @@ export function PickupDateTimePicker({
     }
   }, [value]);
 
-  const options = includeScheduleOption
-    ? PICKUP_OPTIONS
-    : PICKUP_OPTIONS.filter((o) => o !== "Schedule");
-
   const handleOptionChange = (newOption: string) => {
     setOption(newOption);
     if (newOption === "Now") {
@@ -155,21 +157,13 @@ export function PickupDateTimePicker({
     <DatePickerProvider>
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "stretch", width: "100%", minWidth: 0, ...sx }}>
         {showPresetSelect && (
-          <TextField
-            size="small"
-            select
+          <SearchableSelect
             label={label}
             value={option}
-            onChange={(e) => handleOptionChange(e.target.value)}
+            onChange={(v) => handleOptionChange(v)}
+            options={PICKUP_SELECT_OPTIONS}
             sx={{ minWidth }}
-          >
-            <MenuItem value="">— Select —</MenuItem>
-            {options.filter(Boolean).map((opt) => (
-              <MenuItem key={opt} value={opt}>
-                {opt}
-              </MenuItem>
-            ))}
-          </TextField>
+          />
         )}
         <Box sx={{ flex: 1, minWidth: 0, display: "flex", alignItems: "stretch" }}>
           <DateTimePicker

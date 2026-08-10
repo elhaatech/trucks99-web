@@ -28,6 +28,23 @@ export function pullSpec(
   );
 }
 
+function pullSpecExact(
+  specifications: BuySellSpecification[] | undefined,
+  ...names: string[]
+): string | undefined {
+  if (!specifications) return undefined;
+  const wanted = names.map((n) => n.toLowerCase());
+  const match = specifications.find((s) => {
+    const specName = s.specification_info?.specification_name?.toLowerCase();
+    return specName && wanted.includes(specName);
+  });
+  if (!match) return undefined;
+  return (
+    match.specification_value_info?.specification_value_name ??
+    (match.specification_value as string | undefined)
+  );
+}
+
 /** Loose name match (includes) for marketplace highlight chips. */
 function normalizeSpecKey(value: string): string {
   return value
@@ -161,6 +178,7 @@ export function getListingSpecChips(
 
   const year =
     highlights?.makeYear?.trim() ||
+    String((product as BuySellProduct & { manufacturingYear?: string | null }).manufacturingYear ?? "").trim() ||
     pullSpecLoose(
       specs,
       "make year",
@@ -170,12 +188,15 @@ export function getListingSpecChips(
     );
   const km =
     highlights?.mileage?.trim() ||
+    String((product as BuySellProduct & { kmDriven?: string | null }).kmDriven ?? "").trim() ||
     pullSpecLoose(specs, "kilometers", "km", "mileage", "odometer", "driven");
   const fuel =
     highlights?.fuelType?.trim() ||
+    String((product as BuySellProduct & { fuelType?: string | null }).fuelType ?? "").trim() ||
     pullSpecLoose(specs, "fuel type", "fuel");
   const owners =
     highlights?.owners?.trim() ||
+    String((product as BuySellProduct & { owners?: string | null }).owners ?? "").trim() ||
     pullSpecLoose(
       specs,
       "no of owners",
@@ -185,8 +206,6 @@ export function getListingSpecChips(
       "owners",
       "owner",
     );
-  const listingId =
-    highlights?.listingId?.trim() || product.bsNumber?.trim() || "";
 
   const looksLikeObjectId = (v?: string) =>
     Boolean(v && /^[a-f0-9]{24}$/i.test(v.trim()));
@@ -235,10 +254,10 @@ export function getVehicleInfoValues(product: BuySellProduct): VehicleInfoValues
     specChips.map((chip) => [chip.key, chip.label]),
   ) as Partial<Record<"year" | "km" | "fuel" | "owners", string>>;
 
-  const directYear = String((product as any).manufacturingYear ?? "").trim();
-  const directFuel = String((product as any).fuelType ?? "").trim();
-  const directKm = formatKilometers(String((product as any).kmDriven ?? "").trim());
-  const directOwners = String((product as any).owners ?? "").trim();
+  const directYear = String((product as BuySellProduct & Record<string, unknown>).manufacturingYear ?? "").trim();
+  const directFuel = String((product as BuySellProduct & Record<string, unknown>).fuelType ?? "").trim();
+  const directKm = formatKilometers(String((product as BuySellProduct & Record<string, unknown>).kmDriven ?? "").trim());
+  const directOwners = String((product as BuySellProduct & Record<string, unknown>).owners ?? "").trim();
 
   return {
     year: directYear || values.year,
@@ -253,7 +272,7 @@ export function getVehicleInfoValues(product: BuySellProduct): VehicleInfoValues
 export function getListingCardTitle(product: BuySellProduct): string {
   const brand =
     product.listing_highlights?.brand?.trim() ||
-    pullSpecLoose(product.specifications, "brand", "make");
+    pullSpecExact(product.specifications, "brand", "make");
   if (brand?.trim() && !/^[a-f0-9]{24}$/i.test(brand.trim())) return brand.trim();
   return getProductTitle(product);
 }
@@ -263,12 +282,17 @@ export function getListingCardCategory(product: BuySellProduct): string {
   const sub =
     typeof product.subcategory_id === "object" && product.subcategory_id
       ? product.subcategory_id.sub_category_name
-      : null;
+      : typeof product.subcategory_id === "string"
+        ? product.subcategory_id
+        : null;
   const cat =
     typeof product.category_id === "object" && product.category_id
       ? product.category_id.category_name
-      : null;
-  return (sub || cat || "").trim();
+      : typeof product.category_id === "string"
+        ? product.category_id
+        : null;
+  const parts = [cat, sub].filter(Boolean);
+  return parts.length ? parts.join(" · ") : "N/A";
 }
 
 const PLACEHOLDER_PERSON_NAMES = new Set([

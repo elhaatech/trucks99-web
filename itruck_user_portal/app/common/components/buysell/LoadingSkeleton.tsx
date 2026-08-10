@@ -15,8 +15,8 @@ export function VehicleCardSkeleton() {
         overflow: "hidden",
       }}
     >
-      <Skeleton variant="rectangular" height={180} />
-      <Box sx={{ p: 2 }}>
+      <Skeleton variant="rectangular" height={140} />
+      <Box sx={{ p: 1.5 }}>
         <Skeleton width="75%" height={20} />
         <Skeleton width="50%" height={16} sx={{ mt: 1 }} />
         <Skeleton width="40%" height={24} sx={{ mt: 1.5 }} />

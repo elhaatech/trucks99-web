@@ -351,8 +351,6 @@ export default function UserProductDashboardPage() {
         onSearch={handleSearch}
       />
 
-  
-
       <Box sx={{ mt: 4 }}>
         {statsError && !statsLoading ? (
           <Alert severity="warning" sx={{ mb: 2 }}>

@@ -6,9 +6,9 @@ import Link from "next/link";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Alert from "@mui/material/Alert";
-import MenuItem from "@mui/material/MenuItem";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import { SearchableSelect, type SelectOption } from "@/components/common/SearchableSelect";
 import {
   registerMarketplaceUser,
   getLocationCountriesAll,
@@ -224,6 +224,21 @@ export default function MarketplaceRegisterPage() {
     }
   }
 
+  const countryOptions: SelectOption[] = useMemo(
+    () => countries.map((c) => ({ value: c.id, label: c.name })),
+    [countries],
+  );
+
+  const stateOptions: SelectOption[] = useMemo(
+    () => states.map((s) => ({ value: s.id, label: s.name })),
+    [states],
+  );
+
+  const cityOptions: SelectOption[] = useMemo(
+    () => cities.map((c) => ({ value: c.id, label: c.name })),
+    [cities],
+  );
+
   return (
     <AuthLayout
       leftContent={
@@ -281,12 +296,10 @@ export default function MarketplaceRegisterPage() {
               disabled={loading}
             />
 
-            <AuthTextField
-              select
+            <SearchableSelect
               label="Country"
               value={form.countryId}
-              onChange={(e) => {
-                const id = e.target.value;
+              onChange={(id) => {
                 const selected = countries.find((c) => c.id === id);
                 setForm((prev) => ({
                   ...prev,
@@ -297,21 +310,15 @@ export default function MarketplaceRegisterPage() {
                   city: "",
                 }));
               }}
+              options={countryOptions}
               disabled={loading || loadingCountries}
-            >
-              {countries.map((c) => (
-                <MenuItem key={c.id} value={c.id}>
-                  {c.name}
-                </MenuItem>
-              ))}
-            </AuthTextField>
+              placeholder="Select country"
+            />
 
-            <AuthTextField
-              select
+            <SearchableSelect
               label="State"
               value={form.stateId}
-              onChange={(e) => {
-                const id = e.target.value;
+              onChange={(id) => {
                 const selected = states.find((s) => s.id === id);
                 setForm((prev) => ({
                   ...prev,
@@ -320,28 +327,21 @@ export default function MarketplaceRegisterPage() {
                   city: "",
                 }));
               }}
+              options={stateOptions}
               disabled={!form.countryId || loading || loadingStates}
-            >
-              {states.map((s) => (
-                <MenuItem key={s.id} value={s.id}>
-                  {s.name}
-                </MenuItem>
-              ))}
-            </AuthTextField>
+              placeholder="Select state"
+            />
 
-            <AuthTextField
-              select
+            <SearchableSelect
               label="City"
               value={form.city}
-              onChange={(e) => setForm((prev) => ({ ...prev, city: e.target.value }))}
+              onChange={(id) =>
+                setForm((prev) => ({ ...prev, city: id }))
+              }
+              options={cityOptions}
               disabled={!form.stateId || loading || loadingCities}
-            >
-              {cities.map((c) => (
-                <MenuItem key={c.id} value={c.name}>
-                  {c.name}
-                </MenuItem>
-              ))}
-            </AuthTextField>
+              placeholder="Select city"
+            />
 
             <FormControlLabel
               control={

@@ -1,35 +1,23 @@
 "use client";
-
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
-import IconButton from "@mui/material/IconButton";
 import Skeleton from "@mui/material/Skeleton";
 import Alert from "@mui/material/Alert";
-import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
-import FavoriteIcon from "@mui/icons-material/Favorite";
-import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
-import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
+
 import {
   BuySellProduct,
   getBuySellRowId,
   postBuySellProductsByOwner,
 } from "@/model/services/buysellapi";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
 import { addFavorite, removeFavorite } from "@/model/services/favoriteapi";
-import {
-  formatProductPrice,
-  getProductLocation,
-  getProductSubtitle,
-  getProductTitle,
-} from "@/app/common/components/buysell/utils";
 import { userProductRoutes } from "@/lib/userProductRoutes";
-import { PRODUCT_THEME as T, INFO, SUCCESS } from "@/lib/theme";
-import { ProductStatusChip } from "@/app/admin/portal/buysell/_components/ProductStatusChip";
+import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
+import { VehicleCard } from "@/app/common/components/buysell/VehicleCard";
 
 type UserRelatedProductsSectionProps = {
   sellerId: string;
@@ -39,8 +27,6 @@ type UserRelatedProductsSectionProps = {
   /** When true, copy and actions target the listing owner (logged-in seller). */
   isOwnerView?: boolean;
   onAddVehicle?: () => void;
-  currentUserId?: string | null;
-  onChatProduct?: (productId: string) => void;
   onNotify?: (payload: { type: "success" | "error"; message: string }) => void;
 };
 
@@ -56,130 +42,6 @@ function RelatedCardSkeleton() {
   );
 }
 
-function RelatedProductCard({
-  product,
-  isFavorite,
-  favoriteLoading,
-  onView,
-  onChat,
-  onFavoriteToggle,
-}: {
-  product: BuySellProduct;
-  isFavorite?: boolean;
-  favoriteLoading?: boolean;
-  onView: () => void;
-  onChat: () => void;
-  onFavoriteToggle: () => void;
-}) {
-  const imageUrl = getBuySellImageUrl(product.images?.[0]);
-  const title = getProductTitle(product);
-  const subtitle = getProductSubtitle(product);
-  const location = getProductLocation(product);
-
-  return (
-    <Box
-      sx={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        borderRadius: T.radius.lg,
-        border: `1px solid ${T.color.border}`,
-        bgcolor: T.color.surface,
-        overflow: "hidden",
-        boxShadow: T.shadow.card,
-        transition: "box-shadow 0.2s ease",
-        "&:hover": { boxShadow: T.shadow.cardHover },
-      }}
-    >
-      <Box sx={{ position: "relative" }}>
-        <Box
-          sx={{
-            height: 150,
-            bgcolor: T.color.surfaceMuted,
-            backgroundImage: imageUrl ? `url(${imageUrl})` : undefined,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        />
-        <Box sx={{ position: "absolute", top: 8, left: 8 }}>
-          <ProductStatusChip status={product.status} />
-        </Box>
-        <IconButton
-          size="small"
-          aria-label={isFavorite ? "Remove from favourites" : "Add to favourites"}
-          disabled={favoriteLoading}
-          onClick={(e) => {
-            e.stopPropagation();
-            onFavoriteToggle();
-          }}
-          sx={{
-            position: "absolute",
-            top: 8,
-            right: 8,
-            bgcolor: "rgba(255,255,255,0.95)",
-            "&:hover": { bgcolor: "#fff" },
-          }}
-        >
-          {isFavorite ? (
-            <FavoriteIcon fontSize="small" sx={{ color: T.color.danger }} />
-          ) : (
-            <FavoriteBorderIcon fontSize="small" />
-          )}
-        </IconButton>
-      </Box>
-
-      <Box sx={{ p: 1.75, flex: 1, display: "flex", flexDirection: "column", gap: 0.75 }}>
-        <Typography sx={{ fontWeight: 700, fontSize: 14, lineHeight: 1.35 }} noWrap>
-          {title}
-        </Typography>
-        {subtitle ? (
-          <Typography sx={{ fontSize: 12.5, color: T.color.textSecondary }} noWrap>
-            {subtitle}
-          </Typography>
-        ) : null}
-        {location ? (
-          <Typography sx={{ fontSize: 12, color: T.color.textMuted }} noWrap>
-            {location}
-          </Typography>
-        ) : null}
-        <Typography sx={{ fontWeight: 800, fontSize: 17, color: SUCCESS, mt: 0.5 }}>
-          {formatProductPrice(product.price)}
-        </Typography>
-
-        <Box sx={{ display: "flex", gap: 1, mt: "auto", pt: 1.25 }}>
-          <IconButton
-            size="small"
-            aria-label="Chat with seller about this vehicle"
-            onClick={onChat}
-            sx={{
-              border: `1px solid ${T.color.border}`,
-              borderRadius: T.radius.md,
-            }}
-          >
-            <ChatBubbleOutlineIcon fontSize="small" sx={{ color: INFO }} />
-          </IconButton>
-          <Button
-            fullWidth
-            variant="contained"
-            size="small"
-            startIcon={<VisibilityOutlinedIcon />}
-            onClick={onView}
-            sx={{
-              bgcolor: INFO,
-              textTransform: "none",
-              fontWeight: 600,
-              fontSize: 13,
-              boxShadow: "none",
-            }}
-          >
-            View Product
-          </Button>
-        </Box>
-      </Box>
-    </Box>
-  );
-}
-
 export function UserRelatedProductsSection({
   sellerId,
   sellerName,
@@ -187,7 +49,6 @@ export function UserRelatedProductsSection({
   isLoggedIn,
   isOwnerView = false,
   onAddVehicle,
-  onChatProduct,
   onNotify,
 }: UserRelatedProductsSectionProps) {
   const router = useRouter();
@@ -334,13 +195,12 @@ export function UserRelatedProductsSection({
             const productId = getBuySellRowId(product);
             return (
               <Grid key={productId} size={{ xs: 12, sm: 6, md: 4 }}>
-                <RelatedProductCard
+                <VehicleCard
                   product={product}
                   isFavorite={favoriteIds.has(productId)}
                   favoriteLoading={togglingIds.has(productId)}
-                  onView={() => router.push(userProductRoutes.view(productId))}
-                  onChat={() => onChatProduct?.(productId)}
                   onFavoriteToggle={() => void handleFavorite(productId)}
+                  onClick={() => router.push(userProductRoutes.view(productId))}
                 />
               </Grid>
             );

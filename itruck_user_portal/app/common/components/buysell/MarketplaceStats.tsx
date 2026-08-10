@@ -668,7 +668,8 @@ export function HeroSearchSection({
             gap: 1.5,
             bgcolor: "rgba(255,255,255,0.98)",
             p: 1.5,
-            borderRadius: 0,
+            borderRadius: "16px",
+            overflow: "hidden",
             boxShadow: T.shadow.elevated,
             maxWidth: 760,
             mx: "auto",
@@ -714,7 +715,7 @@ export function HeroSearchSection({
             type="submit"
             sx={{
               border: "none",
-              borderRadius: 0,
+              borderRadius: "16px",
               bgcolor: INFO,
               color: "#fff",
               fontWeight: 700,

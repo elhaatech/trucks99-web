@@ -467,11 +467,10 @@ export default function UserProductViewPage() {
               }
               excludeProductId={id}
               isLoggedIn={authReady && Boolean(currentUserId)}
-              isOwnerView={isOwner}
-              onAddVehicle={() => router.push(userProductRoutes.sellVehicle("create"))}
-              onChatProduct={(productId) => openChat(productId)}
-              onNotify={notify}
-            />
+               isOwnerView={isOwner}
+               onAddVehicle={() => router.push(userProductRoutes.sellVehicle("create"))}
+               onNotify={notify}
+             />
           ) : null}
         </Box>
 
