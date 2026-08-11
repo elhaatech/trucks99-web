@@ -110,10 +110,11 @@ export const SHADOW = {
 /* ── Typography scale ─────────────────────────────────────────────────────── */
 export const TYPOGRAPHY = {
   fontFamily:
-    'var(--font-jakarta), var(--font-geist-sans), "Segoe UI", sans-serif',
+    'var(--font-poppins), "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   fontFamilyMono:
     'var(--font-geist-mono), "JetBrains Mono", "Fira Code", monospace',
   weights: {
+    light: 300,
     regular: 400,
     medium: 500,
     semibold: 600,

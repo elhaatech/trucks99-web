@@ -378,15 +378,21 @@ export default function UserProductDashboardPage() {
           Premium listings with paid featured visibility on TRUCKS99.
         </Typography>
         {authReady ? (
-          <FeaturedVehiclesGrid
-            products={featuredVehicles}
-            loading={featuredLoading}
-            error={featuredError}
-            onRetry={loadFeaturedVehicles}
-            onViewDetails={(id) => void handleViewProduct(id)}
-            onBrowseAll={() => router.push(userProductRoutes.list())}
-            emptyDescription="No featured listings yet. Browse all vehicles or feature yours from your listing page."
-          />
+          <>
+            {featuredError && !featuredLoading ? (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                {featuredError}
+              </Alert>
+            ) : null}
+            <FeaturedVehiclesGrid
+              products={featuredVehicles}
+              loading={featuredLoading}
+              onRetry={loadFeaturedVehicles}
+              onViewDetails={(id) => void handleViewProduct(id)}
+              onBrowseAll={() => router.push(userProductRoutes.list())}
+              emptyDescription="No featured listings yet. Browse all vehicles or feature yours from your listing page."
+            />
+          </>
         ) : (
           <FeaturedVehiclesGrid products={[]} loading onViewDetails={() => {}} />
         )}

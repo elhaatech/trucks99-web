@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Poppins } from "next/font/google";
 import ThemeRegistry from "./ThemeRegistry";
 
-const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
+const poppins = Poppins({
+  variable: "--font-poppins",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -25,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${jakarta.variable} antialiased`} suppressHydrationWarning style={{ overflowX: "hidden" }}>
+      <body className={`${poppins.variable} antialiased`} suppressHydrationWarning style={{ overflowX: "hidden" }}>
         <ThemeRegistry>{children}</ThemeRegistry>
       </body>
     </html>

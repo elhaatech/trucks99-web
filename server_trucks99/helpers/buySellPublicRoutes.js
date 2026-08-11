@@ -52,6 +52,7 @@ function isPublicBuySellMarketplaceRoute(method, originalUrlPath) {
   if (method === "GET" && subPath === "all") return true;
   if (method === "GET" && subPath === "dashboard-stats") return true;
   if (method === "POST" && subPath === "recent-vehicles") return true;
+  if (method === "POST" && subPath === "featured-vehicles/list") return true;
   if (method === "POST" && subPath === "list") return true;
   if (method === "POST" && subPath.startsWith("products/owner/")) return true;
   if (method === "PATCH" && /^[^/]+\/view$/.test(subPath)) return true;

@@ -203,14 +203,14 @@ export default function UserProductListContent() {
           display: "flex",
           flexWrap: "wrap",
           justifyContent: "space-between",
-          alignItems: "flex-end",
+          alignItems: "center",
           gap: 2,
           mb: 3,
         }}
       >
         <VehicleListHeader count={total} title="All Vehicles" loading={loading} />
 
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, alignItems: "center" }}>
+        <Box sx={{ display: "flex", gap: 1.5, alignItems: "center", flexShrink: 0 }}>
           <SortDropdown value={sortBy} onChange={handleSortChange} />
           <ToggleButtonGroup
             size="small"
