@@ -120,7 +120,7 @@ export default function ChatInboxPage({ onSelectRoom }: Props) {
                 {/* Product image thumbnail */}
                 <Box
                   component="img"
-                  src={room.product?.image || "/placeholder-product.png"}
+                  src={room.product?.image || "/assets/default-vehicle.png"}
                   alt={room.product?.title || "Product"}
                   sx={{
                     width: 56,

@@ -278,19 +278,8 @@ export default function UserProductViewPage() {
   const offerActionLabel = hasMyOfferOnProduct ? "View your offer" : "Make an Offer";
   const offerActionLabelCompact = hasMyOfferOnProduct ? "View your offer" : "Make Offer";
 
-  const handleShare = async () => {
-    const url = typeof window !== "undefined" ? window.location.href : "";
-    try {
-      if (typeof navigator !== "undefined" && navigator.share) {
-        await navigator.share({ title, url });
-      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(url);
-        notify({ type: "success", message: "Link copied to clipboard." });
-      }
-    } catch {
-      /* user cancelled share */
-    }
-  };
+  const productUrl =
+    typeof window !== "undefined" ? window.location.href : "";
 
   const summaryProps = {
     title,
@@ -304,7 +293,8 @@ export default function UserProductViewPage() {
     wishlisted,
     favoriteBusy,
     onFavoriteToggle: canShop ? () => void handleFavorite() : undefined,
-    onShare: handleShare,
+    shareUrl: productUrl,
+    productTitle: title,
   };
 
   const offersSectionProps = {

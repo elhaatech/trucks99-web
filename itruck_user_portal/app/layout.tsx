@@ -1,9 +1,16 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Inter, Sora } from "next/font/google";
 import ThemeRegistry from "./ThemeRegistry";
 
-const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+});
+
+const sora = Sora({
+  variable: "--font-sora",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   display: "swap",
@@ -25,7 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${jakarta.variable} antialiased`} suppressHydrationWarning style={{ overflowX: "hidden" }}>
+      <body className={`${inter.variable} ${sora.variable} antialiased`} suppressHydrationWarning style={{ overflowX: "hidden" }}>
         <ThemeRegistry>{children}</ThemeRegistry>
       </body>
     </html>

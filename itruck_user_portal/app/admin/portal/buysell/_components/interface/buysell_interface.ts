@@ -49,7 +49,7 @@ export const EMPTY_FORM: FormState = {
   city_id: "",
   address: "",
   pincode: "",
-  status: "active",
+  status: "pending",
 };
 
 export const EMPTY_FILTERS: FilterState = {

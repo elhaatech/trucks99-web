@@ -16,7 +16,7 @@ export function BuySellPageBack() {
   }
 
   return (
-    <Box sx={{ mb: { xs: 1.5, md: 2 } }}>
+    <Box sx={{ mt: { xs: 2, md: 3 }, mb: { xs: 1.5, md: 2 } }}>
       <BackButton
         fallback={getBuySellBackFallback(pathname)}
         label="Back"

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
@@ -29,7 +28,6 @@ import {
   exportOffersToPdf,
 } from "@/app/common/components/buysell/productOffers/exportProductOffers";
 import { formatProductPrice } from "@/app/common/components/buysell/utils";
-import { userProductRoutes } from "@/lib/userProductRoutes";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 
 export type ProductOfferTab = ProductOfferListTabId;
@@ -117,7 +115,6 @@ export function UserProductBitRecordsSection({
   refreshToken = 0,
   authReady = true,
 }: UserProductBitRecordsSectionProps) {
-  const router = useRouter();
   const canViewAll = Boolean(currentUserId && isOwner);
 
   const vehicleContext = useMemo(
@@ -366,24 +363,8 @@ export function UserProductBitRecordsSection({
               </Button>
             </Box>
           ) : null}
-
-          <Box sx={{ textAlign: "center", mt: 2.5 }}>
-            <Button
-              variant="text"
-              onClick={() => router.push(userProductRoutes.offers(activeTab))}
-              sx={{
-                textTransform: "none",
-                fontWeight: 700,
-                fontSize: 14,
-                color: INFO,
-              }}
-            >
-              View All Offers
-            </Button>
-          </Box>
         </>
       )}
-
       <ProductOfferDetailDialog
         open={detailOffer != null}
         onClose={() => setDetailOffer(null)}

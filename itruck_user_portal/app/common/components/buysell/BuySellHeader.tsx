@@ -19,7 +19,6 @@ import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import MenuIcon from "@mui/icons-material/Menu";
 import SearchIcon from "@mui/icons-material/Search";
 import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
-import { BrandLogo } from "@/components/ui/BrandLogo";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
@@ -29,6 +28,7 @@ import DirectionsCarOutlinedIcon from "@mui/icons-material/DirectionsCarOutlined
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import ContactSupportOutlinedIcon from "@mui/icons-material/ContactSupportOutlined";
 import { alpha } from "@mui/material/styles";
+import Image from "next/image";
 import {
   INFO,
   LAYOUT,
@@ -150,6 +150,11 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
             display: { lg: "none" },
             border: `1px solid ${T.color.border}`,
             borderRadius: 2,
+            transition: `all ${TRANSITION.fast}`,
+            "&:hover": {
+              bgcolor: alpha(PRIMARY, 0.06),
+              borderColor: alpha(PRIMARY, 0.3),
+            },
           }}
           onClick={onMobileMenuToggle}
           aria-label="Open menu"
@@ -165,11 +170,23 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
             cursor: "pointer",
             flexShrink: 0,
             transition: `opacity ${TRANSITION.fast}`,
-            "&:hover": { opacity: 0.88 },
+            "&:hover": { opacity: 0.85 },
           }}
           onClick={() => router.push(userProductRoutes.dashboard())}
         >
-          <BrandLogo height={40} priority />
+          <Image
+            src="/assets/logo.png"
+            alt="TRUCKS99"
+            width={52}
+            height={34}
+            priority
+            style={{
+              width: "auto",
+              height: 34,
+              objectFit: "contain",
+              display: "block",
+            }}
+          />
           <Box sx={{ display: { xs: "none", sm: "block" } }}>
             <Typography
               sx={{
@@ -178,6 +195,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
                 color: T.color.textMuted,
+                lineHeight: 1.2,
               }}
             >
               Marketplace
@@ -200,8 +218,9 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                   fontWeight: active ? 700 : 500,
                   color: active ? PRIMARY : T.color.textSecondary,
                   fontSize: 13.5,
-                  px: 1.5,
-                  py: 0.85,
+                  px: { xs: 1, md: 1.5 },
+                  py: { xs: 0.75, md: 0.85 },
+                  minHeight: 36,
                   minWidth: "auto",
                   gap: 0.75,
                   borderRadius: 2,
@@ -210,7 +229,9 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                   "&:hover": {
                     bgcolor: alpha(PRIMARY, 0.1),
                     color: PRIMARY,
+                    transform: "translateY(-1px)",
                   },
+                  "&:active": { transform: "scale(0.97)" },
                 }}
               >
                 {link.label === "Favorites" ? (
@@ -242,7 +263,6 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
           })}
         </Box>
 
-     
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: "auto" }}>
           <Tooltip title="AI Assistant">
             <Button
@@ -255,17 +275,22 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                 fontSize: 13,
                 minWidth: "auto",
                 px: { xs: 1.25, sm: 1.75 },
-                py: 0.85,
+                py: { xs: 0.75, md: 0.85 },
+                minHeight: 36,
                 borderRadius: 2.5,
                 color: assistantActive ? "#fff" : T.color.textPrimary,
                 background: assistantActive ? GRADIENT : alpha(PRIMARY, 0.06),
                 border: assistantActive ? "none" : `1px solid ${alpha(PRIMARY, 0.2)}`,
                 boxShadow: assistantActive ? SHADOW.primary : "none",
+                transition: `all ${TRANSITION.fast}`,
                 "&:hover": {
                   background: GRADIENT,
                   color: "#fff",
                   borderColor: "transparent",
+                  transform: "translateY(-1px)",
+                  boxShadow: SHADOW.primaryLg,
                 },
+                "&:active": { transform: "translateY(0)" },
                 "& .MuiButton-startIcon": { mr: { xs: 0, sm: 0.75 } },
               }}
             >
@@ -282,6 +307,11 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
               display: { lg: "none" },
               border: `1px solid ${T.color.border}`,
               borderRadius: 2,
+              transition: `all ${TRANSITION.fast}`,
+              "&:hover": {
+                bgcolor: alpha(PRIMARY, 0.06),
+                borderColor: alpha(PRIMARY, 0.3),
+              },
             }}
           >
             <Badge badgeContent={favoriteCount} color="primary" max={99}>
@@ -300,10 +330,15 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                   gap: 1,
                   color: T.color.textPrimary,
                   borderRadius: 2.5,
-                  px: 1,
-                  py: 0.5,
+                  px: { xs: 1, sm: 1.25 },
+                  py: 0.75,
+                  minHeight: 36,
                   border: `1px solid ${T.color.border}`,
-                  "&:hover": { bgcolor: alpha(PRIMARY, 0.04) },
+                  transition: `all ${TRANSITION.fast}`,
+                  "&:hover": {
+                    bgcolor: alpha(PRIMARY, 0.06),
+                    borderColor: alpha(PRIMARY, 0.25),
+                  },
                 }}
               >
                 <Typography
@@ -441,9 +476,16 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                 fontWeight: 700,
                 borderRadius: 2.5,
                 px: 2,
+                py: 0.75,
+                minHeight: 36,
                 background: GRADIENT,
                 boxShadow: SHADOW.primary,
-                "&:hover": { boxShadow: SHADOW.primaryLg },
+                transition: `all ${TRANSITION.fast}`,
+                "&:hover": {
+                  boxShadow: SHADOW.primaryLg,
+                  transform: "translateY(-1px)",
+                },
+                "&:active": { transform: "translateY(0)" },
               }}
             >
               Login

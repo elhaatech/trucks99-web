@@ -7,10 +7,10 @@ import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import ViewModuleOutlinedIcon from "@mui/icons-material/ViewModuleOutlined";
 import ViewListOutlinedIcon from "@mui/icons-material/ViewListOutlined";
+import { SearchableSelect } from "@/components/common/SearchableSelect";
 import {
   VehicleFilterPanel,
   MobileFilterButton,
-  SortDropdown,
   VehicleGrid,
   VehicleListHeader,
   EMPTY_VEHICLE_FILTERS,
@@ -190,10 +190,9 @@ export default function UserProductListContent() {
       <Box
         sx={{
           display: "flex",
-          flexWrap: "wrap",
           justifyContent: "space-between",
-          alignItems: "flex-end",
-          gap: 2,
+          alignItems: "center",
+          gap: 1.5,
           mb: 3,
         }}
       >
@@ -203,8 +202,20 @@ export default function UserProductListContent() {
           loading={list.loading}
         />
 
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, alignItems: "center" }}>
-          <SortDropdown value={sortBy} onChange={handleSortChange} />
+        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+          <SearchableSelect
+            label="Sort by"
+            value={sortBy}
+            onChange={(v) => handleSortChange(v as SortOption)}
+            options={[
+              { value: "newest", label: "Newest first" },
+              { value: "price_asc", label: "Price: Low to High" },
+              { value: "price_desc", label: "Price: High to Low" },
+              { value: "views", label: "Most viewed" },
+            ]}
+            fullWidth={false}
+            sx={{ minWidth: 200, "& .MuiAutocomplete-clearIndicator": { display: "none" } }}
+          />
           <ToggleButtonGroup
             size="small"
             exclusive

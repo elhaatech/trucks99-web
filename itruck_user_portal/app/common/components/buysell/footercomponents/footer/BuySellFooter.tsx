@@ -99,13 +99,17 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
               width: "100%",
               maxWidth: LAYOUT.contentMaxWidth,
               mx: "auto",
-              display: "flex",
-              flexWrap: "wrap",
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, 1fr)",
+                lg: "repeat(4, 1fr)",
+              },
               gap: { xs: 3, sm: 4, lg: 5 },
             }}
           >
           {/* Company */}
-          <Box sx={{ flex: { xs: "1 1 100%", sm: "1 1 220px" }, maxWidth: { sm: 280 } }}>
+          <Box>
             <Box sx={{ mb: 1.5 }}>
               <BrandLogo height={36} />
             </Box>
@@ -141,13 +145,13 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
 
           {/* Marketplace / Company / Support link groups */}
           {FOOTER_LINK_GROUPS.map((group) => (
-            <Box key={group.title} sx={{ flex: { xs: "1 1 40%", sm: "0 1 140px" } }}>
+            <Box key={group.title}>
               <FooterLinkColumn group={group} />
             </Box>
           ))}
 
           {/* Contact / Get in Touch */}
-          <Box sx={{ flex: { xs: "1 1 100%", sm: "0 1 180px" } }}>
+          <Box>
             <Typography
               sx={{
                 fontSize: 12,

@@ -667,9 +667,7 @@ export function BuySellForm({
       const originalStatus = String(product?.status ?? "").toLowerCase();
       const canTogglePublish =
         !isEdit ||
-        originalStatus === "draft" ||
-        originalStatus === "active" ||
-        originalStatus === "inactive";
+        originalStatus === "draft";
 
       const payload: BuySellCreatePayload = {
         category_id: values.category_id,

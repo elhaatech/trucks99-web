@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
@@ -8,8 +9,11 @@ import AgricultureOutlinedIcon from "@mui/icons-material/AgricultureOutlined";
 import DirectionsBusOutlinedIcon from "@mui/icons-material/DirectionsBusOutlined";
 import BuildOutlinedIcon from "@mui/icons-material/BuildOutlined";
 import TerrainOutlinedIcon from "@mui/icons-material/TerrainOutlined";
+import ConstructionOutlinedIcon from "@mui/icons-material/ConstructionOutlined";
+import TrafficOutlinedIcon from "@mui/icons-material/TrafficOutlined";
+import AppsOutlinedIcon from "@mui/icons-material/AppsOutlined";
 import { alpha } from "@mui/material/styles";
-import { PRODUCT_THEME as T, INFO, PRIMARY } from "@/lib/theme";
+import { PRODUCT_THEME as T } from "@/lib/theme";
 import type { Category } from "@/model/services/category";
 
 type CategoryCardProps = {
@@ -19,27 +23,66 @@ type CategoryCardProps = {
 
 function getCategoryIcon(name: string) {
   const lower = (name || "").toLowerCase();
-  if (lower.includes("truck") || lower.includes("lorry") || lower.includes("vehicle")) {
-    return LocalShippingOutlinedIcon;
-  }
-  if (lower.includes("trailer") || lower.includes("tanker")) {
-    return AirportShuttleOutlinedIcon;
-  }
-  if (lower.includes("jcb") || lower.includes("excavator") || lower.includes("crane")) {
+  if (lower.includes("tractor")) {
     return AgricultureOutlinedIcon;
   }
-  if (lower.includes("tipper") || lower.includes("dump")) {
+  if (lower.includes("bus") || lower.includes("van") || lower.includes("coach")) {
+    return DirectionsBusOutlinedIcon;
+  }
+  if (lower.includes("const") || lower.includes("road") || lower.includes("mining")) {
+    return ConstructionOutlinedIcon;
+  }
+  if (lower.includes("crane") || lower.includes("lift")) {
+    return TrafficOutlinedIcon;
+  }
+  if (lower.includes("jcb") || lower.includes("excavator")) {
     return TerrainOutlinedIcon;
   }
-  if (lower.includes("bus") || lower.includes("coach")) {
-    return DirectionsBusOutlinedIcon;
+  if (lower.includes("other")) {
+    return AppsOutlinedIcon;
+  }
+  if (lower.includes("truck") || lower.includes("mini tr") || lower.includes("3 wheeler") || lower.includes("lorry") || lower.includes("vehicle")) {
+    return AirportShuttleOutlinedIcon;
+  }
+  if (lower.includes("agri") || lower.includes("tool")) {
+    return LocalShippingOutlinedIcon;
   }
   return BuildOutlinedIcon;
 }
 
+type PastelColorSet = {
+  bg: string;
+  color: string;
+  hoverBg: string;
+};
+
+const PASTEL_COLORS: Record<string, PastelColorSet> = {
+  tractor: { bg: "#FEF3C7", color: "#D97706", hoverBg: "#FDE68A" },
+  bus: { bg: "#EDE9FE", color: "#7C3AED", hoverBg: "#DDD6FE" },
+  constrn: { bg: "#FFE4E6", color: "#E11D48", hoverBg: "#FECDD3" },
+  crane: { bg: "#CFFAFE", color: "#0891B2", hoverBg: "#A5F3FC" },
+  excavator: { bg: "#DCFCE7", color: "#16A34A", hoverBg: "#BBF7D0" },
+  other: { bg: "#F1F5F9", color: "#475569", hoverBg: "#E2E8F0" },
+  truck: { bg: "#FFF7ED", color: "#EA580C", hoverBg: "#FFEDD5" },
+  agri: { bg: "#EFF6FF", color: "#2563EB", hoverBg: "#DBEAFE" },
+};
+
+function getCategoryColors(name: string): PastelColorSet {
+  const lower = (name || "").toLowerCase();
+  if (lower.includes("tractor")) return PASTEL_COLORS.tractor;
+  if (lower.includes("bus") || lower.includes("van") || lower.includes("coach")) return PASTEL_COLORS.bus;
+  if (lower.includes("const") || lower.includes("road") || lower.includes("mining")) return PASTEL_COLORS.constrn;
+  if (lower.includes("crane") || lower.includes("lift")) return PASTEL_COLORS.crane;
+  if (lower.includes("jcb") || lower.includes("excavator")) return PASTEL_COLORS.excavator;
+  if (lower.includes("other")) return PASTEL_COLORS.other;
+  if (lower.includes("truck") || lower.includes("mini tr") || lower.includes("3 wheeler") || lower.includes("lorry") || lower.includes("vehicle")) return PASTEL_COLORS.truck;
+  if (lower.includes("agri") || lower.includes("tool")) return PASTEL_COLORS.agri;
+  return PASTEL_COLORS.other;
+}
+
 export function CategoryCard({ category, onClick }: CategoryCardProps) {
   const id = category._id;
-  const Icon = getCategoryIcon(category.category_name);
+  const colors = getCategoryColors(category.category_name);
 
   return (
     <Box
@@ -69,12 +112,12 @@ export function CategoryCard({ category, onClick }: CategoryCardProps) {
         transition: "border-color 0.2s, box-shadow 0.2s, transform 0.2s",
         "&:hover": onClick
           ? {
-              borderColor: alpha(PRIMARY, 0.45),
+              borderColor: alpha(colors.color, 0.45),
               boxShadow: T.shadow.card,
               transform: "translateY(-2px)",
               "& .category-icon-wrap": {
-                bgcolor: alpha(PRIMARY, 0.14),
-                color: PRIMARY,
+                bgcolor: colors.hoverBg,
+                color: colors.color,
               },
             }
           : undefined,
@@ -89,12 +132,12 @@ export function CategoryCard({ category, onClick }: CategoryCardProps) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          bgcolor: alpha(PRIMARY, 0.08),
-          color: INFO,
+          bgcolor: colors.bg,
+          color: colors.color,
           transition: "background-color 0.2s, color 0.2s",
         }}
       >
-        <Icon sx={{ fontSize: 24 }} />
+        {React.createElement(getCategoryIcon(category.category_name), { sx: { fontSize: 24 } })}
       </Box>
       <Typography
         sx={{

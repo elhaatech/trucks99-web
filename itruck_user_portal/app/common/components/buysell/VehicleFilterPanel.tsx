@@ -47,6 +47,20 @@ function FilterFields({
     categoryId: values.category_id || "",
   });
 
+  const numberFieldSx = {
+    "& input": {
+      paddingRight: 3,
+      "-webkit-appearance": "none",
+      "-moz-appearance": "textfield",
+      "&::-webkit-inner-spin-button": {
+        "-webkit-appearance": "none",
+      },
+      "&::-webkit-outer-spin-button": {
+        "-webkit-appearance": "none",
+      },
+    },
+  };
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       <Typography sx={{ fontWeight: 700, fontSize: 16, color: T.color.textPrimary }}>
@@ -92,6 +106,7 @@ function FilterFields({
           type="number"
           value={values.min_price}
           onChange={(e) => onChange({ min_price: e.target.value })}
+          InputProps={{ sx: numberFieldSx }}
         />
         <TextField
           size="small"
@@ -99,6 +114,7 @@ function FilterFields({
           type="number"
           value={values.max_price}
           onChange={(e) => onChange({ max_price: e.target.value })}
+          InputProps={{ sx: numberFieldSx }}
         />
       </Box>
 
@@ -109,6 +125,7 @@ function FilterFields({
     type="number"
     value={values.no_of_owners_max}
     onChange={(e) => onChange({ no_of_owners_max: e.target.value })}
+    InputProps={{ sx: numberFieldSx }}
   />
   <TextField
     size="small"
@@ -116,6 +133,7 @@ function FilterFields({
     type="number"
     value={values.km_max}
     onChange={(e) => onChange({ km_max: e.target.value })}
+    InputProps={{ sx: numberFieldSx }}
   />
 </Box>
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
@@ -125,6 +143,7 @@ function FilterFields({
           type="number"
           value={values.make_year_min}
           onChange={(e) => onChange({ make_year_min: e.target.value })}
+          InputProps={{ sx: numberFieldSx }}
         />
         <TextField
           size="small"
@@ -132,6 +151,7 @@ function FilterFields({
           type="number"
           value={values.make_year_max}
           onChange={(e) => onChange({ make_year_max: e.target.value })}
+          InputProps={{ sx: numberFieldSx }}
         />
       </Box>
 

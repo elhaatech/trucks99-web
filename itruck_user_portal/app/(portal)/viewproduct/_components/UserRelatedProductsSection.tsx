@@ -183,17 +183,15 @@ export function UserRelatedProductsSection({
         ) : null}
       </Box>
 
-      {isOwnerView ? (
-        <Box sx={{ mb: 2 }}>
-          <CityFilterDropdown
-            label="City"
-            value={cityFilter}
-            onChange={setCityFilter}
-            placeholder="All cities"
-            sx={{ maxWidth: 240 }}
-          />
-        </Box>
-      ) : null}
+      <Box sx={{ mb: 2 }}>
+        <CityFilterDropdown
+          label="City"
+          value={cityFilter}
+          onChange={setCityFilter}
+          placeholder="All cities"
+          sx={{ maxWidth: 240 }}
+        />
+      </Box>
 
       {categoryId ? (
         <Box sx={{ mb: 2 }}>

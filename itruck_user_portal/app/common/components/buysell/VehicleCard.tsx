@@ -26,7 +26,7 @@ import {
   resolveFeaturedListingUi,
 } from "@/lib/featuredVehicleListingStatus";
 
-import truckimg from "../../../assets/defaulttruck.png";
+import defaultVehicleImg from "@/assets/dtruck.png";
 
 
 
@@ -131,6 +131,7 @@ export const VehicleCard = memo(function VehicleCard({
       sx={{
         display: "flex",
         flexDirection: "column",
+        height: "100%",
         bgcolor: T.color.surface,
         border: `1px solid ${T.color.border}`,
         borderRadius: T.radius.lg,
@@ -189,7 +190,7 @@ export const VehicleCard = memo(function VehicleCard({
               </Box>
             ) : (
               <Image
-                src={truckimg}
+                src={defaultVehicleImg}
                 alt="No vehicle photo available"
                 fill
                 sizes={
@@ -297,7 +298,7 @@ export const VehicleCard = memo(function VehicleCard({
             minWidth: 0,
           }}
         >
-          <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 0.5 }}>
+          <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 0.5, overflow: "hidden" }}>
             <Typography
               sx={{
                  fontWeight: 800,
@@ -320,8 +321,12 @@ export const VehicleCard = memo(function VehicleCard({
                    fontSize: 12,
                    fontWeight: 600,
                    color: T.color.textSecondary,
-                  letterSpacing: "0.03em",
-                  textTransform: "uppercase",
+                   letterSpacing: "0.03em",
+                   textTransform: "uppercase",
+                   display: "-webkit-box",
+                   WebkitLineClamp: 1,
+                   WebkitBoxOrient: "vertical",
+                   overflow: "hidden",
                 }}
               >
                 {subtitle}
@@ -338,7 +343,7 @@ export const VehicleCard = memo(function VehicleCard({
               alignItems: isList ? { sm: "flex-end" } : "stretch",
               gap: 1,
               flexShrink: 0,
-              mt: isList ? { xs: 1, sm: 0 } : 0,
+              mt: isList ? { xs: 1, sm: 0 } : "auto",
               minWidth: isList ? 140 : undefined,
             }}
           >

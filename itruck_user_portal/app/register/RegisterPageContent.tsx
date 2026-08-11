@@ -47,11 +47,9 @@ export default function MarketplaceRegisterPage() {
     return base;
   }, [returnTo]);
 
-  const [countries, setCountries] = useState<SimpleOption[]>([]);
   const [states, setStates] = useState<SimpleOption[]>([]);
   const [cities, setCities] = useState<SimpleOption[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [loadingCountries, setLoadingCountries] = useState(true);
   const [loadingStates, setLoadingStates] = useState(false);
   const [loadingCities, setLoadingCities] = useState(false);
 
@@ -80,7 +78,6 @@ export default function MarketplaceRegisterPage() {
   useEffect(() => {
     let cancelled = false;
     async function loadCountries() {
-      setLoadingCountries(true);
       try {
         const countryData = await getLocationCountriesAll();
         if (cancelled) return;
@@ -91,20 +88,15 @@ export default function MarketplaceRegisterPage() {
           (c) => c.name.trim().toLowerCase() === "india",
         );
         if (india) {
-          setCountries([india]);
           setForm((prev) => ({
             ...prev,
             countryId: india.id,
             country: india.name,
           }));
-        } else {
-          setCountries([]);
         }
       } catch (err) {
         console.error("Failed to load countries", err);
         if (!cancelled) setError("Could not load location data. Try again later.");
-      } finally {
-        if (!cancelled) setLoadingCountries(false);
       }
     }
     loadCountries();
@@ -129,11 +121,21 @@ export default function MarketplaceRegisterPage() {
         });
         if (cancelled) return;
         const items = res?.items || [];
-        setStates(
-          items
-            .map((s) => ({ id: s.id || s.uuid || "", name: s.name || "" }))
-            .filter((s) => s.id && s.name),
+        const stateOpts = items
+          .map((s) => ({ id: s.id || s.uuid || "", name: s.name || "" }))
+          .filter((s) => s.id && s.name);
+        setStates(stateOpts);
+
+        const tamilNadu = stateOpts.find(
+          (s) => s.name.trim().toLowerCase() === "tamil nadu",
         );
+        if (tamilNadu && !cancelled) {
+          setForm((prev) => ({
+            ...prev,
+            stateId: tamilNadu.id,
+            state: tamilNadu.name,
+          }));
+        }
       } catch (err) {
         console.error("Failed to load states", err);
         if (!cancelled) setStates([]);
@@ -208,7 +210,7 @@ export default function MarketplaceRegisterPage() {
         company_name: form.company_name.trim() || undefined,
         city: form.city || undefined,
         state: form.state || undefined,
-        country: form.country || undefined,
+        country: "India",
         termsAccepted: true,
       });
 
@@ -223,11 +225,6 @@ export default function MarketplaceRegisterPage() {
       setLoading(false);
     }
   }
-
-  const countryOptions: SelectOption[] = useMemo(
-    () => countries.map((c) => ({ value: c.id, label: c.name })),
-    [countries],
-  );
 
   const stateOptions: SelectOption[] = useMemo(
     () => states.map((s) => ({ value: s.id, label: s.name })),
@@ -271,77 +268,65 @@ export default function MarketplaceRegisterPage() {
           </Typography>
 
           <form onSubmit={handleRegister}>
-            <AuthTextField
-              label="Name"
-              value={form.name}
-              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-              disabled={loading}
-            />
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <AuthTextField
+                label="Name"
+                value={form.name}
+                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                disabled={loading}
+                sx={{ m: 0 }}
+              />
 
-            <AuthTextField
-              label="Mobile number"
-              type="tel"
-              placeholder="9876543210"
-              value={form.mobile}
-              onChange={(e) => setForm((prev) => ({ ...prev, mobile: e.target.value }))}
-              disabled={loading}
-            />
+              <AuthTextField
+                label="Mobile number"
+                type="tel"
+                placeholder="9876543210"
+                value={form.mobile}
+                onChange={(e) => setForm((prev) => ({ ...prev, mobile: e.target.value }))}
+                disabled={loading}
+                sx={{ m: 0 }}
+              />
 
-            <AuthTextField
-              label="Company name (optional)"
-              value={form.company_name}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, company_name: e.target.value }))
-              }
-              disabled={loading}
-            />
+              <AuthTextField
+                label="Company name (optional)"
+                value={form.company_name}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, company_name: e.target.value }))
+                }
+                disabled={loading}
+                sx={{ m: 0 }}
+              />
 
-            <SearchableSelect
-              label="Country"
-              value={form.countryId}
-              onChange={(id) => {
-                const selected = countries.find((c) => c.id === id);
-                setForm((prev) => ({
-                  ...prev,
-                  countryId: id,
-                  country: selected?.name ?? "",
-                  stateId: "",
-                  state: "",
-                  city: "",
-                }));
-              }}
-              options={countryOptions}
-              disabled={loading || loadingCountries}
-              placeholder="Select country"
-            />
+              <SearchableSelect
+                label="State"
+                value={form.stateId}
+                onChange={(id) => {
+                  const selected = states.find((s) => s.id === id);
+                  setForm((prev) => ({
+                    ...prev,
+                    stateId: id,
+                    state: selected?.name ?? "",
+                    city: "",
+                  }));
+                }}
+                options={stateOptions}
+                disabled={!form.countryId || loading || loadingStates}
+                placeholder="Select state"
+                sx={{ m: 0 }}
+              />
 
-            <SearchableSelect
-              label="State"
-              value={form.stateId}
-              onChange={(id) => {
-                const selected = states.find((s) => s.id === id);
-                setForm((prev) => ({
-                  ...prev,
-                  stateId: id,
-                  state: selected?.name ?? "",
-                  city: "",
-                }));
-              }}
-              options={stateOptions}
-              disabled={!form.countryId || loading || loadingStates}
-              placeholder="Select state"
-            />
-
-            <SearchableSelect
-              label="City"
-              value={form.city}
-              onChange={(id) =>
-                setForm((prev) => ({ ...prev, city: id }))
-              }
-              options={cityOptions}
-              disabled={!form.stateId || loading || loadingCities}
-              placeholder="Select city"
-            />
+              <SearchableSelect
+                label="City"
+                value={form.city}
+                onChange={(id) =>
+                  setForm((prev) => ({ ...prev, city: id }))
+                }
+                options={cityOptions}
+                disabled={!form.stateId || loading || loadingCities}
+                placeholder="Select city"
+                sx={{ m: 0 }}
+              />
+            </Box>
 
             <FormControlLabel
               control={
