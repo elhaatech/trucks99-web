@@ -23,7 +23,7 @@ const PUBLIC_PATHS = [
   "/api/auth/resend-otp",
   "/api/company-start-country",
   "/api/role",
-  
+  "/api/test-firebase-easy",
 ];
 
 /** Path + method combinations that are public */
