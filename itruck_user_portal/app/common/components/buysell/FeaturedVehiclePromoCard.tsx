@@ -28,7 +28,7 @@ export function FeaturedVehiclePromoCard({
   onPayNow,
   compact = false,
   showPayNow = true,
-  payNowLabel = "Pay Now",
+  payNowLabel = "Make as Featured",
 }: FeaturedVehiclePromoCardProps) {
   const benefits = compact ? COMPACT_BENEFITS : DEFAULT_BENEFITS;
 

@@ -131,7 +131,7 @@ export function resolveFeaturedListingUi(
     daysRemaining: null,
     expiredDaysAgo: null,
     showPayNow: true,
-    payNowLabel: "Pay Now",
+    payNowLabel: "Mark as Featured",
     statusLabel: "Not featured",
   };
 
