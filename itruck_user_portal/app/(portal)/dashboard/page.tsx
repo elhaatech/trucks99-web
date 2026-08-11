@@ -22,7 +22,7 @@ import { toBuySellListPayload } from "@/lib/buySellListUtils";
 import {
   getBuySellDashboardStats,
   getBuySellFeaturedVehicles,
-  getBuySellListPage,
+  getBuySellList,
   getBuySellRecentVehicles,
   getBuySellRowId,
   type BuySellProduct,
@@ -67,8 +67,6 @@ export default function UserProductDashboardPage() {
   const [categoryId, setCategoryId] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
   const [exploreVehicles, setExploreVehicles] = useState<BuySellProduct[]>([]);
-  const [explorePage, setExplorePage] = useState(1);
-  const [exploreTotalPages, setExploreTotalPages] = useState(1);
   const [featuredVehicles, setFeaturedVehicles] = useState<BuySellProduct[]>([]);
   const [recentVehicles, setRecentVehicles] = useState<BuySellProduct[]>([]);
   const [dashboardData, setDashboardData] = useState<
@@ -83,23 +81,19 @@ export default function UserProductDashboardPage() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [featuredLoading, setFeaturedLoading] = useState(true);
   const [recentVehiclesLoading, setRecentVehiclesLoading] = useState(true);
-  const [exploreLoading, setExploreLoading] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const favoriteIdsRef = useRef(favoriteIds);
   favoriteIdsRef.current = favoriteIds;
 
   const loadExplorePage = useCallback(
-    async (page: number, signal?: AbortSignal) => {
-      const result = await getBuySellListPage(
-        {
-          ...toBuySellListPayload({ ...EMPTY_FILTERS, usear_type: "all" }),
-          page,
-          limit: MARKETPLACE.VEHICLE_PAGE_SIZE,
-        },
-        { signal },
-      );
-      return result;
+    async (signal?: AbortSignal): Promise<BuySellProduct[]> => {
+      const items =
+        (await getBuySellList(
+          { ...toBuySellListPayload({ ...EMPTY_FILTERS, usear_type: "all" }) },
+          { signal },
+        )) ?? [];
+      return items;
     },
     [],
   );
@@ -118,13 +112,11 @@ export default function UserProductDashboardPage() {
 
     void (async () => {
       try {
-        const exploreResult = await loadExplorePage(1, signal);
+        const exploreItems = await loadExplorePage(signal);
         if (signal.aborted) return;
-        setExploreVehicles(exploreResult.items ?? []);
-        setExplorePage(exploreResult.page ?? 1);
-        setExploreTotalPages(exploreResult.totalPages ?? 1);
-        setFavoriteIds(seedFavoritesFromProducts(exploreResult.items ?? []));
-        if ((exploreResult.items?.length ?? 0) === 0) {
+        setExploreVehicles(exploreItems);
+        setFavoriteIds(seedFavoritesFromProducts(exploreItems));
+        if (exploreItems.length === 0) {
           setListError("No vehicles to show yet. List a vehicle or check back soon.");
         }
       } catch (err) {
@@ -228,36 +220,6 @@ export default function UserProductDashboardPage() {
       )
       .finally(() => setFeaturedLoading(false));
   }, []);
-
-  const handleExplorePageChange = useCallback(
-    async (page: number) => {
-      setExploreLoading(true);
-      setListError("");
-      try {
-        const result = await loadExplorePage(page);
-        setExploreVehicles(result.items ?? []);
-        setExplorePage(result.page ?? page);
-        setExploreTotalPages(result.totalPages ?? 1);
-        setFavoriteIds((prev) => {
-          const next = new Set(prev);
-          for (const p of result.items ?? []) {
-            if (p.is_favorite) next.add(getBuySellRowId(p));
-          }
-          return next;
-        });
-        if ((result.items?.length ?? 0) === 0) {
-          setListError("No vehicles to show yet. List a vehicle or check back soon.");
-        }
-      } catch (err) {
-        setListError(
-          err instanceof Error ? err.message : "Failed to load vehicles",
-        );
-      } finally {
-        setExploreLoading(false);
-      }
-    },
-    [loadExplorePage],
-  );
 
   const marketplaceStats = useMemo(() => {
     if (dashboardData?.marketplace) {
@@ -502,11 +464,7 @@ export default function UserProductDashboardPage() {
           </Button>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Browse every active listing on TRUCKS99
-          {!loading && exploreVehicles.length > 0
-            ? ` · page ${explorePage} of ${exploreTotalPages}`
-            : ""}
-          .
+          Browse every active listing on TRUCKS99.
         </Typography>
         {listError && !loading && exploreVehicles.length === 0 ? (
           <Alert severity="info" sx={{ mb: 2 }}>
@@ -515,14 +473,11 @@ export default function UserProductDashboardPage() {
         ) : null}
         <VehicleGrid
           products={exploreVehicles}
-          loading={loading || exploreLoading}
+          loading={loading}
           favoriteIds={favoriteIds}
           togglingFavoriteIds={togglingIds}
           onFavoriteToggle={handleFavoriteToggle}
           onProductClick={(id) => void handleViewProduct(id)}
-          page={explorePage}
-          totalPages={exploreTotalPages}
-          onPageChange={(page) => void handleExplorePageChange(page)}
           emptyDescription="No vehicles to explore yet. Be the first to list on TRUCKS99."
         />
       </Box>

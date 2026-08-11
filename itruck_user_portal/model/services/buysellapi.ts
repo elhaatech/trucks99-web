@@ -640,6 +640,63 @@ export async function fetchFeaturedVehicles(
   }
 }
 
+/** Maximum page size the featured-vehicles endpoints allow (server caps at 48). */
+const FEATURED_MAX_LIMIT = 48;
+
+/** Collect every featured vehicle across all pages (no pagination UI). */
+export async function fetchFeaturedVehiclesAll(
+  params: FeaturedVehiclesListParams = {},
+): Promise<BuySellProduct[]> {
+  const search = params.search?.trim() || "";
+  const sort = params.sort ?? "newest";
+  const status = params.status;
+  const limit = FEATURED_MAX_LIMIT;
+  let page = params.page ?? 1;
+  const collected: BuySellProduct[] = [];
+  for (let guard = 0; guard < 1000; guard++) {
+    const res = await fetchFeaturedVehicles({
+      page,
+      limit,
+      search: search || undefined,
+      sort,
+      status,
+    });
+    const batch = res?.data ?? [];
+    collected.push(...batch);
+    const totalPages = res?.pagination?.totalPages ?? 1;
+    if (page >= totalPages || batch.length < limit) break;
+    page += 1;
+  }
+  return collected;
+}
+
+/** Collect every admin featured vehicle across all pages (no pagination UI). */
+export async function fetchFeaturedVehiclesAdminAll(
+  params: FeaturedVehiclesListParams = {},
+): Promise<BuySellProduct[]> {
+  const search = params.search?.trim() || "";
+  const sort = params.sort ?? "newest";
+  const status = params.status;
+  const limit = FEATURED_MAX_LIMIT;
+  let page = params.page ?? 1;
+  const collected: BuySellProduct[] = [];
+  for (let guard = 0; guard < 1000; guard++) {
+    const res = await fetchFeaturedVehiclesAdmin({
+      page,
+      limit,
+      search: search || undefined,
+      sort,
+      status,
+    });
+    const batch = res?.data ?? [];
+    collected.push(...batch);
+    const totalPages = res?.pagination?.totalPages ?? 1;
+    if (page >= totalPages || batch.length < limit) break;
+    page += 1;
+  }
+  return collected;
+}
+
 /** GET /api/buy-sell/featured-vehicles/admin — admin featured placements. */
 export async function fetchFeaturedVehiclesAdmin(
   params: FeaturedVehiclesListParams = {},

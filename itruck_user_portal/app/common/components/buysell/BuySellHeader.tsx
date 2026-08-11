@@ -37,6 +37,7 @@ import {
   PRIMARY,
   SHADOW,
   TRANSITION,
+  Z_INDEX,
 } from "@/lib/theme";
 import { isSellHubPath, userProductRoutes } from "@/lib/userProductRoutes";
 import { getBuySellImageUrl } from "@/lib/buysellUtils";
@@ -119,9 +120,12 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
 
   return (
     <AppBar
-      position="sticky"
+      position="fixed"
       elevation={0}
       sx={{
+        top: 0,
+        width: "100%",
+        zIndex: Z_INDEX.navbar,
         bgcolor: alpha("#FFFFFF", 0.92),
         color: T.color.textPrimary,
         backdropFilter: "blur(12px)",

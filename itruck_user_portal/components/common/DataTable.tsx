@@ -13,7 +13,6 @@ import TableSortLabel from "@mui/material/TableSortLabel";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import Checkbox from "@mui/material/Checkbox";
-import TablePagination from "@mui/material/TablePagination";
 import { ListEmptyState } from "./ListEmptyState";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { getDateTimestamp, isDateSortColumn } from "@/lib/dateUtils";
@@ -59,14 +58,6 @@ export interface DataTableProps<T> {
   selectable?: boolean;
   selectedIds?: string[];
   onSelectionChange?: (selectedIds: string[]) => void;
-
-  // ── Server-side pagination ──────────────────────────────────────────────────
-  totalCount?: number;
-  /** 0-based page index (server-side mode). */
-  page?: number;
-  pageSize?: number;
-  onPageChange?: (newPage: number) => void;
-  onPageSizeChange?: (newPageSize: number) => void;
 }
 
 function stableSort<T>(array: T[], orderBy: string, order: Order): T[] {
@@ -110,24 +101,7 @@ export function DataTable<T>({
   selectable = false,
   selectedIds = [],
   onSelectionChange,
-  // server-side pagination props
-  totalCount,
-  page: externalPage,
-  pageSize: externalPageSize,
-  onPageChange,
-  onPageSizeChange,
 }: DataTableProps<T>) {
-  // ── Determine mode ─────────────────────────────────────────────────────────
-  const isServerSide = totalCount !== undefined && onPageChange !== undefined;
-
-  // ── Internal state (client-side mode only) ─────────────────────────────────
-  const [internalPage, setInternalPage] = React.useState(0);
-  const [internalRowsPerPage, setInternalRowsPerPage] = React.useState(5);
-
-  // ── Unified page / pageSize values ────────────────────────────────────────
-  const page        = isServerSide ? (externalPage ?? 0)      : internalPage;
-  const rowsPerPage = isServerSide ? (externalPageSize ?? 10) : internalRowsPerPage;
-
   // ── Sorting state ──────────────────────────────────────────────────────────
   const [orderBy, setOrderBy] = React.useState<string | null>(null);
   const [order,   setOrder]   = React.useState<Order>("asc");
@@ -139,23 +113,13 @@ export function DataTable<T>({
       setOrderBy(colId);
       setOrder("asc");
     }
-    if (isServerSide) {
-      onPageChange?.(0);
-    } else {
-      setInternalPage(0);
-    }
   };
 
-  // ── Rows to display (current page) ────────────────────────────────────────
+  // ── Rows to display (all rows) ────────────────────────────────────────────
   const displayRows = React.useMemo(() => {
-    if (isServerSide) {
-      if (!orderBy) return rows;
-      return stableSort(rows, orderBy, order);
-    }
-    const sorted = orderBy ? stableSort(rows, orderBy, order) : rows;
-    const start  = page * rowsPerPage;
-    return sorted.slice(start, start + rowsPerPage);
-  }, [isServerSide, rows, orderBy, order, page, rowsPerPage]);
+    if (!orderBy) return rows;
+    return stableSort(rows, orderBy, order);
+  }, [rows, orderBy, order]);
 
   // ── All row IDs (entire dataset, not just current page) ───────────────────
   const allRowIds = React.useMemo(
@@ -178,13 +142,6 @@ export function DataTable<T>({
    * is selected but not all of them — drives the indeterminate state.
    */
   const someSelected = selectedIds.length > 0 && !allSelected;
-
-  // Reset internal page when rows shrink (client-side mode only)
-  React.useEffect(() => {
-    if (!isServerSide && internalPage * internalRowsPerPage >= rows.length && internalPage > 0) {
-      setInternalPage(0);
-    }
-  }, [isServerSide, rows.length, internalPage, internalRowsPerPage]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -212,25 +169,6 @@ export function DataTable<T>({
     }
   };
 
-  const handlePageChange = (_: unknown, newPage: number) => {
-    if (isServerSide) {
-      onPageChange?.(newPage);
-    } else {
-      setInternalPage(newPage);
-    }
-  };
-
-  const handleRowsPerPageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseInt(e.target.value, 10);
-    if (isServerSide) {
-      onPageSizeChange?.(val);
-      onPageChange?.(0);
-    } else {
-      setInternalRowsPerPage(val);
-      setInternalPage(0);
-    }
-  };
-
   // ── Actions helpers ────────────────────────────────────────────────────────
   const hasActions =
     typeof actions === "function" ? true : Array.isArray(actions) && actions.length > 0;
@@ -240,8 +178,8 @@ export function DataTable<T>({
 
   const colSpan = (selectable ? 1 : 0) + columns.length + (hasActions ? 1 : 0);
 
-  // ── Total count for pagination control ────────────────────────────────────
-  const paginationTotal = isServerSide ? totalCount! : rows.length;
+  // ── Total count (full dataset, no paging) ─────────────────────────────────
+  const paginationTotal = rows.length;
 
   return (
     <Paper
@@ -297,11 +235,11 @@ export function DataTable<T>({
         sx={{ maxHeight: 560, minHeight: 300 }}
       >
         {loading ? (
-          <TableSkeleton
-            rows={rowsPerPage}
-            columns={colSpan}
-            showHeader
-          />
+            <TableSkeleton
+              rows={5}
+              columns={colSpan}
+              showHeader
+            />
         ) : (
         <Table stickyHeader={stickyHeader} size="medium">
           <TableHead>
@@ -461,16 +399,6 @@ export function DataTable<T>({
         </Table>
         )}
       </TableContainer>
-
-      <TablePagination
-        component="div"
-        count={paginationTotal}
-        page={page}
-        onPageChange={handlePageChange}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={handleRowsPerPageChange}
-        rowsPerPageOptions={[5, 10, 25, 50]}
-      />
     </Paper>
   );
 }

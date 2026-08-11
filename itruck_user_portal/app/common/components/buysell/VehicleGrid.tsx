@@ -2,7 +2,6 @@
 
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import Pagination from "@mui/material/Pagination";
 import { EmptyState } from "@/components/ui/EmptyState";
 import SearchOffOutlinedIcon from "@mui/icons-material/SearchOffOutlined";
 import { getBuySellRowId, type BuySellProduct } from "@/model/services/buysellapi";
@@ -25,9 +24,6 @@ type VehicleGridProps = {
   emptyDescription?: string;
   showOwnerFeaturedControls?: boolean;
   onFeaturePayNow?: (productId: string) => void;
-  page?: number;
-  totalPages?: number;
-  onPageChange?: (page: number) => void;
 };
 
 const PAGE_SIZE = 12;
@@ -47,9 +43,6 @@ export function VehicleGrid({
   emptyDescription = "Try adjusting your filters or search query.",
   showOwnerFeaturedControls = false,
   onFeaturePayNow,
-  page = 1,
-  totalPages = 1,
-  onPageChange,
 }: VehicleGridProps) {
   if (loading) {
     return <VehicleGridSkeleton count={6} />;
@@ -100,16 +93,6 @@ export function VehicleGrid({
         })}
       </Box>
 
-      {totalPages > 1 && onPageChange ? (
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-          <Pagination
-            count={totalPages}
-            page={page}
-            onChange={(_, p) => onPageChange(p)}
-            color="primary"
-          />
-        </Box>
-      ) : null}
     </Box>
   );
 }

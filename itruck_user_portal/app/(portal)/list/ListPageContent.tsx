@@ -14,7 +14,6 @@ import {
   VehicleGrid,
   VehicleListHeader,
   EMPTY_VEHICLE_FILTERS,
-  VEHICLE_PAGE_SIZE,
   type SortOption,
   type VehicleFilterValues,
 } from "@/app/common/components/buysell";
@@ -23,7 +22,7 @@ import { toBuySellListPayload } from "@/lib/buySellListUtils";
 import { useBuySellFavorites } from "@/lib/useBuySellFavorites";
 import { ensureLoggedInToViewProduct } from "@/lib/requireMarketplaceLogin";
 import {
-  getBuySellListPage,
+  getBuySellList,
   type BuySellProduct,
 } from "@/model/services/buysellapi";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
@@ -88,9 +87,7 @@ export default function UserProductListContent() {
   const [filters, setFilters] = useState<VehicleFilterValues>(urlFilters);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [layout, setLayout] = useState<"grid" | "list">("list");
-  const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [products, setProducts] = useState<BuySellProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,7 +98,6 @@ export default function UserProductListContent() {
 
   useEffect(() => {
     setFilters(urlFilters);
-    setPage(1);
   }, [urlKey]); // eslint-disable-line react-hooks/exhaustive-deps -- sync when URL filter key changes
 
   useEffect(() => {
@@ -115,17 +111,13 @@ export default function UserProductListContent() {
           ...toBuySellListPayload(urlFilters),
           search: urlFilters.search.trim() || undefined,
           sort: sortBy,
-          page,
-          limit: VEHICLE_PAGE_SIZE,
         };
-        const result = await getBuySellListPage(payload, {
+        const items = (await getBuySellList(payload, {
           signal: controller.signal,
-        });
+        })) ?? [];
         if (cancelled || controller.signal.aborted) return;
-        const items = result.items ?? [];
         setProducts(items);
-        setTotal(result.total ?? items.length);
-        setTotalPages(result.totalPages ?? 1);
+        setTotal(items.length);
         syncFromProducts(items);
       } catch (err) {
         if (cancelled || isAbortError(err)) return;
@@ -142,26 +134,21 @@ export default function UserProductListContent() {
       cancelled = true;
       controller.abort();
     };
-  }, [urlKey, urlFilters, sortBy, page, notify, syncFromProducts]);
+  }, [urlKey, urlFilters, sortBy, notify, syncFromProducts]);
 
   const handleApplyFilters = async () => {
     const next = { ...filters, usear_type: "buy" as const };
     setApplyLoading(true);
     setMobileFiltersOpen(false);
-    setPage(1);
 
     try {
       const payload = {
         ...toBuySellListPayload(next),
-        page: 1,
-        limit: VEHICLE_PAGE_SIZE,
         sort: sortBy,
       };
-      const result = await getBuySellListPage(payload);
-      setProducts(result.items ?? []);
-      setTotal(result.total ?? 0);
-      setTotalPages(result.totalPages ?? 1);
-      setPage((result.page ?? 1) - 1);
+      const items = (await getBuySellList(payload)) ?? [];
+      setProducts(items);
+      setTotal(items.length);
       router.replace(userProductRoutes.list(filtersToQuery(next)), { scroll: false });
     } catch (err) {
       notify({
@@ -181,7 +168,6 @@ export default function UserProductListContent() {
       km_min: "10000",
     };
     setFilters(cleared);
-    setPage(1);
     setMobileFiltersOpen(false);
     router.replace(userProductRoutes.list(), { scroll: false });
   };
@@ -208,7 +194,6 @@ export default function UserProductListContent() {
 
   const handleSortChange = useCallback((v: SortOption) => {
     setSortBy(v);
-    setPage(1);
   }, []);
 
   return (
@@ -270,9 +255,6 @@ export default function UserProductListContent() {
           togglingFavoriteIds={togglingIds}
           onFavoriteToggle={handleFavoriteToggle}
           onProductClick={(id) => void handleViewProduct(id)}
-          page={page}
-          totalPages={totalPages}
-          onPageChange={setPage}
         />
       </Box>
     </Box>

@@ -19,7 +19,7 @@ import {
 import { EmptyState } from "@/components/ui/EmptyState";
 import SearchOffOutlinedIcon from "@mui/icons-material/SearchOffOutlined";
 import {
-  fetchFeaturedVehicles,
+  fetchFeaturedVehiclesAll,
   type BuySellProduct,
 } from "@/model/services/buysellapi";
 import { useNotification } from "@/hooks/useNotification";
@@ -27,8 +27,6 @@ import { ensureLoggedInToViewProduct, getMarketplaceLoginPath } from "@/lib/requ
 import { isAbortError } from "@/lib/apiCache";
 import { toErrorMessage } from "@/lib/errors";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
-
-const PAGE_SIZE = 12;
 
 const FEATURED_SORT_OPTIONS = [
   "newest",
@@ -58,26 +56,18 @@ export default function FeaturedVehiclesMarketplacePage() {
     const s = searchParams.get("sort");
     return s && isFeaturedSort(s) ? s : "newest";
   }, [searchParams]);
-  const initialPage = useMemo(() => {
-    const p = Number.parseInt(searchParams.get("page") || "1", 10);
-    return Number.isFinite(p) && p > 0 ? p : 1;
-  }, [searchParams]);
-
   const [searchInput, setSearchInput] = useState(initialSearch);
   const [search, setSearch] = useState(initialSearch);
   const [sortBy, setSortBy] = useState<FeaturedSortOption>(initialSort);
-  const [page, setPage] = useState(initialPage);
   const [products, setProducts] = useState<BuySellProduct[]>([]);
-  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const syncUrl = useCallback(
-    (next: { q?: string; sort?: string; page?: number }) => {
+    (next: { q?: string; sort?: string }) => {
       const params = new URLSearchParams();
       if (next.q) params.set("q", next.q);
       if (next.sort && next.sort !== "newest") params.set("sort", next.sort);
-      if (next.page && next.page > 1) params.set("page", String(next.page));
       const qs = params.toString();
       router.replace(
         `${userProductRoutes.featuredVehicles()}${qs ? `?${qs}` : ""}`,
@@ -106,15 +96,9 @@ export default function FeaturedVehiclesMarketplacePage() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetchFeaturedVehicles({
-          page,
-          limit: PAGE_SIZE,
-          search,
-          sort: sortBy,
-        });
+        const items = await fetchFeaturedVehiclesAll({ search, sort: sortBy });
         if (cancelled || controller.signal.aborted) return;
-        setProducts(res.data ?? []);
-        setTotalPages(res.pagination?.totalPages ?? 1);
+        setProducts(items);
       } catch (err) {
         if (cancelled || isAbortError(err)) return;
         const message = toErrorMessage(err, "Failed to load featured vehicles");
@@ -129,20 +113,13 @@ export default function FeaturedVehiclesMarketplacePage() {
       cancelled = true;
       controller.abort();
     };
-  }, [authReady, isLoggedIn, notify, page, search, sortBy]);
+  }, [authReady, isLoggedIn, notify, search, sortBy]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const q = searchInput.trim();
     setSearch(q);
-    setPage(1);
-    syncUrl({ q, sort: sortBy, page: 1 });
-  };
-
-  const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
-    setPage(value);
-    syncUrl({ q: search, sort: sortBy, page: value });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    syncUrl({ q, sort: sortBy });
   };
 
   const handleViewProduct = useCallback(
@@ -160,7 +137,6 @@ export default function FeaturedVehiclesMarketplacePage() {
 
   const handleRetry = useCallback(() => {
     if (!isLoggedIn) return;
-    setPage((p) => p);
     setSearch((s) => s);
     setSortBy((s) => s);
   }, [isLoggedIn]);
@@ -254,15 +230,9 @@ export default function FeaturedVehiclesMarketplacePage() {
           onRetry={() => {
             handleRetry();
             setLoading(true);
-            void fetchFeaturedVehicles({
-              page,
-              limit: PAGE_SIZE,
-              search,
-              sort: sortBy,
-            })
-              .then((res) => {
-                setProducts(res.data ?? []);
-                setTotalPages(res.pagination?.totalPages ?? 1);
+            void fetchFeaturedVehiclesAll({ search, sort: sortBy })
+              .then((items) => {
+                setProducts(items);
                 setError("");
               })
               .catch((err) =>
@@ -291,16 +261,13 @@ export default function FeaturedVehiclesMarketplacePage() {
         />
       ) : !error ? (
         <>
-          <VehicleGrid
-            products={products}
-            loading={loading}
-            favoriteIds={new Set()}
-            togglingFavoriteIds={new Set()}
-            onProductClick={(id) => void handleViewProduct(id)}
-            page={page}
-            totalPages={totalPages}
-            onPageChange={(p) => handlePageChange(null as unknown as React.ChangeEvent<unknown>, p)}
-          />
+        <VehicleGrid
+          products={products}
+          loading={loading}
+          favoriteIds={new Set()}
+          togglingFavoriteIds={new Set()}
+          onProductClick={(id) => void handleViewProduct(id)}
+        />
         </>
       ) : null}
     </Box>

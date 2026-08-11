@@ -188,7 +188,12 @@ export function BuySellShell({ children }: BuySellShellProps) {
           flex: 1,
           minHeight: 0,
           width: "100%",
-          pt: isHeroFlush ? 0 : LAYOUT.pageGutterTop,
+          pt: isHeroFlush
+            ? 0
+            : {
+                xs: `${LAYOUT.navbarHeight + LAYOUT.pageGutterTop.xs * 8}px`,
+                md: `${LAYOUT.navbarHeight + LAYOUT.pageGutterTop.md * 8}px`,
+              },
           pb: { xs: 2.5, md: 3 },
         }}
       >

@@ -6,7 +6,6 @@ import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
-import Pagination from "@mui/material/Pagination";
 import { SearchableSelect, type SelectOption } from "@/components/common/SearchableSelect";
 import {
   DataTable,
@@ -18,7 +17,7 @@ import { useNotification } from "@/hooks/useNotification";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { routes } from "@/lib/routes";
 import {
-  fetchFeaturedVehiclesAdmin,
+  fetchFeaturedVehiclesAdminAll,
   removeFeaturedVehicleAdmin,
   updateFeaturedVehicleAdminStatus,
   type BuySellProduct,
@@ -60,8 +59,6 @@ export default function AdminFeaturedVehiclesPage() {
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
 
   const {
     open: deleteOpen,
@@ -102,15 +99,12 @@ export default function AdminFeaturedVehiclesPage() {
   const loadRows = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetchFeaturedVehiclesAdmin({
-        page,
-        limit: 20,
+      const rows = await fetchFeaturedVehiclesAdminAll({
         search: appliedSearch,
         status: statusFilter,
         sort: "newest",
       });
-      setRows(mapRows(res.data ?? []));
-      setTotalPages(res.pagination?.totalPages ?? 1);
+      setRows(mapRows(rows));
     } catch (err) {
       notify({
         type: "error",
@@ -120,7 +114,7 @@ export default function AdminFeaturedVehiclesPage() {
     } finally {
       setLoading(false);
     }
-  }, [appliedSearch, notify, page, statusFilter]);
+  }, [appliedSearch, notify, statusFilter]);
 
   useEffect(() => {
     void loadRows();
@@ -220,7 +214,6 @@ export default function AdminFeaturedVehiclesPage() {
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               setAppliedSearch(search.trim());
-              setPage(1);
             }
           }}
           sx={{ minWidth: 260, flex: 1 }}
@@ -230,7 +223,6 @@ export default function AdminFeaturedVehiclesPage() {
           value={statusFilter}
           onChange={(v) => {
             setStatusFilter(v as StatusFilter);
-            setPage(1);
           }}
           options={STATUS_FILTER_OPTIONS}
           sx={{ minWidth: 160 }}
@@ -239,7 +231,6 @@ export default function AdminFeaturedVehiclesPage() {
           variant="contained"
           onClick={() => {
             setAppliedSearch(search.trim());
-            setPage(1);
           }}
           sx={{ textTransform: "none" }}
         >
@@ -255,17 +246,6 @@ export default function AdminFeaturedVehiclesPage() {
         actions={actions}
         emptyMessage="No featured vehicle records found."
       />
-
-      {totalPages > 1 ? (
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
-          <Pagination
-            count={totalPages}
-            page={page}
-            onChange={(_, value) => setPage(value)}
-            color="primary"
-          />
-        </Box>
-      ) : null}
 
       <ConfirmDialog
         open={deleteOpen}

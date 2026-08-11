@@ -20,7 +20,7 @@ import { userProductRoutes } from "@/lib/userProductRoutes";
 import { PRODUCT_THEME as T } from "@/lib/theme";
 import {
   deleteBuySellProducts,
-  getBuySellListPage,
+  getBuySellList,
   getBuySellRowId,
   type BuySellProduct,
 } from "@/model/services/buysellapi";
@@ -38,7 +38,6 @@ import {
   VehicleGrid,
   VehicleListHeader,
   EMPTY_VEHICLE_FILTERS,
-  VEHICLE_PAGE_SIZE,
 } from "@/app/common/components/buysell";
 import {
   PostListingFeaturedFlow,
@@ -47,7 +46,6 @@ import {
 import { SellVehiclePageHeader } from "./_components/SellVehiclePageHeader";
 import type { BuySellFormSuccessContext } from "@/app/admin/portal/buysell/_components/buysellcolumnsForm/buysellForm";
 import { toErrorMessage } from "@/lib/errors";
-import { MARKETPLACE } from "@/constants/marketplace";
 import { isAbortError } from "@/lib/apiCache";
 
 const BuySellForm = dynamic(
@@ -79,9 +77,7 @@ function SellVehicleContent() {
 
   const isCreate = searchParams.get("tab") === "create";
   const [products, setProducts] = useState<BuySellProduct[]>([]);
-  const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
@@ -100,31 +96,19 @@ function SellVehicleContent() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const listingCount = total;
-  const pageSize = VEHICLE_PAGE_SIZE || MARKETPLACE.VEHICLE_PAGE_SIZE;
 
   const loadListings = useCallback(
-    async (options?: { silent?: boolean; page?: number }) => {
-      const pageToLoad = options?.page ?? page;
+    async (options?: { silent?: boolean }) => {
       if (!options?.silent) {
         setLoading(true);
       }
       setListError("");
       try {
-        const result = await getBuySellListPage({
+        const items = (await getBuySellList({
           ...toBuySellListPayload(filters),
-          page: pageToLoad,
-          limit: pageSize,
-        });
-        const items = result.items ?? [];
-        const nextPage = result.page ?? pageToLoad;
-        const nextTotal = result.total ?? items.length;
+        })) ?? [];
         setProducts(items);
-        setTotal(nextTotal);
-        setTotalPages(result.totalPages ?? 1);
-        // If delete emptied the last page, step back once.
-        if (items.length === 0 && nextPage > 1 && nextTotal > 0) {
-          setPage(nextPage - 1);
-        }
+        setTotal(items.length);
       } catch (err) {
         if (isAbortError(err)) return;
         const message = toErrorMessage(err, "Failed to load listings");
@@ -138,14 +122,14 @@ function SellVehicleContent() {
         }
       }
     },
-    [notify, page, pageSize, filters],
+    [notify, filters],
   );
 
   useEffect(() => {
     if (!isCreate) {
-      void loadListings({ page });
+      void loadListings();
     }
-  }, [isCreate, page, loadListings]);
+  }, [isCreate, loadListings]);
 
   const handleCreateSuccess = (ctx?: BuySellFormSuccessContext) => {
     router.replace(userProductRoutes.sellVehicle());
@@ -228,18 +212,12 @@ function SellVehicleContent() {
   const handleApplyFilters = useCallback(async () => {
     setApplyLoading(true);
     setMobileFiltersOpen(false);
-    setPage(1);
     try {
-      const payload = {
+      const items = (await getBuySellList({
         ...toBuySellListPayload(filters),
-        page: 1,
-        limit: pageSize,
-      };
-      const result = await getBuySellListPage(payload);
-      setProducts(result.items ?? []);
-      setTotal(result.total ?? 0);
-      setTotalPages(result.totalPages ?? 1);
-      setPage((result.page ?? 1) - 1);
+      })) ?? [];
+      setProducts(items);
+      setTotal(items.length);
     } catch (err) {
       notify({
         type: "error",
@@ -248,7 +226,7 @@ function SellVehicleContent() {
     } finally {
       setApplyLoading(false);
     }
-  }, [filters, pageSize, notify]);
+  }, [filters, notify]);
 
   const handleClearFilters = useCallback(() => {
     const cleared = {
@@ -258,7 +236,6 @@ function SellVehicleContent() {
       km_min: "10000",
     };
     setFilters(cleared);
-    setPage(1);
     setMobileFiltersOpen(false);
   }, []);
 
@@ -417,9 +394,6 @@ function SellVehicleContent() {
               onFeaturePayNow={openFeaturePlansForProduct}
               emptyTitle="No listings yet"
               emptyDescription='Tap "List new vehicle" to create your first ad. It only takes a few minutes.'
-              page={page}
-              totalPages={totalPages}
-              onPageChange={setPage}
             />
           )}
 
