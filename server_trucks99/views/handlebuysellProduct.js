@@ -1892,7 +1892,7 @@ function parseDashboardVehicleLimit(raw) {
 /** Marketplace listings shown on the user dashboard (all sellers, newest/featured). */
 function buildDashboardMarketplaceFilter() {
   return {
-    status: "pending",
+    status: { $in: ["pending", "accepeted", "active"] },
   };
 }
 
@@ -1933,7 +1933,7 @@ buySellRouter.post("/recent-vehicles", async (req, res) => {
 
 /** Short TTL cache for public featured strip / featured page. */
 const featuredListCache = new Map();
-const FEATURED_LIST_TTL_MS = 15_000;
+const FEATURED_LIST_TTL_MS = 1000;
 
 function getFeaturedListCacheKey(body) {
   return JSON.stringify({
@@ -2003,7 +2003,7 @@ buySellRouter.post("/featured-vehicles/list", async (req, res) => {
 
     const products = await BuySellProduct.find({
       _id: { $in: productIds },
-      status: "pending",
+      status: { $in: ["pending", "accepeted", "active"] },
     })
       .select(LIST_PRODUCT_SELECT_LITE)
       .populate("category_id", "category_name")
