@@ -31,11 +31,24 @@ const loadRouter = express.Router();
 
 async function sendBidPushToUser(userId, title, body) {
   if (!userId) return;
-  const tokenDoc = await FcmToken.findOne({ userId, isActive: true })
+  const tokenDocs = await FcmToken.find({ userId, isActive: true })
     .sort({ lastUsed: -1 })
     .lean();
-  if (!tokenDoc?.token) return;
-  await sendNotification(tokenDoc.token, title, body);
+  
+  if (!tokenDocs || tokenDocs.length === 0) return;
+
+  await Promise.all(
+    tokenDocs.map(async (tokenDoc) => {
+      if (tokenDoc?.token) {
+        const result = await sendNotification(tokenDoc.token, title, body);
+        if (result?.success) {
+           FcmToken.updateOne({ _id: tokenDoc._id }, { $set: { lastUsed: new Date() } }).catch(() => {});
+        } else if (result?.invalidToken) {
+           FcmToken.updateOne({ _id: tokenDoc._id }, { $set: { isActive: false } }).catch(() => {});
+        }
+      }
+    })
+  );
 }
 
 async function generateNextLoadNumber() {
