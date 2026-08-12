@@ -18,6 +18,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import ArrowBackIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForwardIos";
 import { useRouter } from "next/navigation";
+import { alpha } from "@mui/material/styles";
 
 import { getCurrentUser, type User } from "@/model/api";
 import {
@@ -48,6 +49,7 @@ import {
   getBuySellRowId,
   updateBuySellProduct,
 } from "@/model/services/buysellapi";
+import { ProductStatusChip } from "../ProductStatusChip";
 import { EMPTY_FORM, FormState } from "../interface/buysell_interface";
 import { uploadFile } from "@/model/services/uploadapi";
 import LocationSelector, {
@@ -80,12 +82,7 @@ const FORM_ID = "buy-sell-form";
 // Status union — must match FormState["status"] exactly
 type BuySellStatus = FormState["status"];
 
-// Draft vs publish — listings go live as active (no admin approval).
-const STATUS_OPTIONS: {
-  value: BuySellStatus;
-  label: string;
-  color: "warning" | "default" | "success";
-}[] = [{ value: "draft", label: "Draft", color: "default" }];
+
 
 const STEPS = [
   "Category & Brand",
@@ -104,8 +101,6 @@ type ImageEntry =
 function toStatus(raw: string | undefined | null): BuySellStatus {
   const lower = (raw ?? "").toLowerCase().trim() as BuySellStatus;
   const allowed: BuySellStatus[] = [
-    "active",
-    "inactive",
     "pending",
     "draft",
     "rejected",
@@ -113,7 +108,7 @@ function toStatus(raw: string | undefined | null): BuySellStatus {
     "purchased",
     "sold",
   ];
-  return allowed.includes(lower) ? lower : "active";
+  return allowed.includes(lower) ? lower : "pending";
 }
 
 function toRelativeUploadPath(url: string): string {
@@ -132,6 +127,14 @@ function toRelativeUploadPath(url: string): string {
 /** A specification counts as "Brand" if its name contains the word brand. */
 function isBrandSpec(spec: Specification): boolean {
   return /\bbrand\b|\bmake\b/i.test(spec.specification_name);
+}
+
+function isYearSpec(spec: Specification): boolean {
+  return /\byear\b/i.test(spec.specification_name);
+}
+
+function isKmSpec(spec: Specification): boolean {
+  return /\bkm\b|\bkilometers?\b|\bmileage\b|\bodometer\b|\bdriven\b/i.test(spec.specification_name);
 }
 
 // ─── Step header ──────────────────────────────────────────────────────────────
@@ -259,7 +262,12 @@ export function BuySellForm({
 
   const cancelTarget = cancelHref ?? routes.buysell.list();
   const backButtonLabel = backLabel ?? "Back to list";
-  const [isDraft, setIsDraft] = useState(false);
+  const [isDraft, setIsDraft] = useState(() => {
+    if (isEdit && product?.status) {
+      return toStatus(product.status) === "draft";
+    }
+    return values.status === "draft";
+  });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // ── Image state ───────────────────────────────────────────────────────────
@@ -357,6 +365,16 @@ export function BuySellForm({
   const vehicleDetailSpecs = useMemo(
     () => specifications.filter((s) => s._id !== brandSpec?._id),
     [specifications, brandSpec],
+  );
+
+  const currentYear = new Date().getFullYear();
+  const yearOptions = useMemo(
+    () =>
+      Array.from({ length: currentYear - 1980 + 1 }, (_, i) => ({
+        value: String(1980 + i),
+        label: String(1980 + i),
+      })),
+    [currentYear],
   );
 
   // ── Refetch brand values scoped to the selected sub category ──────────────
@@ -551,9 +569,8 @@ export function BuySellForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product, specifications]);
 
-  // ── Sync isDraft → form status (create mode only) ─────────────────────────
+  // ── Sync isDraft → form status ─────────────────────────────────────────────
   useEffect(() => {
-    if (isEdit) return;
     const next: BuySellStatus = isDraft ? "draft" : "pending";
     setFieldValue("status", next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -564,9 +581,9 @@ export function BuySellForm({
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
 
-    const remainingSlots = 4 - imageEntries.length;
+    const remainingSlots = 9 - imageEntries.length;
     if (remainingSlots <= 0) {
-      setError("You can upload a maximum of 4 images.");
+      setError("You can upload a maximum of 9 images.");
       e.target.value = "";
       return;
     }
@@ -574,7 +591,7 @@ export function BuySellForm({
     const filesToAdd = files.slice(0, remainingSlots);
     if (files.length > remainingSlots) {
       setError(
-        `Only ${remainingSlots} more image(s) can be added (max 4 total).`,
+        `Only ${remainingSlots} more image(s) can be added (max 9 total).`,
       );
     } else {
       setError("");
@@ -612,7 +629,6 @@ export function BuySellForm({
           return "Valid price is required";
         if (Number(values.price) < 10000)
           return "Price must be at least ₹10,000";
-        if (!values.description.trim()) return "Description is required";
         return null;
       }
       if (step === 1) {
@@ -632,10 +648,10 @@ export function BuySellForm({
         return null;
       }
       if (step === 3) {
-        if (imageEntries.length === 0) return "At least one image is required";
-        if (imageEntries.length > 4)
-          return "You can upload a maximum of 4 images";
-        if (!values.status) return "Status is required";
+        if (imageEntries.length < 4)
+          return "At least 4 images are required";
+        if (imageEntries.length > 9)
+          return "You can upload a maximum of 9 images";
         return null;
       }
       return null;
@@ -675,9 +691,6 @@ export function BuySellForm({
         if (!values.price || isNaN(Number(values.price)))
           setFieldError("price", "Valid price is required");
         else clearFieldError("price");
-        if (!values.description.trim())
-          setFieldError("description", "Description is required");
-        else clearFieldError("description");
       }
       if (step === 1) {
         for (const spec of vehicleDetailSpecs) {
@@ -700,10 +713,9 @@ export function BuySellForm({
         else clearFieldError("pincode");
       }
       if (step === 3) {
-        if (imageEntries.length === 0) setFieldError("images", "At least one image is required");
+        if (imageEntries.length < 4)
+          setFieldError("images", "At least 4 images are required");
         else clearFieldError("images");
-        if (!values.status) setFieldError("status", "Status is required");
-        else clearFieldError("status");
       }
     },
     [
@@ -800,11 +812,6 @@ export function BuySellForm({
       }
       setUploadingImages(false);
 
-      const originalStatus = String(product?.status ?? "").toLowerCase();
-      const canTogglePublish =
-        !isEdit ||
-        originalStatus === "draft";
-
       const payload: BuySellCreatePayload = {
         category_id: values.category_id,
         subcategory_id: values.subcategory_id,
@@ -818,14 +825,11 @@ export function BuySellForm({
         specifications: values.specifications.filter(
           (s) => s.specification_id && s.specification_value,
         ),
+        status: values.status,
         // Backend accepts `images` (preferred) and `existing_images` (legacy).
         images: finalImages,
         existing_images: finalImages,
       };
-
-      if (!isEdit || canTogglePublish) {
-        payload.status = values.status;
-      }
 
       let successContext: BuySellFormSuccessContext | undefined;
 
@@ -853,6 +857,7 @@ export function BuySellForm({
           : isEdit
             ? "Failed to update"
             : "Failed to create";
+      console.error("[BuySellForm submit error]", err);
       setError(msg);
       notify({ type: "error", message: msg });
     } finally {
@@ -1026,7 +1031,8 @@ export function BuySellForm({
               label="Price (₹)"
               value={values.price}
               onChange={(v) => {
-                setFieldValue("price", v);
+                const numeric = v.replace(/\D/g, "");
+                setFieldValue("price", numeric);
                 clearFieldError("price");
               }}
               required
@@ -1044,7 +1050,6 @@ export function BuySellForm({
                 }}
                 multiline
                 rows={3}
-                required
                 error={!!fieldErrors["description"]}
                 helperText={fieldErrors["description"]}
               />
@@ -1066,22 +1071,58 @@ export function BuySellForm({
             </Typography>
           ) : (
             <FormGrid>
-              {vehicleDetailSpecs.map((spec) => (
-                <SpecField
-                  key={spec._id}
-                  spec={spec}
-                  value={getSpecEntry(spec._id).value}
-                  onChange={(v) => {
-                    updateSpecValue(spec._id, v);
-                    clearFieldError(`spec_${spec._id}`);
-                  }}
-                  values={specValueMap[spec._id] ?? []}
-                  loading={!!specValueLoadingMap[spec._id]}
-                  required
-                  error={!!fieldErrors[`spec_${spec._id}`]}
-                  helperText={fieldErrors[`spec_${spec._id}`]}
-                />
-              ))}
+              {vehicleDetailSpecs.map((spec) => {
+                if (isYearSpec(spec)) {
+                  return (
+                    <FormSelectField
+                      key={spec._id}
+                      label={spec.specification_name}
+                      value={getSpecEntry(spec._id).value}
+                      onChange={(v) => {
+                        updateSpecValue(spec._id, v);
+                        clearFieldError(`spec_${spec._id}`);
+                      }}
+                      options={yearOptions}
+                      required
+                      error={!!fieldErrors[`spec_${spec._id}`]}
+                      helperText={fieldErrors[`spec_${spec._id}`]}
+                    />
+                  );
+                }
+                if (isKmSpec(spec)) {
+                  return (
+                    <FormTextField
+                      key={spec._id}
+                      label={spec.specification_name}
+                      value={getSpecEntry(spec._id).value}
+                      onChange={(v) => {
+                        const numeric = v.replace(/\D/g, "");
+                        updateSpecValue(spec._id, numeric);
+                        clearFieldError(`spec_${spec._id}`);
+                      }}
+                      required
+                      error={!!fieldErrors[`spec_${spec._id}`]}
+                      helperText={fieldErrors[`spec_${spec._id}`]}
+                    />
+                  );
+                }
+                return (
+                  <SpecField
+                    key={spec._id}
+                    spec={spec}
+                    value={getSpecEntry(spec._id).value}
+                    onChange={(v) => {
+                      updateSpecValue(spec._id, v);
+                      clearFieldError(`spec_${spec._id}`);
+                    }}
+                    values={specValueMap[spec._id] ?? []}
+                    loading={!!specValueLoadingMap[spec._id]}
+                    required
+                    error={!!fieldErrors[`spec_${spec._id}`]}
+                    helperText={fieldErrors[`spec_${spec._id}`]}
+                  />
+                );
+              })}
             </FormGrid>
           )}
         </Box>
@@ -1126,7 +1167,8 @@ export function BuySellForm({
               label="Pincode"
               value={values.pincode}
               onChange={(v) => {
-                setFieldValue("pincode", v);
+                const numeric = v.replace(/\D/g, "");
+                setFieldValue("pincode", numeric);
                 clearFieldError("pincode");
               }}
               required
@@ -1141,8 +1183,8 @@ export function BuySellForm({
       {activeStep === 3 && (
         <Box>
           <StepIntro
-            title="Photos & Listing Status"
-            subtitle="Add a few photos and choose whether to publish now or save as a draft."
+            title="Photos"
+            subtitle="Upload at least 4 photos of your vehicle."
           />
 
           <input
@@ -1157,14 +1199,14 @@ export function BuySellForm({
           <Button
             variant="outlined"
             startIcon={<CloudUploadIcon />}
-            disabled={submitting || imageEntries.length >= 4}
+            disabled={submitting || imageEntries.length >= 9}
             onClick={() => imageInputRef.current?.click()}
             sx={{ mb: 2 }}
           >
             {imageEntries.length === 0
               ? "Upload Images"
-              : imageEntries.length >= 4
-                ? "Maximum 4 images reached"
+              : imageEntries.length >= 9
+                ? "Maximum 9 images reached"
                 : "Add More Images"}{" "}
           </Button>
 
@@ -1243,7 +1285,7 @@ export function BuySellForm({
                         color="text.secondary"
                         sx={{ display: "block", mb: 1 }}
                       >
-                        {imageEntries.length}/4 images added
+                        {imageEntries.length}/9 images added
                       </Typography>
                     </Box>
                     {isNew && (
@@ -1295,126 +1337,56 @@ export function BuySellForm({
             </Typography>
           )}
 
-          <Typography
-            variant="caption"
+          <Box
             sx={{
-              color: "text.secondary",
-              fontWeight: 600,
-              fontSize: "0.68rem",
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              display: "block",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 1,
               mb: 1,
             }}
           >
-            Status
-          </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                fontWeight: 600,
+                fontSize: "0.68rem",
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+              }}
+            >
+              Status
+            </Typography>
+            <ProductStatusChip status={isDraft ? "draft" : "pending"} />
+          </Box>
 
           <Box
             sx={{
-              display: "flex",
-              flexWrap: "wrap",
+              display: "inline-flex",
+              alignItems: "center",
               gap: 1,
-              mb: !isEdit ? 1.5 : 0,
+              px: 1.5,
+              py: 0.75,
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 2,
+              bgcolor: "transparent",
+              cursor: "pointer",
+              transition: "all 0.15s",
             }}
+            onClick={() => setIsDraft((prev) => !prev)}
           >
-            {STATUS_OPTIONS.map((s) => {
-              const originalStatus = String(
-                product?.status ?? "",
-              ).toLowerCase();
-              const statusLocked =
-                isEdit &&
-                originalStatus !== "draft" &&
-                originalStatus !== "active" &&
-                originalStatus !== "inactive";
-              const isSelected = values.status === s.value;
-              return (
-                <Chip
-                  key={s.value}
-                  label={s.label}
-                  color={s.color}
-                  variant={isSelected ? "filled" : "outlined"}
-                  disabled={statusLocked || submitting}
-                  onClick={() => {
-                    if (statusLocked) return;
-                    setFieldValue("status", s.value);
-                    setIsDraft(s.value === "draft");
-                    clearFieldError("status");
-                  }}
-                  sx={{
-                    cursor: statusLocked ? "not-allowed" : "pointer",
-                    fontWeight: isSelected ? 600 : 400,
-                    fontSize: 13,
-                    borderRadius: 5,
-                    px: 0.5,
-                    transition: "all 0.15s",
-                    "&:hover": { opacity: statusLocked ? 1 : 0.85 },
-                  }}
-                />
-              );
-            })}
+            <Checkbox
+              checked={isDraft}
+              onChange={(e) => setIsDraft(e.target.checked)}
+              size="small"
+              sx={{ p: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <Typography variant="body2" fontWeight={isDraft ? 600 : 400}>
+              {isDraft ? "Draft" : "Pending"}
+            </Typography>
           </Box>
-
-          {fieldErrors["status"] && (
-            <Typography
-              variant="caption"
-              color="error"
-              sx={{ display: "block", mb: 1 }}
-            >
-              {fieldErrors["status"]}
-            </Typography>
-          )}
-
-          {isEdit &&
-          !["draft", "active", "inactive"].includes(
-            String(product?.status ?? "").toLowerCase(),
-          ) ? (
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ display: "block", mb: 1 }}
-            >
-              Current status: <strong>{String(product?.status)}</strong>{" "}
-              (managed by system — details can still be updated).
-            </Typography>
-          ) : null}
-
-          {!isEdit && (
-            <Box
-              sx={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 1,
-                px: 1.5,
-                py: 0.75,
-                border: "1px solid",
-                borderColor: isDraft ? "primary.main" : "divider",
-                borderRadius: 2,
-                bgcolor: isDraft ? "action.selected" : "transparent",
-                cursor: "pointer",
-                transition: "all 0.15s",
-              }}
-              onClick={() => setIsDraft((prev) => !prev)}
-            >
-              <Checkbox
-                checked={isDraft}
-                onChange={(e) => setIsDraft(e.target.checked)}
-                size="small"
-                sx={{ p: 0 }}
-                onClick={(e) => e.stopPropagation()}
-              />
-              <Typography variant="body2" fontWeight={isDraft ? 600 : 400}>
-                Save as Draft
-              </Typography>
-              <Chip
-                label={isDraft ? "Draft" : "Pending"}
-                size="small"
-                color={isDraft ? "default" : "warning"}
-                variant="filled"
-                sx={{ fontSize: 11, height: 20, pointerEvents: "none" }}
-              />
-            </Box>
-          )}
         </Box>
       )}
     </Box>
