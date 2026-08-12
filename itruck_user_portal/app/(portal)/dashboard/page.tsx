@@ -38,6 +38,7 @@ import { EMPTY_FILTERS } from "@/app/admin/portal/buysell/_components/interface/
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { MARKETPLACE } from "@/constants/marketplace";
 import { toErrorMessage } from "@/lib/errors";
+import { isAbortError } from "@/lib/apiCache";
 
 const EMPTY_STATS: MarketplaceStats = {
   totalListings: 0,
@@ -116,7 +117,11 @@ export default function UserProductDashboardPage() {
   }, [exploreList.items]);
 
   useEffect(() => {
-    if (exploreList.error && exploreList.items.length === 0) {
+    if (
+      exploreList.error &&
+      exploreList.items.length === 0 &&
+      !isAbortError(exploreList.error)
+    ) {
       notifyRef.current({
         type: "error",
         message: exploreList.error.message,
@@ -475,7 +480,9 @@ export default function UserProductDashboardPage() {
             : ""}
           .
         </Typography>
-        {exploreList.error && exploreList.items.length === 0 ? (
+        {exploreList.error &&
+        exploreList.items.length === 0 &&
+        !isAbortError(exploreList.error) ? (
           <Alert severity="info" sx={{ mb: 2 }}>
             {exploreList.error.message ||
               "No vehicles to show yet. List a vehicle or check back soon."}

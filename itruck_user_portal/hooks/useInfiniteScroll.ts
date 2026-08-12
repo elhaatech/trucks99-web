@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isAbortError } from "@/lib/apiCache";
 
 export interface InfiniteScrollResult<T> {
   items: T[];
@@ -47,18 +48,23 @@ export function useInfiniteScroll<T>(
   const loadPageRef = useRef(loadPage);
   loadPageRef.current = loadPage;
 
+  /** Bumps when filters/sort change — stale in-flight responses must not clear loading. */
+  const requestGenRef = useRef(0);
+
   const stateRef = useRef({ loading: false, loadingMore: false, hasMore: true, page: 1, totalPages: 1 });
   stateRef.current = { loading, loadingMore, hasMore, page, totalPages };
 
   const fetchPage = useCallback(
-    async (pageNum: number, isMore: boolean, signal?: AbortSignal) => {
+    async (pageNum: number, isMore: boolean, signal?: AbortSignal, gen?: number) => {
+      const activeGen = gen ?? requestGenRef.current;
+
       if (isMore) setLoadingMore(true);
       else setLoading(true);
       setError(null);
 
       try {
         const result = await loadPageRef.current(pageNum, signal ?? new AbortController().signal);
-        if (signal?.aborted) return;
+        if (signal?.aborted || activeGen !== requestGenRef.current) return;
 
         const newItems = result.items ?? [];
         setItems((prev) => (isMore ? [...prev, ...newItems] : newItems));
@@ -67,9 +73,16 @@ export function useInfiniteScroll<T>(
         setPage(result.page ?? pageNum);
         setHasMore((result.page ?? pageNum) < (result.totalPages ?? 1));
       } catch (err) {
-        if (signal?.aborted) return;
+        if (
+          signal?.aborted ||
+          activeGen !== requestGenRef.current ||
+          isAbortError(err)
+        ) {
+          return;
+        }
         setError(err instanceof Error ? err : new Error(String(err)));
       } finally {
+        if (activeGen !== requestGenRef.current) return;
         if (isMore) setLoadingMore(false);
         else setLoading(false);
       }
@@ -83,6 +96,7 @@ export function useInfiniteScroll<T>(
       return;
     }
 
+    const gen = ++requestGenRef.current;
     abortCtrlRef.current?.abort();
     setItems([]);
     setHasMore(true);
@@ -91,10 +105,15 @@ export function useInfiniteScroll<T>(
     setTotalPages(1);
     setError(null);
     setLoading(true);
+    setLoadingMore(false);
 
     const controller = new AbortController();
     abortCtrlRef.current = controller;
-    void fetchPage(1, false, controller.signal);
+    void fetchPage(1, false, controller.signal, gen);
+
+    return () => {
+      controller.abort();
+    };
   }, [enabled, loadPage, fetchPage]);
 
   useEffect(() => {
@@ -123,6 +142,7 @@ export function useInfiniteScroll<T>(
   }, []);
 
   const reset = useCallback(() => {
+    const gen = ++requestGenRef.current;
     abortCtrlRef.current?.abort();
     setItems([]);
     setHasMore(true);
@@ -131,10 +151,11 @@ export function useInfiniteScroll<T>(
     setTotalPages(1);
     setError(null);
     setLoading(true);
+    setLoadingMore(false);
 
     const controller = new AbortController();
     abortCtrlRef.current = controller;
-    void fetchPage(1, false, controller.signal);
+    void fetchPage(1, false, controller.signal, gen);
   }, [fetchPage]);
 
   return {

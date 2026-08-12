@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getToken, onMessage } from "firebase/messaging";
 import { getFirebaseMessaging } from "@/lib/firebase";
 import { useNotification } from "@/hooks/useNotification";
@@ -11,12 +11,15 @@ export function useFirebasePush() {
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const { notify } = useNotification();
   const router = useRouter();
-
+  const notifyRef = useRef(notify);
+  const routerRef = useRef(router);
+  notifyRef.current = notify;
+  routerRef.current = router;
 
   useEffect(() => {
     const handleServiceWorkerMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === "OPEN_ROUTE_FROM_PUSH" && event.data.route) {
-        router.push(event.data.route);
+        routerRef.current.push(event.data.route);
       }
     };
 
@@ -71,8 +74,7 @@ export function useFirebasePush() {
           const data = payload.data || {};
           
           if (title || body) {
-            // Display toast with action to navigate
-            notify({
+            notifyRef.current({
               type: "info",
               message: `${title || ""}: ${body || ""}`,
             });
@@ -97,7 +99,7 @@ export function useFirebasePush() {
         navigator.serviceWorker.removeEventListener("message", handleServiceWorkerMessage);
       }
     };
-  }, [notify, router]);
+  }, []);
 
   return { fcmToken };
 }

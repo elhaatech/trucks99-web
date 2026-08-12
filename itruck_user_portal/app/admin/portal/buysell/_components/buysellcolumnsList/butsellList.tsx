@@ -112,8 +112,8 @@ export function BuySellListPage() {
     ) => {
       setLoading(true);
       setError("");
-      const nextPage = opts?.page ?? page;
-      const nextPageSize = opts?.pageSize ?? pageSize;
+      const nextPage = opts?.page ?? 0;
+      const nextPageSize = opts?.pageSize ?? ADMIN_LIST_PAGE_SIZE;
       try {
         const result = await getBuySellListPage({
           ...toBuySellListPayload({
@@ -146,7 +146,7 @@ export function BuySellListPage() {
         setLoading(false);
       }
     },
-    [notify, page, pageSize],
+    [notify],
   );
 
   // ── Mount: restore saved filters when navigating back ─────────────────────

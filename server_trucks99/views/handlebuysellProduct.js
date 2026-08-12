@@ -1533,13 +1533,14 @@ buySellRouter.post("/list", async (req, res) => {
 
     const withLocation = await enrichBuySellProductsWithLocation(trimmedList);
     const withSpecifications = await enrichBuySellSpecifications(withLocation);
+    const includeBitRecords =
+      body.include_bit_records === true || body.includeBitRecords === true;
     const enrichedList = await enrichBuySellListItems(
       withSpecifications,
       actor,
       {
-        // Match getById: bring back bit_records/bid_count/highest_bid/accepted_bid
-        // so the frontend never needs a per-item detail call.
-        includeBitRecords: true,
+        // Aggregate bid summary only — full bit_records arrays are loaded on detail views.
+        includeBitRecords,
       },
     );
 

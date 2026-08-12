@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import Box from "@mui/material/Box";
@@ -30,6 +30,7 @@ import {
   type FilterState,
 } from "@/app/admin/portal/buysell/_components/interface/buysell_interface";
 import { useNotification } from "@/hooks/useNotification";
+import { useAppliedFilters } from "@/hooks/useAppliedFilters";
 import { getProductTitle } from "@/app/common/components/buysell/utils";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import {
@@ -37,7 +38,6 @@ import {
   MobileFilterButton,
   VehicleGrid,
   VehicleListHeader,
-  EMPTY_VEHICLE_FILTERS,
   VEHICLE_PAGE_SIZE,
 } from "@/app/common/components/buysell";
 import {
@@ -71,6 +71,13 @@ const FeaturedVehiclePlansDialog = dynamic(
   { ssr: false },
 );
 
+const DEFAULT_SELL_FILTERS: FilterState = {
+  ...EMPTY_FILTERS,
+  usear_type: "sell",
+  no_of_owners_min: "1",
+  km_min: "10000",
+};
+
 function SellVehicleContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -90,33 +97,43 @@ function SellVehicleContent() {
   const [featurePlansTarget, setFeaturePlansTarget] =
     useState<NewListingFeaturedPrompt | null>(null);
 
-  const [filters, setFilters] = useState<FilterState>({
-    ...EMPTY_FILTERS,
-    usear_type: "sell",
-    no_of_owners_min: "1",
-    km_min: "10000",
-  });
+  const {
+    draft: filters,
+    patchDraft: handleFilterChange,
+    applied: appliedFilters,
+    applyDraft: applyFilters,
+    resetAll: resetFilters,
+  } = useAppliedFilters<FilterState>(DEFAULT_SELL_FILTERS);
   const [applyLoading, setApplyLoading] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const listingCount = total;
   const pageSize = VEHICLE_PAGE_SIZE || MARKETPLACE.VEHICLE_PAGE_SIZE;
+  const pageRef = useRef(page);
+  const appliedFiltersRef = useRef(appliedFilters);
+  pageRef.current = page;
+  appliedFiltersRef.current = appliedFilters;
 
   const loadListings = useCallback(
-    async (options?: { silent?: boolean; page?: number }) => {
-      const pageToLoad = options?.page ?? page;
-      if (!options?.silent) {
+    async (options: {
+      silent?: boolean;
+      page: number;
+      filters: FilterState;
+    }) => {
+      const pageToLoad = Math.max(1, options.page);
+      const filtersToUse = options.filters;
+      if (!options.silent) {
         setLoading(true);
       }
       setListError("");
       try {
         const result = await getBuySellListPage({
-          ...toBuySellListPayload(filters),
+          ...toBuySellListPayload(filtersToUse),
           page: pageToLoad,
           limit: pageSize,
         });
         const items = result.items ?? [];
-        const nextPage = result.page ?? pageToLoad;
+        const nextPage = Math.max(1, result.page ?? pageToLoad);
         const nextTotal = result.total ?? items.length;
         setProducts(items);
         setTotal(nextTotal);
@@ -124,28 +141,40 @@ function SellVehicleContent() {
         // If delete emptied the last page, step back once.
         if (items.length === 0 && nextPage > 1 && nextTotal > 0) {
           setPage(nextPage - 1);
+        } else if (nextPage !== pageToLoad) {
+          setPage(nextPage);
         }
       } catch (err) {
         if (isAbortError(err)) return;
         const message = toErrorMessage(err, "Failed to load listings");
         setListError(message);
-        if (!options?.silent) {
+        if (!options.silent) {
           notify({ type: "error", message });
         }
       } finally {
-        if (!options?.silent) {
+        if (!options.silent) {
           setLoading(false);
         }
       }
     },
-    [notify, page, pageSize, filters],
+    [notify, pageSize],
+  );
+
+  const reloadListings = useCallback(
+    (opts?: { silent?: boolean; page?: number; filters?: FilterState }) =>
+      loadListings({
+        silent: opts?.silent,
+        page: opts?.page ?? pageRef.current,
+        filters: opts?.filters ?? appliedFiltersRef.current,
+      }),
+    [loadListings],
   );
 
   useEffect(() => {
     if (!isCreate) {
-      void loadListings({ page });
+      void loadListings({ page, filters: appliedFilters });
     }
-  }, [isCreate, page, loadListings]);
+  }, [isCreate, page, appliedFilters, loadListings]);
 
   const handleCreateSuccess = (ctx?: BuySellFormSuccessContext) => {
     router.replace(userProductRoutes.sellVehicle());
@@ -155,7 +184,7 @@ function SellVehicleContent() {
         title: getProductTitle(ctx.product),
       });
     }
-    void loadListings({ silent: true });
+    void reloadListings({ silent: true });
   };
 
   const handleEdit = useCallback(
@@ -187,7 +216,7 @@ function SellVehicleContent() {
       await deleteBuySellProducts([id]);
       notify({ type: "success", message: "Listing deleted successfully." });
       setDeleteTarget(null);
-      await loadListings();
+      await reloadListings();
     } catch (err) {
       notify({
         type: "error",
@@ -200,7 +229,7 @@ function SellVehicleContent() {
         return next;
       });
     }
-  }, [deleteTarget, deleteInProgress, loadListings, notify]);
+  }, [deleteTarget, deleteInProgress, reloadListings, notify]);
 
   const listNewVehicleButton = (
     <Button
@@ -225,49 +254,24 @@ function SellVehicleContent() {
     [products],
   );
 
-  const handleApplyFilters = useCallback(async () => {
+  const handleApplyFilters = useCallback(() => {
     setApplyLoading(true);
     setMobileFiltersOpen(false);
+    applyFilters();
     setPage(1);
-    try {
-      const payload = {
-        ...toBuySellListPayload(filters),
-        page: 1,
-        limit: pageSize,
-      };
-      const result = await getBuySellListPage(payload);
-      setProducts(result.items ?? []);
-      setTotal(result.total ?? 0);
-      setTotalPages(result.totalPages ?? 1);
-      setPage((result.page ?? 1) - 1);
-    } catch (err) {
-      notify({
-        type: "error",
-        message: toErrorMessage(err, "Failed to apply filters"),
-      });
-    } finally {
+  }, [applyFilters]);
+
+  useEffect(() => {
+    if (applyLoading && !loading) {
       setApplyLoading(false);
     }
-  }, [filters, pageSize, notify]);
+  }, [applyLoading, loading]);
 
   const handleClearFilters = useCallback(() => {
-    const cleared = {
-      ...EMPTY_VEHICLE_FILTERS,
-      usear_type: "sell" as FilterState["usear_type"],
-      no_of_owners_min: "1",
-      km_min: "10000",
-    };
-    setFilters(cleared);
+    resetFilters(DEFAULT_SELL_FILTERS);
     setPage(1);
     setMobileFiltersOpen(false);
-  }, []);
-
-  const handleFilterChange = useCallback(
-    (patch: Partial<FilterState>) => {
-      setFilters((prev) => ({ ...prev, ...patch }));
-    },
-    [],
-  );
+  }, [resetFilters]);
 
   const featuredFlow = (
     <PostListingFeaturedFlow
@@ -284,7 +288,7 @@ function SellVehicleContent() {
           message:
             detail?.message || "Payment successful. Your vehicle is now featured.",
         });
-        void loadListings({ silent: true });
+        void reloadListings({ silent: true });
       }}
     />
   );
@@ -303,7 +307,7 @@ function SellVehicleContent() {
             detail?.message || "Payment successful. Your vehicle is now featured.",
         });
         setFeaturePlansTarget(null);
-        void loadListings({ silent: true });
+        void reloadListings({ silent: true });
       }}
     />
   );
@@ -402,7 +406,7 @@ function SellVehicleContent() {
             <BuySellErrorState
               title="Couldn't load your listings"
               message={listError}
-              onRetry={() => void loadListings()}
+              onRetry={() => reloadListings()}
             />
           ) : (
             <VehicleGrid

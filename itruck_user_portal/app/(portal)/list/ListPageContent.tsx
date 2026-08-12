@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Box from "@mui/material/Box";
 import ToggleButton from "@mui/material/ToggleButton";
@@ -85,6 +85,8 @@ export default function UserProductListContent() {
     [searchParams],
   );
   const urlKey = useMemo(() => serializeFilters(urlFilters), [urlFilters]);
+  const urlFiltersRef = useRef(urlFilters);
+  urlFiltersRef.current = urlFilters;
 
   const [filters, setFilters] = useState<VehicleFilterValues>(urlFilters);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
@@ -97,9 +99,10 @@ export default function UserProductListContent() {
 
   const loadPage = useCallback(
     async (page: number, signal: AbortSignal) => {
+      const filters = urlFiltersRef.current;
       const payload = {
-        ...toBuySellListPayload(urlFilters),
-        search: urlFilters.search.trim() || undefined,
+        ...toBuySellListPayload(filters),
+        search: filters.search.trim() || undefined,
         sort: sortBy,
         page,
         limit: VEHICLE_PAGE_SIZE,
@@ -114,7 +117,7 @@ export default function UserProductListContent() {
         page: result.page ?? page,
       };
     },
-    [urlKey, urlFilters, sortBy],
+    [urlKey, sortBy],
   );
 
   const list = useInfiniteScroll(loadPage);
@@ -130,7 +133,7 @@ export default function UserProductListContent() {
   }, [applyLoading, list.loading]);
 
   useEffect(() => {
-    if (list.error) {
+    if (list.error && !isAbortError(list.error)) {
       notify({
         type: "error",
         message: toErrorMessage(list.error, "Failed to load vehicles"),
