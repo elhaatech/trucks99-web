@@ -26,6 +26,7 @@ const {
 const {
   notify,
   NOTIFICATION_EVENTS,
+  buildProductPushMetadata,
 } = require("../services/notificationService");
 const { productLabel } = require("../helpers/productLabel");
 const {
@@ -1533,13 +1534,14 @@ buySellRouter.post("/list", async (req, res) => {
 
     const withLocation = await enrichBuySellProductsWithLocation(trimmedList);
     const withSpecifications = await enrichBuySellSpecifications(withLocation);
+    const includeBitRecords =
+      body.include_bit_records === true || body.includeBitRecords === true;
     const enrichedList = await enrichBuySellListItems(
       withSpecifications,
       actor,
       {
-        // Match getById: bring back bit_records/bid_count/highest_bid/accepted_bid
-        // so the frontend never needs a per-item detail call.
-        includeBitRecords: true,
+        // Aggregate bid summary only — full bit_records arrays are loaded on detail views.
+        includeBitRecords,
       },
     );
 
@@ -2399,7 +2401,7 @@ buySellRouter.post("/book/:id", async (req, res) => {
         amount: advanceAmount,
         bookingId,
       },
-      metadata: { productId: updated._id },
+      metadata: buildProductPushMetadata(updated, { status: 'booking' }),
     }).catch((err) =>
       console.error("[buysell book] notification failed:", err.message),
     );
@@ -2414,7 +2416,7 @@ buySellRouter.post("/book/:id", async (req, res) => {
           amount: advanceAmount,
           bookingId,
         },
-        metadata: { productId: updated._id, role: "seller" },
+        metadata: buildProductPushMetadata(updated, { role: 'seller', status: 'booking' }),
       }).catch((err) =>
         console.error(
           "[buysell book] seller notification failed:",
@@ -2514,7 +2516,7 @@ buySellRouter.post("/purchase/:id", async (req, res) => {
         productName: pName,
         amount: purchaseAmount,
       },
-      metadata: { productId: updated._id },
+      metadata: buildProductPushMetadata(updated, { status: 'purchased' }),
     }).catch((err) =>
       console.error("[buysell purchase] notification failed:", err.message),
     );
@@ -2528,7 +2530,7 @@ buySellRouter.post("/purchase/:id", async (req, res) => {
           amount: purchaseAmount,
           buyerName: actor.name,
         },
-        metadata: { productId: updated._id },
+        metadata: buildProductPushMetadata(updated, { status: 'sold' }),
       }).catch((err) =>
         console.error(
           "[buysell purchase] sold notification failed:",
@@ -3068,7 +3070,10 @@ buySellRouter.post("/payment/verify", async (req, res) => {
           bookingId,
           transactionId: txnId,
         },
-        metadata: { productId: updated._id, orderId: razorpay_order_id },
+        metadata: buildProductPushMetadata(updated, {
+          orderId: razorpay_order_id,
+          status: 'booking',
+        }),
       }).catch((err) =>
         console.error(
           "[buysell verify] booking notification failed:",
@@ -3087,11 +3092,11 @@ buySellRouter.post("/payment/verify", async (req, res) => {
             bookingId,
             transactionId: txnId,
           },
-          metadata: {
-            productId: updated._id,
+          metadata: buildProductPushMetadata(updated, {
             orderId: razorpay_order_id,
-            role: "seller",
-          },
+            role: 'seller',
+            status: 'booking',
+          }),
         }).catch((err) =>
           console.error(
             "[buysell verify] seller booking notification failed:",
@@ -3109,7 +3114,10 @@ buySellRouter.post("/payment/verify", async (req, res) => {
           amount: payAmount,
           transactionId: txnId,
         },
-        metadata: { productId: updated._id, orderId: razorpay_order_id },
+        metadata: buildProductPushMetadata(updated, {
+          orderId: razorpay_order_id,
+          status: 'purchased',
+        }),
       }).catch((err) =>
         console.error(
           "[buysell verify] purchase notification failed:",
@@ -3126,7 +3134,7 @@ buySellRouter.post("/payment/verify", async (req, res) => {
             amount: payAmount,
             buyerName,
           },
-          metadata: { productId: updated._id },
+          metadata: buildProductPushMetadata(updated, { status: 'sold' }),
         }).catch((err) =>
           console.error(
             "[buysell verify] sold notification failed:",
@@ -3145,7 +3153,10 @@ buySellRouter.post("/payment/verify", async (req, res) => {
         amount: payAmount,
         transactionId: txnId,
       },
-      metadata: { productId: updated._id, orderId: razorpay_order_id },
+      metadata: buildProductPushMetadata(updated, {
+        orderId: razorpay_order_id,
+        status: 'payment_success',
+      }),
     }).catch((err) =>
       console.error(
         "[buysell verify] payment notification failed:",
@@ -3163,11 +3174,11 @@ buySellRouter.post("/payment/verify", async (req, res) => {
           amount: payAmount,
           transactionId: txnId,
         },
-        metadata: {
-          productId: updated._id,
+        metadata: buildProductPushMetadata(updated, {
           orderId: razorpay_order_id,
-          role: "seller",
-        },
+          role: 'seller',
+          status: 'payment_success',
+        }),
       }).catch((err) =>
         console.error(
           "[buysell verify] seller payment notification failed:",

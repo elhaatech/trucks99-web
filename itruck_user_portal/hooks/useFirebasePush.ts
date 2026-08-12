@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getToken, onMessage } from "firebase/messaging";
 import { getFirebaseMessaging } from "@/lib/firebase";
 import { useNotification } from "@/hooks/useNotification";
@@ -11,12 +11,16 @@ export function useFirebasePush() {
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const { notify } = useNotification();
   const router = useRouter();
-
+  const notifyRef = useRef(notify);
+  const routerRef = useRef(router);
+  notifyRef.current = notify;
+  routerRef.current = router;
 
   useEffect(() => {
     const handleServiceWorkerMessage = (event: MessageEvent) => {
-      if (event.data && event.data.type === "OPEN_ROUTE_FROM_PUSH" && event.data.route) {
-        router.push(event.data.route);
+      if (event.data?.type === "OPEN_ROUTE_FROM_PUSH" && event.data.route) {
+        console.log("[FCM][web] navigating from push click:", event.data.route);
+        routerRef.current.push(event.data.route);
       }
     };
 
@@ -28,62 +32,84 @@ export function useFirebasePush() {
 
     const setupFirebase = async () => {
       try {
-        const messaging = await getFirebaseMessaging();
-        if (!messaging) return;
+        console.log("[FCM][web] setup starting…");
 
-        // Request permission
-        const permission = await Notification.requestPermission();
-        if (permission !== "granted") {
-          console.log("Notification permission denied");
+        const messaging = await getFirebaseMessaging();
+        if (!messaging) {
+          console.warn("[FCM][web] SKIP — Firebase messaging not supported or config missing");
           return;
         }
 
-        // Get token (requires registered service worker for web push)
+        console.log("[FCM][web] messaging ready");
+
+        const permission = await Notification.requestPermission();
+        console.log("[FCM][web] notification permission:", permission);
+        if (permission !== "granted") {
+          console.warn("[FCM][web] SKIP — notification permission denied");
+          return;
+        }
+
         const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
         if (!vapidKey) {
-          console.warn("NEXT_PUBLIC_FIREBASE_VAPID_KEY is not set; skipping FCM token registration");
+          console.warn("[FCM][web] SKIP — NEXT_PUBLIC_FIREBASE_VAPID_KEY is not set");
           return;
         }
 
         const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+        console.log("[FCM][web] service worker registered:", registration.scope);
+
+        await navigator.serviceWorker.ready;
+        console.log("[FCM][web] service worker active");
+
         const currentToken = await getToken(messaging, {
           vapidKey,
           serviceWorkerRegistration: registration,
         });
-        
+
         if (currentToken) {
+          console.log("[FCM][web] FCM token obtained:", `${currentToken.slice(0, 12)}...`);
           setFcmToken(currentToken);
-          // Save token to backend
-          await api("/api/firebase/save-token", {
+
+          const saveResult = await api("/api/firebase/save-token", {
             method: "POST",
             body: JSON.stringify({
               token: currentToken,
               device: "web",
               platform: navigator?.userAgent || "web",
             }),
-          }).catch(console.error);
+          }).catch((err) => {
+            console.error("[FCM][web] save-token FAILED:", err);
+            return null;
+          });
+
+          console.log("[FCM][web] save-token response:", saveResult);
+        } else {
+          console.warn("[FCM][web] no FCM token returned from getToken()");
         }
 
-        // Listen for foreground messages
         unsubscribe = onMessage(messaging, (payload) => {
-          console.log("Foreground message received:", payload);
+          console.log("[FCM][web] foreground message received:", payload);
+          console.log("[FCM][web] notification:", payload.notification);
+          console.log("[FCM][web] data:", payload.data);
+
           const { title, body } = payload.notification || {};
           const data = payload.data || {};
-          
+
           if (title || body) {
-            // Display toast with action to navigate
-            notify({
+            notifyRef.current({
               type: "info",
               message: `${title || ""}: ${body || ""}`,
             });
-            
-            // Optionally could render a custom toast that is clickable, but for now we just show a toast.
-            // If the user is on the site, they can just click it or we can add a way to click through the toast.
-            // But since notify doesn't support onClick easily, we rely on the in-app notification center for history.
+          }
+
+          if (data.route && typeof data.route === "string") {
+            console.log("[FCM][web] route in payload (foreground):", data.route);
           }
         });
+
+        console.log("[FCM][web] setup complete — listening for foreground messages");
       } catch (error) {
-        console.error("Error setting up Firebase push notifications:", error);
+        console.error("[FCM][web] setup FAILED:", error);
       }
     };
 
@@ -97,7 +123,7 @@ export function useFirebasePush() {
         navigator.serviceWorker.removeEventListener("message", handleServiceWorkerMessage);
       }
     };
-  }, [notify, router]);
+  }, []);
 
   return { fcmToken };
 }

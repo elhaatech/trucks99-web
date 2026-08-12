@@ -191,7 +191,7 @@ const DEFAULT_TEMPLATES = [
       whatsapp: {
         body: 'New offer on {{productName}}: ₹{{amount}} from {{userName}}.',
       },
-      push: { title: 'New offer', body: '₹{{amount}} on {{productName}}' },
+      push: { title: 'New offer', body: '{{userName}} bid ₹{{amount}} on {{productName}}' },
     },
   },
   {
@@ -206,39 +206,43 @@ const DEFAULT_TEMPLATES = [
       whatsapp: {
         body: 'TRUCKS99: Your offer of ₹{{amount}} on {{productName}} was accepted.',
       },
-      push: { title: 'Offer accepted', body: '{{productName}} — ₹{{amount}}' },
+      push: { title: 'Offer accepted', body: 'Your bid of ₹{{amount}} for {{productName}} was accepted.' },
     },
   },
   {
     event: NOTIFICATION_EVENTS.BID_REJECTED,
     label: 'Bid Rejected',
-    placeholders: ['amount', 'productName'],
+    placeholders: ['amount', 'productName', 'rejectionReason'],
     templates: {
       in_app: {
         title: 'Offer declined',
-        body: 'Your offer of ₹{{amount}} was not accepted.',
+        body: 'Your offer of ₹{{amount}} on {{productName}} was not accepted. {{rejectionReason}}',
       },
       whatsapp: {
-        body: 'TRUCKS99: Your offer of ₹{{amount}} was not accepted at this time.',
+        body: 'TRUCKS99: Your offer of ₹{{amount}} on {{productName}} was not accepted. {{rejectionReason}}',
+      },
+      push: {
+        title: 'Offer declined',
+        body: 'Your bid of ₹{{amount}} on {{productName}} was declined. {{rejectionReason}}',
       },
     },
   },
   {
     event: NOTIFICATION_EVENTS.NEW_REQUEST,
     label: 'New Request',
-    description: 'Sent to a post owner when a load/truck post receives a new request.',
-    placeholders: ['userName', 'postType'],
+    description: 'Sent to a post owner when a load/truck/product receives a new request or offer.',
+    placeholders: ['userName', 'postType', 'amount', 'entityLabel', 'productName', 'relatedLabel'],
     templates: {
       in_app: {
         title: 'New request received',
-        body: 'Your {{postType}} post received a new request from {{userName}}.',
+        body: '{{userName}} requested your {{postType}} ({{entityLabel}}) with a bid of ₹{{amount}}.',
       },
       whatsapp: {
-        body: 'TRUCKS99: Your {{postType}} post received a new request from {{userName}}.',
+        body: 'TRUCKS99: {{userName}} placed an offer of ₹{{amount}} on your {{postType}} ({{entityLabel}}).',
       },
       push: {
-        title: 'New request received',
-        body: 'Your {{postType}} post received a new request from {{userName}}.',
+        title: 'New {{postType}} offer',
+        body: '{{userName}} offered ₹{{amount}} on {{entityLabel}}',
       },
     },
   },
@@ -246,18 +250,18 @@ const DEFAULT_TEMPLATES = [
     event: NOTIFICATION_EVENTS.REQUEST_ACCEPTED,
     label: 'Request Accepted',
     description: 'Sent to the requesting user when the post owner accepts their request.',
-    placeholders: ['postType'],
+    placeholders: ['postType', 'amount', 'entityLabel'],
     templates: {
       in_app: {
         title: 'Request accepted',
-        body: 'Your request for this {{postType}} has been accepted by the post owner.',
+        body: 'Your {{postType}} bid of ₹{{amount}} was accepted.',
       },
       whatsapp: {
-        body: 'TRUCKS99: Your request for this {{postType}} has been accepted by the post owner.',
+        body: 'TRUCKS99: Your request for this {{postType}} was accepted.',
       },
       push: {
         title: 'Request accepted',
-        body: 'Your request for this {{postType}} has been accepted by the post owner.',
+        body: 'Your {{postType}} bid of ₹{{amount}} was accepted.',
       },
     },
   },
@@ -265,18 +269,18 @@ const DEFAULT_TEMPLATES = [
     event: NOTIFICATION_EVENTS.REQUEST_REJECTED,
     label: 'Request Rejected',
     description: 'Sent to the requesting user when the post owner rejects their request.',
-    placeholders: ['postType'],
+    placeholders: ['postType', 'amount', 'entityLabel', 'rejectionReason'],
     templates: {
       in_app: {
         title: 'Request declined',
-        body: 'Your request for this {{postType}} has been rejected by the post owner.',
+        body: 'Your {{postType}} bid of ₹{{amount}} was declined. {{rejectionReason}}',
       },
       whatsapp: {
-        body: 'TRUCKS99: Your request for this {{postType}} has been rejected by the post owner.',
+        body: 'TRUCKS99: Your request for this {{postType}} was declined. {{rejectionReason}}',
       },
       push: {
         title: 'Request declined',
-        body: 'Your request for this {{postType}} has been rejected by the post owner.',
+        body: 'Your {{postType}} bid of ₹{{amount}} was declined. {{rejectionReason}}',
       },
     },
   },
@@ -340,6 +344,46 @@ function renderTemplate(template, data) {
     const val = data[key];
     return val != null && val !== '' ? String(val) : '—';
   });
+}
+
+/** Maps internal notification events to FCM `data.type` values expected by the mobile app. */
+function resolveFcmEventType(event, metadata = {}) {
+  if (metadata.fcmType) return String(metadata.fcmType);
+  switch (event) {
+    case NOTIFICATION_EVENTS.BID_PLACED:
+    case NOTIFICATION_EVENTS.NEW_REQUEST:
+      return 'NEW_REQUEST';
+    case NOTIFICATION_EVENTS.BID_ACCEPTED:
+    case NOTIFICATION_EVENTS.REQUEST_ACCEPTED:
+      return 'REQUEST_ACCEPTED';
+    case NOTIFICATION_EVENTS.BID_REJECTED:
+    case NOTIFICATION_EVENTS.REQUEST_REJECTED:
+      return 'REQUEST_REJECTED';
+    case NOTIFICATION_EVENTS.PRODUCT_BOOKING:
+      return 'PRODUCT_BOOKING';
+    case NOTIFICATION_EVENTS.PRODUCT_PURCHASED:
+      return 'PRODUCT_PURCHASED';
+    case NOTIFICATION_EVENTS.PRODUCT_SOLD:
+      return 'PRODUCT_SOLD';
+    case NOTIFICATION_EVENTS.PAYMENT_SUCCESS:
+      return 'PAYMENT_SUCCESS';
+    default:
+      return String(event || 'GENERAL');
+  }
+}
+
+function buildProductPushMetadata(product, extra = {}) {
+  if (!product) return { ...extra };
+  const productId = product.id || product.uuid || (product._id != null ? String(product._id) : '');
+  return {
+    productId,
+    postId: productId,
+    entityId: productId,
+    postType: 'PRODUCT',
+    entityType: 'PRODUCT',
+    route: productId ? `/portal/products/${productId}` : '/admin/portal/notifications',
+    ...extra,
+  };
 }
 
 function resolveWhatsAppBody(event, tpl, payload, metadata) {
@@ -466,18 +510,21 @@ async function notify({
   const userOid = user?._id || (await resolveToObjectId(User, String(userId)));
 
   if (!userOid && event !== NOTIFICATION_EVENTS.ADMIN_BULK) {
+    console.warn("[FCM][notificationService] SKIP — user not found:", userId, "event:", event);
     return { ok: false, error: 'User not found', results };
   }
 
   if (!skipDedupe && dedupeKey && userOid) {
     const dup = await wasRecentlySent(userOid, event, dedupeKey);
     if (dup) {
+      console.warn("[FCM][notificationService] SKIP duplicate:", { event, userId: String(userOid), dedupeKey });
       return { ok: true, skipped: true, reason: 'duplicate', results };
     }
   }
 
   const tpl = await getTemplate(event);
   if (!tpl || tpl.enabled === false) {
+    console.warn("[FCM][notificationService] SKIP — template missing/disabled:", event);
     return { ok: true, skipped: true, reason: 'template disabled or missing', results };
   }
 
@@ -619,13 +666,70 @@ async function notify({
     const title = renderTemplate(tpl.templates?.push?.title || tpl.templates?.in_app?.title || tpl.label, payload);
     const body = renderTemplate(tpl.templates?.push?.body || tpl.templates?.in_app?.body || '', payload);
     // Structured data payload so the frontend/app can deep-link straight to the post/request.
-    const push = await sendPushToUser(userOid, title, body, {
-      type: event,
-      postId: metadata.postId || metadata.productId || metadata.loadId || metadata.truckId || '',
-      requestId: metadata.requestId || metadata.bitRecordId || '',
-      postType: metadata.postType || '',
-      status: metadata.status || '',
-      route: metadata.route || '/admin/portal/notifications',
+    const productPublicId =
+      metadata.productId != null
+        ? String(metadata.productId)
+        : metadata.postType === "PRODUCT"
+          ? String(metadata.postId || metadata.entityId || "")
+          : "";
+    const postPublicId = metadata.postId != null ? String(metadata.postId) : "";
+    const requestPublicId =
+      metadata.requestId != null
+        ? String(metadata.requestId)
+        : metadata.bitRecordId != null
+          ? String(metadata.bitRecordId)
+          : "";
+
+    const fcmType = resolveFcmEventType(event, metadata);
+    const pushOptions = {
+      type: fcmType,
+      postId: postPublicId || productPublicId,
+      productId: productPublicId,
+      requestId: requestPublicId,
+      bitRecordId: requestPublicId,
+      postType: metadata.postType || metadata.entityType || "",
+      entityType: metadata.entityType || metadata.postType || "",
+      entityId: metadata.entityId || postPublicId || productPublicId,
+      status: metadata.status || "",
+      route: metadata.route || "/admin/portal/notifications",
+      id: postPublicId || productPublicId || metadata.entityId || "",
+      bidAmount:
+        metadata.bidAmount != null
+          ? String(metadata.bidAmount)
+          : data.amount != null
+            ? String(data.amount)
+            : "",
+      bidderId:
+        metadata.bidderId || metadata.senderId
+          ? String(metadata.bidderId || metadata.senderId)
+          : "",
+      bidderName: metadata.bidderName || data.userName || "",
+      ownerId: metadata.ownerId ? String(metadata.ownerId) : "",
+      bitReason: metadata.bitReason ? String(metadata.bitReason) : "",
+      rejectionType: metadata.rejectionType ? String(metadata.rejectionType) : "",
+    };
+
+    console.log("[FCM][notificationService] sending push →", {
+      event,
+      fcmType,
+      userId: String(userOid),
+      title,
+      body,
+      productId: pushOptions.productId,
+      requestId: pushOptions.requestId,
+      postType: pushOptions.postType,
+      route: pushOptions.route,
+    });
+
+    const push = await sendPushToUser(userOid, title, body, pushOptions);
+
+    console.log("[FCM][notificationService] push result →", {
+      event,
+      userId: String(userOid),
+      sent: push?.sent ?? false,
+      error: push?.error || null,
+      deviceCount: push?.deviceCount ?? 0,
+      messageId: push?.messageId || null,
     });
     await logDelivery({
       userId: userOid,
@@ -640,6 +744,10 @@ async function notify({
       metadata,
     });
     results.channels.push = push;
+  } else if (!activeChannels.includes('push')) {
+    console.warn("[FCM][notificationService] SKIP push — channel disabled for event:", event);
+  } else if (!userOid) {
+    console.warn("[FCM][notificationService] SKIP push — user not found:", userId, "event:", event);
   }
 
   return { ok: true, results };
@@ -658,26 +766,60 @@ async function notifyMultiple(userIds, params) {
 
 async function seedDefaultTemplates() {
   for (const def of DEFAULT_TEMPLATES) {
+    const isPushTemplateEvent = [
+      NOTIFICATION_EVENTS.BID_PLACED,
+      NOTIFICATION_EVENTS.BID_ACCEPTED,
+      NOTIFICATION_EVENTS.BID_REJECTED,
+      NOTIFICATION_EVENTS.NEW_REQUEST,
+      NOTIFICATION_EVENTS.REQUEST_ACCEPTED,
+      NOTIFICATION_EVENTS.REQUEST_REJECTED,
+      NOTIFICATION_EVENTS.PRODUCT_BOOKING,
+      NOTIFICATION_EVENTS.PRODUCT_PURCHASED,
+      NOTIFICATION_EVENTS.PRODUCT_SOLD,
+      NOTIFICATION_EVENTS.PAYMENT_SUCCESS,
+    ].includes(def.event);
+
     // eslint-disable-next-line no-await-in-loop
     await NotificationTemplate.findOneAndUpdate(
       { event: def.event },
-      {
-        $setOnInsert: {
-          event: def.event,
-          label: def.label,
-          description: def.description || '',
-          enabled: true,
-          channels: {
-            in_app: true,
-            whatsapp: true,
-            sms: false,
-            email: false,
-            push: true,
+      isPushTemplateEvent
+        ? {
+            $set: {
+              label: def.label,
+              description: def.description || '',
+              templates: def.templates,
+              placeholders: def.placeholders || [],
+              'channels.push': true,
+            },
+            $setOnInsert: {
+              event: def.event,
+              enabled: true,
+              channels: {
+                in_app: true,
+                whatsapp: true,
+                sms: false,
+                email: false,
+                push: true,
+              },
+            },
+          }
+        : {
+            $setOnInsert: {
+              event: def.event,
+              label: def.label,
+              description: def.description || '',
+              enabled: true,
+              channels: {
+                in_app: true,
+                whatsapp: true,
+                sms: false,
+                email: false,
+                push: true,
+              },
+              templates: def.templates,
+              placeholders: def.placeholders || [],
+            },
           },
-          templates: def.templates,
-          placeholders: def.placeholders || [],
-        },
-      },
       { upsert: true },
     );
   }
@@ -692,4 +834,6 @@ module.exports = {
   seedDefaultTemplates,
   renderTemplate,
   wasRecentlySent,
+  resolveFcmEventType,
+  buildProductPushMetadata,
 };

@@ -503,25 +503,28 @@ export async function getBuySellListPage(
   options?: { signal?: AbortSignal },
 ): Promise<BuySellListPage> {
   const cacheKey = `buy-sell-list-page:${JSON.stringify(body)}`;
+  const fetchPage = async (): Promise<BuySellListPage> => {
+    const payload = await api<unknown>("/api/buy-sell/list", {
+      method: "POST",
+      body: JSON.stringify(body),
+      signal: options?.signal,
+    });
+    const items = unwrapBuySellListResponse(payload);
+    const meta = readBuySellListPagination(payload, {
+      page: body.page,
+      limit: body.limit,
+      itemCount: items.length,
+    });
+    return { items, ...meta };
+  };
+
   try {
-    return await cachedRequest(
-      cacheKey,
-      async () => {
-        const payload = await api<unknown>("/api/buy-sell/list", {
-          method: "POST",
-          body: JSON.stringify(body),
-          signal: options?.signal,
-        });
-        const items = unwrapBuySellListResponse(payload);
-        const meta = readBuySellListPagination(payload, {
-          page: body.page,
-          limit: body.limit,
-          itemCount: items.length,
-        });
-        return { items, ...meta };
-      },
-      options?.signal ? 0 : 15_000,
-    );
+    // Never dedupe/cache cancellable scroll requests — a shared in-flight promise
+    // tied to an aborted signal makes the next caller inherit "signal is aborted".
+    if (options?.signal) {
+      return await fetchPage();
+    }
+    return await cachedRequest(cacheKey, fetchPage, 15_000);
   } catch (error) {
     normalizeError(error);
   }

@@ -46,20 +46,30 @@ function loadServiceAccountFromEnv() {
   return null;
 }
 
-function loadServiceAccountFromFile() {
-  const serviceAccountPath =
-    process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
-    path.join(__dirname, "..", "firebase-service-account.json");
+const DEFAULT_SERVICE_ACCOUNT_CANDIDATES = [
+  "firebase-service-account.json",
+  "firebase-service-account..json",
+];
 
-  if (!fs.existsSync(serviceAccountPath)) {
-    return { credentials: null, path: serviceAccountPath };
+function loadServiceAccountFromFile() {
+  const explicitPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+  const candidates = explicitPath
+    ? [explicitPath]
+    : DEFAULT_SERVICE_ACCOUNT_CANDIDATES.map((name) =>
+        path.join(__dirname, "..", name),
+      );
+
+  for (const serviceAccountPath of candidates) {
+    if (!fs.existsSync(serviceAccountPath)) continue;
+
+    const raw = fs.readFileSync(serviceAccountPath, "utf8");
+    return {
+      credentials: parseJsonCredentials(raw, serviceAccountPath),
+      path: serviceAccountPath,
+    };
   }
 
-  const raw = fs.readFileSync(serviceAccountPath, "utf8");
-  return {
-    credentials: parseJsonCredentials(raw, serviceAccountPath),
-    path: serviceAccountPath,
-  };
+  return { credentials: null, path: candidates[0] };
 }
 
 function initializeFirebaseAdmin() {
@@ -116,63 +126,122 @@ initializeFirebaseAdmin();
 
 const isInvalidTokenError = (code) => INVALID_TOKEN_CODES.has(code);
 
-// Send notification to a single device.
-// Web clients receive both data + notification payloads for tray display and deep-linking.
+const ANDROID_CHANNEL_ID =
+  process.env.FCM_ANDROID_CHANNEL_ID || "trucks99_default";
+const DEFAULT_PUSH_TITLE = "Trucks99";
+
+function stringifyFcmData(data = {}) {
+  return Object.fromEntries(
+    Object.entries(data).map(([key, value]) => [key, value == null ? "" : String(value)]),
+  );
+}
+
+function buildFcmMessage(token, title, body, options = {}) {
+  const notificationTitle = String(title || DEFAULT_PUSH_TITLE);
+  const notificationBody = String(body || "");
+
+  const dataPayload = stringifyFcmData({
+    title: notificationTitle,
+    body: notificationBody,
+    type: options.type || "GENERAL",
+    id: options.id || options.postId || options.productId || "",
+    postId: options.postId || options.id || "",
+    productId: options.productId || "",
+    requestId: options.requestId || options.bitRecordId || "",
+    bitRecordId: options.bitRecordId || options.requestId || "",
+    postType: options.postType || "",
+    entityType: options.entityType || options.postType || "",
+    entityId: options.entityId || options.postId || options.productId || "",
+    status: options.status || "",
+    route: options.route || "/admin/portal/notifications",
+    bidAmount: options.bidAmount || "",
+    bidderId: options.bidderId || "",
+    bidderName: options.bidderName || "",
+    ownerId: options.ownerId || "",
+    bitReason: options.bitReason || "",
+    rejectionType: options.rejectionType || "",
+    ...(options.data || {}),
+  });
+
+  const message = {
+    token,
+    notification: {
+      title: notificationTitle,
+      body: notificationBody,
+    },
+    android: {
+      priority: "high",
+      notification: {
+        channelId: ANDROID_CHANNEL_ID,
+        sound: "default",
+        title: notificationTitle,
+        body: notificationBody,
+      },
+    },
+    apns: {
+      payload: {
+        aps: {
+          alert: {
+            title: notificationTitle,
+            body: notificationBody,
+          },
+          sound: "default",
+        },
+      },
+    },
+    data: dataPayload,
+  };
+
+  if (options.route) {
+    message.webpush = {
+      notification: {
+        title: notificationTitle,
+        body: notificationBody,
+        requireInteraction: false,
+      },
+      fcmOptions: {
+        link: String(options.route),
+      },
+    };
+  } else {
+    message.webpush = {
+      notification: {
+        title: notificationTitle,
+        body: notificationBody,
+        requireInteraction: false,
+      },
+    };
+  }
+
+  return message;
+}
+
+// Send notification to a single device (mobile + web).
 const sendNotification = async (token, title, body, options = {}) => {
   if (!firebaseReady) {
     return { success: false, message: "Firebase not configured" };
   }
 
-  const {
-    route = "/admin/portal",
-    type = "GENERAL",
-    id = "",
-    postId = "",
-    requestId = "",
-    postType = "",
-    status = "",
-  } = options || {};
-
-  const message = {
-    data: {
-      type: String(type || "GENERAL"),
-      id: String(id || postId || ""),
-      postId: String(postId || id || ""),
-      requestId: String(requestId || ""),
-      postType: String(postType || ""),
-      status: String(status || ""),
-      route: String(route || "/admin/portal"),
-      title: String(title || ""),
-      body: String(body || ""),
-    },
-    token,
-  };
-
-  if (title || body) {
-    message.notification = {
-      title: String(title || ""),
-      body: String(body || ""),
-    };
-    message.webpush = {
-      notification: {
-        title: String(title || ""),
-        body: String(body || ""),
-        requireInteraction: false,
-      },
-      fcmOptions: {
-        link: String(route || "/admin/portal"),
-      },
-    };
+  if (!token) {
+    return { success: false, message: "FCM token missing" };
   }
 
   try {
+    const message = buildFcmMessage(token, title, body, options);
+    console.log("[FCM][Firebase] sending →", {
+      token: token ? `${token.slice(0, 12)}...` : "(empty)",
+      title: message.notification?.title,
+      body: message.notification?.body,
+      channelId: message.android?.notification?.channelId,
+      data: message.data,
+    });
     const response = await admin.messaging().send(message);
-    console.log("[Firebase] Notification sent. Message ID:", response);
+    console.log("[FCM][Firebase] sent OK → messageId:", response);
     return { success: true, message: response };
   } catch (error) {
     const code = error?.code || null;
-    console.error("[Firebase] Send failed:", code || error?.message || error);
-    console.error("[Firebase] Token prefix:", token ? `${token.slice(0, 12)}...` : "(empty)");
+    console.error("[FCM][Firebase] send FAILED →", code || error?.message || error);
+    console.error("[FCM][Firebase] token prefix:", token ? `${token.slice(0, 12)}...` : "(empty)");
     return {
       success: false,
       message: error?.message || "Error sending notification",
@@ -216,10 +285,14 @@ const publishLoadBidEvent = async ({
 };
 
 sendNotification.sendNotification = sendNotification;
+sendNotification.buildFcmMessage = buildFcmMessage;
+sendNotification.stringifyFcmData = stringifyFcmData;
 sendNotification.publishLoadBidEvent = publishLoadBidEvent;
 sendNotification.isInvalidTokenError = isInvalidTokenError;
 sendNotification.admin = admin;
-sendNotification.firebaseReady = firebaseReady;
+Object.defineProperty(sendNotification, "firebaseReady", {
+  get: () => firebaseReady,
+});
 sendNotification.initError = initError;
 
 module.exports = sendNotification;

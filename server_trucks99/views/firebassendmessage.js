@@ -1,6 +1,6 @@
 const express = require("express");
 const User = require("../schema/user");
-const { sendPushToUser, saveFcmToken } = require("../services/fcmPushService");
+const { sendPushToUser, sendPushToToken, saveFcmToken } = require("../services/fcmPushService");
 
 const firebaseSendMessageRouter = express.Router();
 
@@ -68,6 +68,56 @@ const testFirebaseEasy = async (req, res) => {
   }
 };
 
+const testFirebaseByToken = async (req, res) => {
+  if (!isFirebaseTestEndpointEnabled()) {
+    return res.status(404).json({ message: "Not found" });
+  }
+
+  try {
+    const { token, title, body } = req.body;
+
+    if (!token || !String(token).trim()) {
+      return res.status(400).json({ message: "Please provide an FCM token in the JSON body." });
+    }
+
+    const fcmToken = String(token).trim();
+    console.log("[FCM] test-firebase-token request →", {
+      token: `${fcmToken.slice(0, 12)}...`,
+      title: title || "Test",
+      body: body || "Testing token endpoint",
+    });
+
+    const result = await sendPushToToken(fcmToken, {
+      title: title || "Test",
+      body: body || "Testing token endpoint",
+      data: { type: "TEST", route: "/admin/portal/notifications" },
+    });
+
+    console.log("[FCM] test-firebase-token result →", {
+      sent: result?.sent ?? false,
+      messageId: result?.messageId || null,
+      error: result?.error || null,
+      code: result?.code || null,
+    });
+
+    if (!result?.sent) {
+      const status = result?.invalidToken ? 400 : 503;
+      return res.status(status).json({
+        message: result?.error || "Push failed",
+        code: result?.code || null,
+      });
+    }
+
+    res.status(200).json({
+      message: "Test message sent successfully to the provided FCM token",
+      messageId: result.messageId,
+    });
+  } catch (error) {
+    console.error("[FCM] test-firebase-token error:", error);
+    res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+};
+
 firebaseSendMessageRouter.post("/firebase/save-token", async (req, res) => {
   try {
     const { token, device, platform } = req.body;
@@ -94,5 +144,6 @@ firebaseSendMessageRouter.post("/firebase/save-token", async (req, res) => {
 
 firebaseSendMessageRouter.post("/firebase-send-message", firebaseSendMessage);
 firebaseSendMessageRouter.post("/test-firebase-easy", testFirebaseEasy);
+firebaseSendMessageRouter.post("/test-firebase-token", testFirebaseByToken);
 
 module.exports = firebaseSendMessageRouter;
