@@ -331,42 +331,26 @@ async function notifyOwnersNewBid({ kind, record, userOid, userName, bit, bitRea
   const ctx = await resolveBidNotificationContext(kind, record);
   const ownerIds = getEntityOwnerObjectIds(entityType, entityDoc);
   const bidderIdStr = userOid ? String(userOid) : '';
+  const postTypeLabel = kind === 'product' ? 'product' : kind === 'truck' ? 'truck' : 'load';
 
   for (const ownerId of ownerIds) {
     if (bidderIdStr && ownerId === bidderIdStr) continue;
-
-    if (kind === 'product') {
-      dispatchBidNotify({
-        userId: ownerId,
-        event: NOTIFICATION_EVENTS.BID_PLACED,
-        data: {
-          userName: userName || 'Buyer',
-          productName: ctx.productName,
-          amount: bit,
-        },
-        metadata: {
-          ...ctx.metadata,
-          status: 'pending',
-          senderId: userOid,
-          ownerId,
-          bitReason: bitReason || '',
-        },
-        dedupeKey: `bid_new_${bitRecordPublicId(record)}_${ownerId}`,
-      });
-      continue;
-    }
-
-    const postTypeLabel = kind === 'truck' ? 'truck' : 'load';
 
     dispatchBidNotify({
       userId: ownerId,
       event: NOTIFICATION_EVENTS.NEW_REQUEST,
       data: {
-        userName: userName || 'User',
+        userName: userName || (kind === 'product' ? 'Buyer' : 'User'),
         postType: postTypeLabel,
         amount: bit,
-        entityLabel: ctx.entityLabel,
-        relatedLabel: kind === 'load' && record.truckId && ctx.relatedLabel ? ctx.relatedLabel : kind === 'truck' && record.loadId && ctx.relatedLabel ? ctx.relatedLabel : '',
+        entityLabel: ctx.entityLabel || ctx.productName,
+        productName: ctx.productName || ctx.entityLabel,
+        relatedLabel:
+          kind === 'load' && record.truckId && ctx.relatedLabel
+            ? ctx.relatedLabel
+            : kind === 'truck' && record.loadId && ctx.relatedLabel
+              ? ctx.relatedLabel
+              : '',
       },
       metadata: {
         ...ctx.metadata,
@@ -384,24 +368,6 @@ async function notifyBidderAccepted({ kind, record, reqUser }) {
   if (!record?.userId) return;
   const ctx = await resolveBidNotificationContext(kind, record);
 
-  if (kind === 'product') {
-    dispatchBidNotify({
-      userId: record.userId,
-      event: NOTIFICATION_EVENTS.BID_ACCEPTED,
-      data: {
-        productName: ctx.productName,
-        amount: record.bit,
-      },
-      metadata: {
-        ...ctx.metadata,
-        status: 'accept',
-        senderId: reqUser?._id,
-      },
-      dedupeKey: `bid_accept_${bitRecordPublicId(record)}`,
-    });
-    return;
-  }
-
   dispatchBidNotify({
     userId: record.userId,
     event: NOTIFICATION_EVENTS.REQUEST_ACCEPTED,
@@ -409,6 +375,7 @@ async function notifyBidderAccepted({ kind, record, reqUser }) {
       postType: ctx.postType.toLowerCase(),
       amount: record.bit,
       entityLabel: ctx.entityLabel,
+      productName: ctx.productName || ctx.entityLabel,
     },
     metadata: {
       ...ctx.metadata,
@@ -434,26 +401,6 @@ async function notifyBidderRejected({
       ? 'Another bid was accepted.'
       : 'The post owner declined your request.');
 
-  if (kind === 'product') {
-    dispatchBidNotify({
-      userId: record.userId,
-      event: NOTIFICATION_EVENTS.BID_REJECTED,
-      data: {
-        amount: record.bit,
-        productName: ctx.productName,
-        rejectionReason: reason,
-      },
-      metadata: {
-        ...ctx.metadata,
-        status: 'reject',
-        rejectionType,
-        senderId: reqUser?._id || null,
-      },
-      dedupeKey: `bid_reject_${bitRecordPublicId(record)}_${rejectionType}`,
-    });
-    return;
-  }
-
   dispatchBidNotify({
     userId: record.userId,
     event: NOTIFICATION_EVENTS.REQUEST_REJECTED,
@@ -461,6 +408,7 @@ async function notifyBidderRejected({
       postType: ctx.postType.toLowerCase(),
       amount: record.bit,
       entityLabel: ctx.entityLabel,
+      productName: ctx.productName || ctx.entityLabel,
       rejectionReason: reason,
     },
     metadata: {

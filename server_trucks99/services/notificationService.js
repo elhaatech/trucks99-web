@@ -230,19 +230,19 @@ const DEFAULT_TEMPLATES = [
   {
     event: NOTIFICATION_EVENTS.NEW_REQUEST,
     label: 'New Request',
-    description: 'Sent to a post owner when a load/truck post receives a new request.',
-    placeholders: ['userName', 'postType', 'amount', 'entityLabel', 'relatedLabel'],
+    description: 'Sent to a post owner when a load/truck/product receives a new request or offer.',
+    placeholders: ['userName', 'postType', 'amount', 'entityLabel', 'productName', 'relatedLabel'],
     templates: {
       in_app: {
         title: 'New request received',
         body: '{{userName}} requested your {{postType}} ({{entityLabel}}) with a bid of ₹{{amount}}.',
       },
       whatsapp: {
-        body: 'TRUCKS99: {{userName}} requested your {{postType}} with a bid of ₹{{amount}}.',
+        body: 'TRUCKS99: {{userName}} placed an offer of ₹{{amount}} on your {{postType}} ({{entityLabel}}).',
       },
       push: {
-        title: 'New {{postType}} request',
-        body: '{{userName}} requested your {{postType}} with a bid of ₹{{amount}}.',
+        title: 'New {{postType}} offer',
+        body: '{{userName}} offered ₹{{amount}} on {{entityLabel}}',
       },
     },
   },
@@ -344,6 +344,46 @@ function renderTemplate(template, data) {
     const val = data[key];
     return val != null && val !== '' ? String(val) : '—';
   });
+}
+
+/** Maps internal notification events to FCM `data.type` values expected by the mobile app. */
+function resolveFcmEventType(event, metadata = {}) {
+  if (metadata.fcmType) return String(metadata.fcmType);
+  switch (event) {
+    case NOTIFICATION_EVENTS.BID_PLACED:
+    case NOTIFICATION_EVENTS.NEW_REQUEST:
+      return 'NEW_REQUEST';
+    case NOTIFICATION_EVENTS.BID_ACCEPTED:
+    case NOTIFICATION_EVENTS.REQUEST_ACCEPTED:
+      return 'REQUEST_ACCEPTED';
+    case NOTIFICATION_EVENTS.BID_REJECTED:
+    case NOTIFICATION_EVENTS.REQUEST_REJECTED:
+      return 'REQUEST_REJECTED';
+    case NOTIFICATION_EVENTS.PRODUCT_BOOKING:
+      return 'PRODUCT_BOOKING';
+    case NOTIFICATION_EVENTS.PRODUCT_PURCHASED:
+      return 'PRODUCT_PURCHASED';
+    case NOTIFICATION_EVENTS.PRODUCT_SOLD:
+      return 'PRODUCT_SOLD';
+    case NOTIFICATION_EVENTS.PAYMENT_SUCCESS:
+      return 'PAYMENT_SUCCESS';
+    default:
+      return String(event || 'GENERAL');
+  }
+}
+
+function buildProductPushMetadata(product, extra = {}) {
+  if (!product) return { ...extra };
+  const productId = product.id || product.uuid || (product._id != null ? String(product._id) : '');
+  return {
+    productId,
+    postId: productId,
+    entityId: productId,
+    postType: 'PRODUCT',
+    entityType: 'PRODUCT',
+    route: productId ? `/portal/products/${productId}` : '/admin/portal/notifications',
+    ...extra,
+  };
 }
 
 function resolveWhatsAppBody(event, tpl, payload, metadata) {
@@ -638,7 +678,7 @@ async function notify({
           : "";
 
     const push = await sendPushToUser(userOid, title, body, {
-      type: event,
+      type: resolveFcmEventType(event, metadata),
       postId: postPublicId || productPublicId,
       productId: productPublicId,
       requestId: requestPublicId,
@@ -695,19 +735,23 @@ async function notifyMultiple(userIds, params) {
 
 async function seedDefaultTemplates() {
   for (const def of DEFAULT_TEMPLATES) {
-    const isBidEvent = [
+    const isPushTemplateEvent = [
       NOTIFICATION_EVENTS.BID_PLACED,
       NOTIFICATION_EVENTS.BID_ACCEPTED,
       NOTIFICATION_EVENTS.BID_REJECTED,
       NOTIFICATION_EVENTS.NEW_REQUEST,
       NOTIFICATION_EVENTS.REQUEST_ACCEPTED,
       NOTIFICATION_EVENTS.REQUEST_REJECTED,
+      NOTIFICATION_EVENTS.PRODUCT_BOOKING,
+      NOTIFICATION_EVENTS.PRODUCT_PURCHASED,
+      NOTIFICATION_EVENTS.PRODUCT_SOLD,
+      NOTIFICATION_EVENTS.PAYMENT_SUCCESS,
     ].includes(def.event);
 
     // eslint-disable-next-line no-await-in-loop
     await NotificationTemplate.findOneAndUpdate(
       { event: def.event },
-      isBidEvent
+      isPushTemplateEvent
         ? {
             $set: {
               label: def.label,
@@ -759,4 +803,6 @@ module.exports = {
   seedDefaultTemplates,
   renderTemplate,
   wasRecentlySent,
+  resolveFcmEventType,
+  buildProductPushMetadata,
 };
