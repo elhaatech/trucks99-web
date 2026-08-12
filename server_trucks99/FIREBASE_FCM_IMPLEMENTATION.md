@@ -38,7 +38,7 @@ See `.env.example`. Supported credential sources (first match wins):
 1. `FIREBASE_SERVICE_ACCOUNT_JSON` — full JSON string (recommended for Azure App Service / Railway)
 2. `FIREBASE_SERVICE_ACCOUNT_BASE64` — base64-encoded JSON
 3. `FIREBASE_PROJECT_ID` + `FIREBASE_CLIENT_EMAIL` + `FIREBASE_PRIVATE_KEY`
-4. `FIREBASE_SERVICE_ACCOUNT_PATH` or `./firebase-service-account.json` (local dev)
+4. `FIREBASE_SERVICE_ACCOUNT_PATH` or `./firebase-service-account.json` (local dev; also tries `firebase-service-account..json`)
 5. `GOOGLE_APPLICATION_CREDENTIALS` — path for application default credentials
 
 ## Environment variables (frontend)
@@ -62,6 +62,7 @@ Generate the VAPID key in Firebase Console → Project settings → Cloud Messag
 | POST | `/api/firebase/save-token` | Required | Register/update FCM token |
 | POST | `/api/firebase-send-message` | Required | Send push to current user's devices |
 | POST | `/api/test-firebase-easy` | Public (dev only) | Test push by mobile number |
+| POST | `/api/test-firebase-token` | Public (dev only) | Test push by FCM device token |
 
 Production blocks `/api/test-firebase-easy` unless `ENABLE_FIREBASE_TEST_ENDPOINT=true`.
 

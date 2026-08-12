@@ -68,6 +68,7 @@ const PUBLIC_METHOD_PATHS = [
   { method: "POST", path: "/api/buysell/recent-vehicles" },
   {"method": "POST", "path": "/api/buy-sell/featured-vehicles/list"},
   { method: "POST", path: "/api/test-firebase-easy" },
+  { method: "POST", path: "/api/test-firebase-token" },
 ];
 
 const { isPublicBuySellMarketplaceRoute } = require("./buySellPublicRoutes");

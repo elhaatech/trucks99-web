@@ -46,20 +46,30 @@ function loadServiceAccountFromEnv() {
   return null;
 }
 
-function loadServiceAccountFromFile() {
-  const serviceAccountPath =
-    process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
-    path.join(__dirname, "..", "firebase-service-account.json");
+const DEFAULT_SERVICE_ACCOUNT_CANDIDATES = [
+  "firebase-service-account.json",
+  "firebase-service-account..json",
+];
 
-  if (!fs.existsSync(serviceAccountPath)) {
-    return { credentials: null, path: serviceAccountPath };
+function loadServiceAccountFromFile() {
+  const explicitPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+  const candidates = explicitPath
+    ? [explicitPath]
+    : DEFAULT_SERVICE_ACCOUNT_CANDIDATES.map((name) =>
+        path.join(__dirname, "..", name),
+      );
+
+  for (const serviceAccountPath of candidates) {
+    if (!fs.existsSync(serviceAccountPath)) continue;
+
+    const raw = fs.readFileSync(serviceAccountPath, "utf8");
+    return {
+      credentials: parseJsonCredentials(raw, serviceAccountPath),
+      path: serviceAccountPath,
+    };
   }
 
-  const raw = fs.readFileSync(serviceAccountPath, "utf8");
-  return {
-    credentials: parseJsonCredentials(raw, serviceAccountPath),
-    path: serviceAccountPath,
-  };
+  return { credentials: null, path: candidates[0] };
 }
 
 function initializeFirebaseAdmin() {
@@ -149,14 +159,35 @@ const sendNotification = async (token, title, body, options = {}) => {
   };
 
   if (title || body) {
+    const notificationTitle = String(title || "");
+    const notificationBody = String(body || "");
+
     message.notification = {
-      title: String(title || ""),
-      body: String(body || ""),
+      title: notificationTitle,
+      body: notificationBody,
+    };
+    message.android = {
+      priority: "high",
+      notification: {
+        title: notificationTitle,
+        body: notificationBody,
+      },
+    };
+    message.apns = {
+      payload: {
+        aps: {
+          alert: {
+            title: notificationTitle,
+            body: notificationBody,
+          },
+          sound: "default",
+        },
+      },
     };
     message.webpush = {
       notification: {
-        title: String(title || ""),
-        body: String(body || ""),
+        title: notificationTitle,
+        body: notificationBody,
         requireInteraction: false,
       },
       fcmOptions: {
