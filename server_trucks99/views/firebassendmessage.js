@@ -1,8 +1,6 @@
 const express = require("express");
 const User = require("../schema/user");
-const FcmToken = require("../schema/firebaseusear");
-const sendNotification = require("../Firebase/firebase");
-const { sendPushToUser, saveFcmToken } = require("../services/fcmPushService");
+const { sendPushToUser, sendPushToToken, saveFcmToken } = require("../services/fcmPushService");
 
 const firebaseSendMessageRouter = express.Router();
 
@@ -82,33 +80,24 @@ const testFirebaseByToken = async (req, res) => {
       return res.status(400).json({ message: "Please provide an FCM token in the JSON body." });
     }
 
-    if (!sendNotification.firebaseReady) {
-      return res.status(503).json({ message: "Firebase not configured" });
-    }
-
     const fcmToken = String(token).trim();
-    const result = await sendNotification(
-      fcmToken,
-      title || "Test",
-      body || "Testing token endpoint",
-    );
+    const result = await sendPushToToken(fcmToken, {
+      title: title || "Test",
+      body: body || "Testing token endpoint",
+      data: { type: "TEST" },
+    });
 
-    if (!result?.success) {
+    if (!result?.sent) {
       const status = result?.invalidToken ? 400 : 503;
       return res.status(status).json({
-        message: result?.message || "Push failed",
+        message: result?.error || "Push failed",
         code: result?.code || null,
       });
     }
 
-    FcmToken.updateOne(
-      { token: fcmToken, isActive: true },
-      { $set: { lastUsed: new Date() } },
-    ).catch(() => {});
-
     res.status(200).json({
       message: "Test message sent successfully to the provided FCM token",
-      messageId: result.message,
+      messageId: result.messageId,
     });
   } catch (error) {
     console.error("[FCM] test-firebase-token error:", error);

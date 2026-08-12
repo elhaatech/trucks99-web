@@ -210,16 +210,20 @@ function buildBidMetadata({
   extra = {},
 }) {
   const entityType = postType || (kind === 'product' ? 'PRODUCT' : kind.toUpperCase());
+  const productPublicId =
+    kind === 'product'
+      ? postId || entityPublicId(productDoc) || (record?.productId ? String(record.productId) : '')
+      : '';
   return {
     postId: postId || null,
     requestId: bitRecordPublicId(record),
-    bitRecordId: record?._id || null,
+    bitRecordId: bitRecordPublicId(record),
     postType: entityType,
     entityType,
-    entityId: postId || null,
-    productId: record?.productId || productDoc?._id || null,
-    loadId: record?.loadId || loadDoc?._id || null,
-    truckId: record?.truckId || truckDoc?._id || null,
+    entityId: postId || productPublicId || null,
+    productId: productPublicId || null,
+    loadId: loadDoc ? entityPublicId(loadDoc) || String(record?.loadId || '') : null,
+    truckId: truckDoc ? entityPublicId(truckDoc) || String(record?.truckId || '') : null,
     bidAmount: record?.bit,
     bitReason: record?.bitReason || '',
     bidderId: record?.userId || null,
@@ -353,12 +357,6 @@ async function notifyOwnersNewBid({ kind, record, userOid, userName, bit, bitRea
     }
 
     const postTypeLabel = kind === 'truck' ? 'truck' : 'load';
-    let bodyContext = '';
-    if (kind === 'load' && record.truckId && ctx.relatedLabel) {
-      bodyContext = ctx.relatedLabel;
-    } else if (kind === 'truck' && record.loadId && ctx.relatedLabel) {
-      bodyContext = ctx.relatedLabel;
-    }
 
     dispatchBidNotify({
       userId: ownerId,
@@ -368,7 +366,7 @@ async function notifyOwnersNewBid({ kind, record, userOid, userName, bit, bitRea
         postType: postTypeLabel,
         amount: bit,
         entityLabel: ctx.entityLabel,
-        relatedLabel: bodyContext,
+        relatedLabel: kind === 'load' && record.truckId && ctx.relatedLabel ? ctx.relatedLabel : kind === 'truck' && record.loadId && ctx.relatedLabel ? ctx.relatedLabel : '',
       },
       metadata: {
         ...ctx.metadata,

@@ -623,18 +623,46 @@ async function notify({
     const title = renderTemplate(tpl.templates?.push?.title || tpl.templates?.in_app?.title || tpl.label, payload);
     const body = renderTemplate(tpl.templates?.push?.body || tpl.templates?.in_app?.body || '', payload);
     // Structured data payload so the frontend/app can deep-link straight to the post/request.
+    const productPublicId =
+      metadata.productId != null
+        ? String(metadata.productId)
+        : metadata.postType === "PRODUCT"
+          ? String(metadata.postId || metadata.entityId || "")
+          : "";
+    const postPublicId = metadata.postId != null ? String(metadata.postId) : "";
+    const requestPublicId =
+      metadata.requestId != null
+        ? String(metadata.requestId)
+        : metadata.bitRecordId != null
+          ? String(metadata.bitRecordId)
+          : "";
+
     const push = await sendPushToUser(userOid, title, body, {
       type: event,
-      postId: metadata.postId || metadata.productId || metadata.loadId || metadata.truckId || metadata.entityId || '',
-      requestId: metadata.requestId || metadata.bitRecordId || '',
-      postType: metadata.postType || metadata.entityType || '',
-      status: metadata.status || '',
-      route: metadata.route || '/admin/portal/notifications',
-      id: metadata.postId || metadata.productId || metadata.entityId || '',
-      bidAmount: metadata.bidAmount != null ? String(metadata.bidAmount) : (data.amount != null ? String(data.amount) : ''),
-      bidderId: metadata.bidderId || metadata.senderId ? String(metadata.bidderId || metadata.senderId) : '',
-      ownerId: metadata.ownerId ? String(metadata.ownerId) : '',
-      bitReason: metadata.bitReason ? String(metadata.bitReason) : '',
+      postId: postPublicId || productPublicId,
+      productId: productPublicId,
+      requestId: requestPublicId,
+      bitRecordId: requestPublicId,
+      postType: metadata.postType || metadata.entityType || "",
+      entityType: metadata.entityType || metadata.postType || "",
+      entityId: metadata.entityId || postPublicId || productPublicId,
+      status: metadata.status || "",
+      route: metadata.route || "/admin/portal/notifications",
+      id: postPublicId || productPublicId || metadata.entityId || "",
+      bidAmount:
+        metadata.bidAmount != null
+          ? String(metadata.bidAmount)
+          : data.amount != null
+            ? String(data.amount)
+            : "",
+      bidderId:
+        metadata.bidderId || metadata.senderId
+          ? String(metadata.bidderId || metadata.senderId)
+          : "",
+      bidderName: metadata.bidderName || data.userName || "",
+      ownerId: metadata.ownerId ? String(metadata.ownerId) : "",
+      bitReason: metadata.bitReason ? String(metadata.bitReason) : "",
+      rejectionType: metadata.rejectionType ? String(metadata.rejectionType) : "",
     });
     await logDelivery({
       userId: userOid,

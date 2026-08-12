@@ -126,62 +126,59 @@ initializeFirebaseAdmin();
 
 const isInvalidTokenError = (code) => INVALID_TOKEN_CODES.has(code);
 
-// Send notification to a single device.
-// Web clients receive both data + notification payloads for tray display and deep-linking.
-const sendNotification = async (token, title, body, options = {}) => {
-  if (!firebaseReady) {
-    return { success: false, message: "Firebase not configured" };
-  }
+const ANDROID_CHANNEL_ID =
+  process.env.FCM_ANDROID_CHANNEL_ID || "trucks99_default";
+const DEFAULT_PUSH_TITLE = "Trucks99";
 
-  const {
-    route = "/admin/portal",
-    type = "GENERAL",
-    id = "",
-    postId = "",
-    requestId = "",
-    postType = "",
-    status = "",
-    bidAmount = "",
-    bidderId = "",
-    ownerId = "",
-    bitReason = "",
-  } = options || {};
+function stringifyFcmData(data = {}) {
+  return Object.fromEntries(
+    Object.entries(data).map(([key, value]) => [key, value == null ? "" : String(value)]),
+  );
+}
+
+function buildFcmMessage(token, title, body, options = {}) {
+  const notificationTitle = String(title || DEFAULT_PUSH_TITLE);
+  const notificationBody = String(body || "");
+
+  const dataPayload = stringifyFcmData({
+    title: notificationTitle,
+    body: notificationBody,
+    type: options.type || "GENERAL",
+    id: options.id || options.postId || options.productId || "",
+    postId: options.postId || options.id || "",
+    productId: options.productId || "",
+    requestId: options.requestId || options.bitRecordId || "",
+    bitRecordId: options.bitRecordId || options.requestId || "",
+    postType: options.postType || "",
+    entityType: options.entityType || options.postType || "",
+    entityId: options.entityId || options.postId || options.productId || "",
+    status: options.status || "",
+    route: options.route || "/admin/portal/notifications",
+    bidAmount: options.bidAmount || "",
+    bidderId: options.bidderId || "",
+    bidderName: options.bidderName || "",
+    ownerId: options.ownerId || "",
+    bitReason: options.bitReason || "",
+    rejectionType: options.rejectionType || "",
+    ...(options.data || {}),
+  });
 
   const message = {
-    data: {
-      type: String(type || "GENERAL"),
-      id: String(id || postId || ""),
-      postId: String(postId || id || ""),
-      requestId: String(requestId || ""),
-      postType: String(postType || ""),
-      status: String(status || ""),
-      route: String(route || "/admin/portal"),
-      title: String(title || ""),
-      body: String(body || ""),
-      bidAmount: String(bidAmount || ""),
-      bidderId: String(bidderId || ""),
-      ownerId: String(ownerId || ""),
-      bitReason: String(bitReason || ""),
-    },
     token,
-  };
-
-  if (title || body) {
-    const notificationTitle = String(title || "");
-    const notificationBody = String(body || "");
-
-    message.notification = {
+    notification: {
       title: notificationTitle,
       body: notificationBody,
-    };
-    message.android = {
+    },
+    android: {
       priority: "high",
       notification: {
+        channelId: ANDROID_CHANNEL_ID,
+        sound: "default",
         title: notificationTitle,
         body: notificationBody,
       },
-    };
-    message.apns = {
+    },
+    apns: {
       payload: {
         aps: {
           alert: {
@@ -191,7 +188,11 @@ const sendNotification = async (token, title, body, options = {}) => {
           sound: "default",
         },
       },
-    };
+    },
+    data: dataPayload,
+  };
+
+  if (options.route) {
     message.webpush = {
       notification: {
         title: notificationTitle,
@@ -199,12 +200,26 @@ const sendNotification = async (token, title, body, options = {}) => {
         requireInteraction: false,
       },
       fcmOptions: {
-        link: String(route || "/admin/portal"),
+        link: String(options.route),
       },
     };
   }
 
+  return message;
+}
+
+// Send notification to a single device (mobile + web).
+const sendNotification = async (token, title, body, options = {}) => {
+  if (!firebaseReady) {
+    return { success: false, message: "Firebase not configured" };
+  }
+
+  if (!token) {
+    return { success: false, message: "FCM token missing" };
+  }
+
   try {
+    const message = buildFcmMessage(token, title, body, options);
     const response = await admin.messaging().send(message);
     console.log("[Firebase] Notification sent. Message ID:", response);
     return { success: true, message: response };
@@ -255,10 +270,14 @@ const publishLoadBidEvent = async ({
 };
 
 sendNotification.sendNotification = sendNotification;
+sendNotification.buildFcmMessage = buildFcmMessage;
+sendNotification.stringifyFcmData = stringifyFcmData;
 sendNotification.publishLoadBidEvent = publishLoadBidEvent;
 sendNotification.isInvalidTokenError = isInvalidTokenError;
 sendNotification.admin = admin;
-sendNotification.firebaseReady = firebaseReady;
+Object.defineProperty(sendNotification, "firebaseReady", {
+  get: () => firebaseReady,
+});
 sendNotification.initError = initError;
 
 module.exports = sendNotification;

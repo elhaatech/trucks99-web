@@ -46,6 +46,7 @@ function testUnconfiguredSendReturnsGracefully() {
 async function testFcmPushServiceExports() {
   const fcmPushService = require("../services/fcmPushService");
   assert(typeof fcmPushService.sendPushToUser === "function");
+  assert(typeof fcmPushService.sendPushToToken === "function");
   assert(typeof fcmPushService.saveFcmToken === "function");
   console.log("[test] fcmPushService exports OK");
 }
