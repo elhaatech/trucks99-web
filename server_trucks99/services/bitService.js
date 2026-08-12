@@ -191,10 +191,39 @@ function truckLabel(truckDoc) {
 }
 
 function dispatchBidNotify({ userId, event, data, metadata, dedupeKey }) {
-  if (!userId) return;
-  notify({ userId, event, data, metadata, dedupeKey }).catch((err) =>
-    console.error(`[bitService] notify ${event} failed:`, err.message),
-  );
+  if (!userId) {
+    console.warn("[FCM][bitService] SKIP — no userId for event:", event);
+    return;
+  }
+
+  console.log("[FCM][bitService] dispatch →", {
+    event,
+    userId: String(userId),
+    dedupeKey,
+    postType: metadata?.postType,
+    productId: metadata?.productId,
+    requestId: metadata?.requestId || metadata?.bitRecordId,
+    status: metadata?.status,
+    amount: data?.amount,
+  });
+
+  notify({ userId, event, data, metadata, dedupeKey })
+    .then((result) => {
+      const push = result?.results?.channels?.push;
+      console.log("[FCM][bitService] notify result →", {
+        event,
+        userId: String(userId),
+        ok: result?.ok,
+        skipped: result?.skipped,
+        skipReason: result?.reason,
+        pushSent: push?.sent ?? null,
+        pushError: push?.error || null,
+        deviceCount: push?.deviceCount ?? null,
+      });
+    })
+    .catch((err) =>
+      console.error(`[FCM][bitService] notify ${event} FAILED:`, err.message),
+    );
 }
 
 function buildBidMetadata({

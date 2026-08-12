@@ -81,10 +81,23 @@ const testFirebaseByToken = async (req, res) => {
     }
 
     const fcmToken = String(token).trim();
+    console.log("[FCM] test-firebase-token request →", {
+      token: `${fcmToken.slice(0, 12)}...`,
+      title: title || "Test",
+      body: body || "Testing token endpoint",
+    });
+
     const result = await sendPushToToken(fcmToken, {
       title: title || "Test",
       body: body || "Testing token endpoint",
-      data: { type: "TEST" },
+      data: { type: "TEST", route: "/admin/portal/notifications" },
+    });
+
+    console.log("[FCM] test-firebase-token result →", {
+      sent: result?.sent ?? false,
+      messageId: result?.messageId || null,
+      error: result?.error || null,
+      code: result?.code || null,
     });
 
     if (!result?.sent) {

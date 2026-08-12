@@ -510,18 +510,21 @@ async function notify({
   const userOid = user?._id || (await resolveToObjectId(User, String(userId)));
 
   if (!userOid && event !== NOTIFICATION_EVENTS.ADMIN_BULK) {
+    console.warn("[FCM][notificationService] SKIP — user not found:", userId, "event:", event);
     return { ok: false, error: 'User not found', results };
   }
 
   if (!skipDedupe && dedupeKey && userOid) {
     const dup = await wasRecentlySent(userOid, event, dedupeKey);
     if (dup) {
+      console.warn("[FCM][notificationService] SKIP duplicate:", { event, userId: String(userOid), dedupeKey });
       return { ok: true, skipped: true, reason: 'duplicate', results };
     }
   }
 
   const tpl = await getTemplate(event);
   if (!tpl || tpl.enabled === false) {
+    console.warn("[FCM][notificationService] SKIP — template missing/disabled:", event);
     return { ok: true, skipped: true, reason: 'template disabled or missing', results };
   }
 
@@ -677,8 +680,9 @@ async function notify({
           ? String(metadata.bitRecordId)
           : "";
 
-    const push = await sendPushToUser(userOid, title, body, {
-      type: resolveFcmEventType(event, metadata),
+    const fcmType = resolveFcmEventType(event, metadata);
+    const pushOptions = {
+      type: fcmType,
       postId: postPublicId || productPublicId,
       productId: productPublicId,
       requestId: requestPublicId,
@@ -703,6 +707,29 @@ async function notify({
       ownerId: metadata.ownerId ? String(metadata.ownerId) : "",
       bitReason: metadata.bitReason ? String(metadata.bitReason) : "",
       rejectionType: metadata.rejectionType ? String(metadata.rejectionType) : "",
+    };
+
+    console.log("[FCM][notificationService] sending push →", {
+      event,
+      fcmType,
+      userId: String(userOid),
+      title,
+      body,
+      productId: pushOptions.productId,
+      requestId: pushOptions.requestId,
+      postType: pushOptions.postType,
+      route: pushOptions.route,
+    });
+
+    const push = await sendPushToUser(userOid, title, body, pushOptions);
+
+    console.log("[FCM][notificationService] push result →", {
+      event,
+      userId: String(userOid),
+      sent: push?.sent ?? false,
+      error: push?.error || null,
+      deviceCount: push?.deviceCount ?? 0,
+      messageId: push?.messageId || null,
     });
     await logDelivery({
       userId: userOid,
@@ -717,6 +744,10 @@ async function notify({
       metadata,
     });
     results.channels.push = push;
+  } else if (!activeChannels.includes('push')) {
+    console.warn("[FCM][notificationService] SKIP push — channel disabled for event:", event);
+  } else if (!userOid) {
+    console.warn("[FCM][notificationService] SKIP push — user not found:", userId, "event:", event);
   }
 
   return { ok: true, results };

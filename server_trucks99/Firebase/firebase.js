@@ -203,6 +203,14 @@ function buildFcmMessage(token, title, body, options = {}) {
         link: String(options.route),
       },
     };
+  } else {
+    message.webpush = {
+      notification: {
+        title: notificationTitle,
+        body: notificationBody,
+        requireInteraction: false,
+      },
+    };
   }
 
   return message;
@@ -220,13 +228,20 @@ const sendNotification = async (token, title, body, options = {}) => {
 
   try {
     const message = buildFcmMessage(token, title, body, options);
+    console.log("[FCM][Firebase] sending →", {
+      token: token ? `${token.slice(0, 12)}...` : "(empty)",
+      title: message.notification?.title,
+      body: message.notification?.body,
+      channelId: message.android?.notification?.channelId,
+      data: message.data,
+    });
     const response = await admin.messaging().send(message);
-    console.log("[Firebase] Notification sent. Message ID:", response);
+    console.log("[FCM][Firebase] sent OK → messageId:", response);
     return { success: true, message: response };
   } catch (error) {
     const code = error?.code || null;
-    console.error("[Firebase] Send failed:", code || error?.message || error);
-    console.error("[Firebase] Token prefix:", token ? `${token.slice(0, 12)}...` : "(empty)");
+    console.error("[FCM][Firebase] send FAILED →", code || error?.message || error);
+    console.error("[FCM][Firebase] token prefix:", token ? `${token.slice(0, 12)}...` : "(empty)");
     return {
       success: false,
       message: error?.message || "Error sending notification",
