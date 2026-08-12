@@ -10,7 +10,7 @@ import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import { alpha, useTheme } from "@mui/material/styles";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getBuySellImageUrl, getFirstBuySellImageUrl } from "@/lib/buysellUtils";
 import { getBuySellRowId, type BuySellCartItem } from "@/model/services/buysellapi";
 import { formatProductPrice, getProductTitle } from "./utils";
 import { ProductStatusChip } from "@/app/admin/portal/buysell/_components/ProductStatusChip";
@@ -37,7 +37,7 @@ export function CartItemRow({
   const product = item.product;
   const productId = getBuySellRowId(product);
   const price = Number(product.price) || 0;
-  const imageUrl = getBuySellImageUrl(product.images?.[0]);
+  const imageUrl = getFirstBuySellImageUrl(product.images);
 
   return (
     <Box

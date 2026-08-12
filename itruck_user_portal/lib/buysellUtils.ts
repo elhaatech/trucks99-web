@@ -14,3 +14,16 @@ export function getBuySellImageUrl(path?: string | null): string {
   const normalized = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
   return `${base}${normalized}`;
 }
+
+/**
+ * Safely resolve the first valid image URL from a product's `images` field.
+ * Returns an empty string when `images` is missing, null, not an array,
+ * or contains only empty/invalid entries.
+ */
+export function getFirstBuySellImageUrl(images?: unknown): string {
+  const list = Array.isArray(images) ? images : [];
+  const firstImage = list.find(
+    (img) => typeof img === "string" && img.trim() !== ""
+  );
+  return firstImage ? getBuySellImageUrl(firstImage) : "";
+}

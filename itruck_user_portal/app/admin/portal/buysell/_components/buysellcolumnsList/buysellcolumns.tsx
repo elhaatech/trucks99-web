@@ -16,7 +16,7 @@ import { ProductStatusChip } from "../ProductStatusChip";
 import { renderClickableName } from "@/components/common/table/tableColumnHelpers";
 import { routes } from "@/lib/routes";
 import { renderNumberColumn } from "@/components/common/table/renderNumberColumn";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getBuySellImageUrl, getFirstBuySellImageUrl } from "@/lib/buysellUtils";
 
 interface UseBuySellColumnsOptions {
   favoriteIds: Set<string>;
@@ -139,10 +139,8 @@ export function useBuySellColumns({
         align: "center",
         sortable: true,
         render: (row) => {
-          const firstImage = Array.isArray(row.images)
-            ? row.images[0]
-            : undefined;
-          return <ImageThumb src={getBuySellImageUrl(firstImage)} />;
+          const src = getFirstBuySellImageUrl(row.images);
+          return <ImageThumb src={src} />;
         },
       },
 

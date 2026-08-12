@@ -11,7 +11,7 @@ import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getBuySellImageUrl, getFirstBuySellImageUrl } from "@/lib/buysellUtils";
 import { createBitRecord } from "@/model/services/bitRecord";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { toMarketplaceApiUser } from "@/lib/marketplaceAuth";
@@ -76,7 +76,7 @@ export function MakeOfferModal({
     }
   };
 
-  const imageUrl = getBuySellImageUrl(product.images?.[0]);
+  const imageUrl = getFirstBuySellImageUrl(product.images);
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">

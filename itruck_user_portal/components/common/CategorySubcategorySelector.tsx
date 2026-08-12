@@ -23,6 +23,8 @@ export type CategorySubcategorySelectorProps = {
   subcategoryPlaceholder?: string;
   activeOnly?: boolean;
   includeInactiveSubcategories?: boolean;
+  categoryError?: boolean;
+  subcategoryError?: boolean;
 };
 
 function getSubcategoryHelperText({
@@ -76,6 +78,8 @@ export function CategorySubcategorySelector({
   subcategoryPlaceholder,
   activeOnly = true,
   includeInactiveSubcategories = false,
+  categoryError = false,
+  subcategoryError = false,
 }: CategorySubcategorySelectorProps) {
   const {
     categoryOptions,
@@ -139,6 +143,7 @@ export function CategorySubcategorySelector({
       required={required}
       disabled={disabled || loadingCategories}
       helperText={categoryHelper}
+      error={categoryError}
     />
   );
 
@@ -158,6 +163,7 @@ export function CategorySubcategorySelector({
             ? `${subcategoryOptions.length} option${subcategoryOptions.length === 1 ? "" : "s"} available`
             : undefined)
         }
+        error={subcategoryError}
       />
       <SubcategoryLoadingSpinner
         show={loadingSubcategories && !!categoryId}

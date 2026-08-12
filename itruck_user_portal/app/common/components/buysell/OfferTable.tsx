@@ -11,7 +11,7 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Avatar from "@mui/material/Avatar";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getBuySellImageUrl, getFirstBuySellImageUrl } from "@/lib/buysellUtils";
 import { formatProductPrice, getProductTitle } from "./utils";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
@@ -150,7 +150,7 @@ export function OfferTable({
               (row as ProductBitRecord).product_info?.id ||
               "";
             const product = row.product ?? (row as ProductBitRecord).product_info ?? null;
-            const image = product?.images?.[0];
+            const image = getFirstBuySellImageUrl(product?.images);
             const title =
               row.productTitle ||
               (product ? getProductTitle(product as BuySellProduct) : "") ||

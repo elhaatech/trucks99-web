@@ -42,7 +42,7 @@ import { addFavorite, removeFavorite } from "@/model/services/favoriteapi";
 import { ProductLifecycleSection } from "@/app/admin/portal/buysell/view/[id]/_components/ProductLifecycleSection";
 import { UserRelatedProductsSection } from "../_components/UserRelatedProductsSection";
 import { extractId } from "@/app/common/components/buysell/utils";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getBuySellImageUrl, getFirstBuySellImageUrl } from "@/lib/buysellUtils";
 import { ProductViewGallery } from "../_components/ProductViewGallery";
 import { ProductViewBreadcrumbs } from "../_components/ProductViewBreadcrumbs";
 import { ProductViewSummary } from "../_components/ProductViewSummary";
@@ -302,7 +302,7 @@ export default function UserProductViewPage() {
     vehicle: {
       productId: id,
       title,
-      imageUrl: getBuySellImageUrl(item.images?.[0]) || undefined,
+      imageUrl: getFirstBuySellImageUrl(item.images) || undefined,
       listedPrice: Number(item.price) || 0,
       sellerName: getSellerDisplayName(item),
       sellerMobile: item.seller_mobile ?? null,

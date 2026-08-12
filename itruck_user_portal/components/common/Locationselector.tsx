@@ -52,6 +52,12 @@ interface LocationSelectorProps {
    * value (or `undefined` to show all countries).
    */
   onlyCountry?: string;
+  countryError?: boolean;
+  stateError?: boolean;
+  cityError?: boolean;
+  countryHelperText?: React.ReactNode;
+  stateHelperText?: React.ReactNode;
+  cityHelperText?: React.ReactNode;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -85,6 +91,12 @@ export function LocationSelector({
   required,
   size = "small",
   onlyCountry = "India",
+  countryError = false,
+  stateError = false,
+  cityError = false,
+  countryHelperText,
+  stateHelperText,
+  cityHelperText,
 }: LocationSelectorProps) {
   const [countries, setCountries] = useState<LocationOption[]>([]);
   const [states, setStates] = useState<LocationOption[]>([]);
@@ -283,6 +295,8 @@ export function LocationSelector({
               fullWidth
               size={size}
               disabled={disabled || countriesLoading}
+              error={countryError}
+              helperText={countryHelperText}
             />
           )}
         />
@@ -312,6 +326,8 @@ export function LocationSelector({
             fullWidth
             size={size}
             disabled={disabled || !value.countryId || statesLoading}
+            error={stateError}
+            helperText={stateHelperText}
           />
         )}
       />
@@ -338,6 +354,8 @@ export function LocationSelector({
             fullWidth
             size={size}
             disabled={disabled || !value.stateId || citiesLoading}
+            error={cityError}
+            helperText={cityHelperText}
           />
         )}
       />

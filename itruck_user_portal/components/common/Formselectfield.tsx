@@ -15,6 +15,7 @@ export interface FormSelectFieldProps {
   fullWidth?: boolean;
   disabled?: boolean;
   helperText?: string;
+  error?: boolean;
 }
 
 /**
@@ -38,6 +39,7 @@ export default function FormSelectField({
   fullWidth = true,
   disabled = false,
   helperText,
+  error = false,
 }: FormSelectFieldProps) {
   return (
     <SearchableSelect
@@ -50,6 +52,7 @@ export default function FormSelectField({
       fullWidth={fullWidth}
       disabled={disabled}
       helperText={helperText}
+      error={error}
     />
   );
 }

@@ -30,6 +30,7 @@ export interface SearchableSelectProps {
   className?: string;
   inputProps?: TextFieldProps["inputProps"];
   id?: string;
+  error?: boolean;
 }
 
 const filter = createFilterOptions<SelectOption>();
@@ -52,6 +53,7 @@ export function SearchableSelect({
   className,
   inputProps,
   id,
+  error = false,
 }: SearchableSelectProps) {
   const selectedOption = options.find((o) => o.value === value) ?? null;
 
@@ -115,6 +117,7 @@ export function SearchableSelect({
           placeholder={placeholder}
           required={required}
           helperText={helperText}
+          error={error}
           inputProps={{
             ...params.inputProps,
             ...inputProps,

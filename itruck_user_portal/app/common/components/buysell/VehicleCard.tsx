@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo } from "react";
 import Image from "next/image";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -13,7 +13,7 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { alpha } from "@mui/material/styles";
 import { PRODUCT_THEME as T, INFO, SUCCESS } from "@/lib/theme";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getBuySellImageUrl, getFirstBuySellImageUrl } from "@/lib/buysellUtils";
 import { getBuySellRowId, type BuySellProduct } from "@/model/services/buysellapi";
 import {
   formatProductPrice,
@@ -87,13 +87,11 @@ export const VehicleCard = memo(function VehicleCard({
     featuredStatus !== "active" &&
     product.isFeatured !== true &&
     Boolean(featuredUi?.showPayNow);
-  const imageUrl = getBuySellImageUrl(product.images?.[0]);
+  const imageUrl = getFirstBuySellImageUrl(product.images);
   const title = getListingCardTitle(product);
   const categoryLabel = getListingCardCategory(product);
   const subtitle = categoryLabel;
   const isList = layout === "list";
-  const [imgError, setImgError] = useState(false);
-  const [fallbackError, setFallbackError] = useState(false);
 
   const handleClick = () => onClick?.(productId);
   const handleView = (e: React.MouseEvent) => {
@@ -168,56 +166,18 @@ export const VehicleCard = memo(function VehicleCard({
             aspectRatio: "16/10",
           }}
         >
-          {!imageUrl || imgError ? (
-            fallbackError ? (
-              <Box
-                sx={{
-                  position: "absolute",
-                  inset: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  bgcolor: alpha(T.color.border, 0.35),
-                  color: T.color.textMuted,
-                }}
-              >
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10 17h4V5H2v12h3" />
-                  <path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1" />
-                  <circle cx="7.5" cy="17.5" r="2.5" />
-                  <circle cx="16.5" cy="17.5" r="2.5" />
-                </svg>
-              </Box>
-            ) : (
-              <Image
-                src={defaultVehicleImg}
-                alt="No vehicle photo available"
-                fill
-                sizes={
-                  isList
-                    ? "(max-width:600px) 100vw, 220px"
-                    : "(max-width:600px) 100vw, (max-width:1200px) 50vw, 25vw"
-                }
-                style={{ objectFit: "cover" }}
-                unoptimized
-                onError={() => setFallbackError(true)}
-              />
-            )
-          ) : (
-            <Image
-              src={imageUrl}
-              alt={title}
-              fill
-              sizes={
-                isList
-                  ? "(max-width:600px) 100vw, 220px"
-                  : "(max-width:600px) 100vw, (max-width:1200px) 50vw, 25vw"
-              }
-              style={{ objectFit: "cover" }}
-              unoptimized
-              onError={() => setImgError(true)}
-            />
-          )}
+          <Image
+            src={imageUrl || defaultVehicleImg}
+            alt={imageUrl ? title : "No vehicle photo available"}
+            fill
+            sizes={
+              isList
+                ? "(max-width:600px) 100vw, 220px"
+                : "(max-width:600px) 100vw, (max-width:1200px) 50vw, 25vw"
+            }
+            style={{ objectFit: "cover" }}
+            unoptimized
+          />
           <Box sx={{ position: "absolute", top: 2, right: 2, zIndex: 1 }}>
              {featuredStatus === "expired" || featuredMeta?.status === "Expired" ? (
                <Box

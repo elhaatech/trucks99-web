@@ -160,6 +160,9 @@ function SpecField({
   values,
   loading,
   disabled,
+  required,
+  error,
+  helperText,
 }: {
   spec: Specification;
   value: string;
@@ -167,6 +170,9 @@ function SpecField({
   values: SpecificationValue[];
   loading: boolean;
   disabled?: boolean;
+  required?: boolean;
+  error?: boolean;
+  helperText?: string;
 }) {
   const isSelectable = spec.type === "selectable";
 
@@ -190,6 +196,9 @@ function SpecField({
             label: sv.specification_value_name,
           }))}
           disabled={disabled || loading || values.length === 0}
+          required
+          error={error}
+          helperText={helperText}
         />
         {loading && (
           <CircularProgress
@@ -213,6 +222,9 @@ function SpecField({
       value={value}
       onChange={onChange}
       disabled={disabled}
+      required
+      error={error}
+      helperText={helperText}
     />
   );
 }
@@ -248,6 +260,7 @@ export function BuySellForm({
   const cancelTarget = cancelHref ?? routes.buysell.list();
   const backButtonLabel = backLabel ?? "Back to list";
   const [isDraft, setIsDraft] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // ── Image state ───────────────────────────────────────────────────────────
   const [imageEntries, setImageEntries] = useState<ImageEntry[]>([]);
@@ -445,6 +458,19 @@ export function BuySellForm({
     [values.specifications, setFieldValue],
   );
 
+  const clearFieldError = useCallback((field: string) => {
+    setFieldErrors((prev) => {
+      if (!(field in prev)) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }, []);
+
+  const setFieldError = useCallback((field: string, message: string) => {
+    setFieldErrors((prev) => ({ ...prev, [field]: message }));
+  }, []);
+
   // ── Populate form on edit ─────────────────────────────────────────────────
   useEffect(() => {
     if (!product) return;
@@ -462,13 +488,25 @@ export function BuySellForm({
     setFieldValue("subcategory_id", subId);
     setFieldValue("price", String(product.price ?? ""));
     setFieldValue("description", product.description ?? "");
-    setFieldValue(
-      "specifications",
-      (product.specifications || []).map((s) => ({
-        specification_id: String(s.specification_id),
-        specification_value: String(s.specification_value),
-      })),
-    );
+
+    const productSpecs = (product.specifications || []).map((s) => ({
+      specification_id: String(s.specification_id),
+      specification_value: String(s.specification_value),
+    }));
+
+    if (specifications.length > 0) {
+      const existingMap = new Map(
+        productSpecs.map((s) => [s.specification_id, s.specification_value]),
+      );
+      const merged = specifications.map((spec) => ({
+        specification_id: spec._id,
+        specification_value: existingMap.get(spec._id) ?? "",
+      }));
+      setFieldValue("specifications", merged);
+    } else {
+      setFieldValue("specifications", productSpecs);
+    }
+
     setFieldValue("address", product.address ?? "");
     setFieldValue("pincode", product.pincode ?? "");
 
@@ -497,10 +535,11 @@ export function BuySellForm({
     setIsDraft(savedStatus === "draft");
 
     const existing: ImageEntry[] = (product.images ?? [])
-      .filter(Boolean)
       .map((url) => ({ kind: "existing" as const, url }));
+
     setImageEntries(existing);
-  }, [product, setFieldValue]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product, specifications, setFieldValue]);
 
   // ── Preload spec values on edit ───────────────────────────────────────────
   useEffect(() => {
@@ -564,22 +603,39 @@ export function BuySellForm({
       if (step === 0) {
         if (!values.category_id) return "Category is required";
         if (!values.subcategory_id) return "Sub category is required";
+        if (brandSpec) {
+          const brandEntry = getSpecEntry(brandSpec._id);
+          if (brandEntry.idx < 0 || !brandEntry.value.trim())
+            return "Brand is required";
+        }
         if (!values.price || isNaN(Number(values.price)))
           return "Valid price is required";
         if (Number(values.price) < 10000)
           return "Price must be at least ₹10,000";
+        if (!values.description.trim()) return "Description is required";
+        return null;
+      }
+      if (step === 1) {
+        for (const spec of vehicleDetailSpecs) {
+          const entry = getSpecEntry(spec._id);
+          if (entry.idx < 0 || !entry.value.trim())
+            return `${spec.specification_name} is required`;
+        }
         return null;
       }
       if (step === 2) {
         if (!location.countryId) return "Country is required";
         if (!location.stateId) return "State is required";
         if (!location.cityId) return "City is required";
+        if (!values.address.trim()) return "Address is required";
+        if (!values.pincode.trim()) return "Pincode is required";
         return null;
       }
       if (step === 3) {
         if (imageEntries.length === 0) return "At least one image is required";
         if (imageEntries.length > 4)
           return "You can upload a maximum of 4 images";
+        if (!values.status) return "Status is required";
         return null;
       }
       return null;
@@ -588,13 +644,90 @@ export function BuySellForm({
       values.category_id,
       values.subcategory_id,
       values.price,
+      values.description,
+      values.address,
+      values.pincode,
+      values.status,
       location.countryId,
       location.stateId,
       location.cityId,
+      imageEntries,
+      brandSpec,
+      vehicleDetailSpecs,
+      getSpecEntry,
+    ],
+  );
+
+  const setFieldErrorsForStep = useCallback(
+    (step: number) => {
+      if (step === 0) {
+        if (!values.category_id) setFieldError("category_id", "Category is required");
+        else clearFieldError("category_id");
+        if (!values.subcategory_id)
+          setFieldError("subcategory_id", "Sub category is required");
+        else clearFieldError("subcategory_id");
+        if (brandSpec) {
+          const brandEntry = getSpecEntry(brandSpec._id);
+          if (brandEntry.idx < 0 || !brandEntry.value.trim())
+            setFieldError(`spec_${brandSpec._id}`, "Brand is required");
+          else clearFieldError(`spec_${brandSpec._id}`);
+        }
+        if (!values.price || isNaN(Number(values.price)))
+          setFieldError("price", "Valid price is required");
+        else clearFieldError("price");
+        if (!values.description.trim())
+          setFieldError("description", "Description is required");
+        else clearFieldError("description");
+      }
+      if (step === 1) {
+        for (const spec of vehicleDetailSpecs) {
+          const entry = getSpecEntry(spec._id);
+          if (entry.idx < 0 || !entry.value.trim())
+            setFieldError(`spec_${spec._id}`, "This field is required");
+          else clearFieldError(`spec_${spec._id}`);
+        }
+      }
+      if (step === 2) {
+        if (!location.countryId) setFieldError("country_id", "Country is required");
+        else clearFieldError("country_id");
+        if (!location.stateId) setFieldError("state_id", "State is required");
+        else clearFieldError("state_id");
+        if (!location.cityId) setFieldError("city_id", "City is required");
+        else clearFieldError("city_id");
+        if (!values.address.trim()) setFieldError("address", "Address is required");
+        else clearFieldError("address");
+        if (!values.pincode.trim()) setFieldError("pincode", "Pincode is required");
+        else clearFieldError("pincode");
+      }
+      if (step === 3) {
+        if (imageEntries.length === 0) setFieldError("images", "At least one image is required");
+        else clearFieldError("images");
+        if (!values.status) setFieldError("status", "Status is required");
+        else clearFieldError("status");
+      }
+    },
+    [
+      values.category_id,
+      values.subcategory_id,
+      values.price,
+      values.description,
+      values.address,
+      values.pincode,
+      values.status,
+      location.countryId,
+      location.stateId,
+      location.cityId,
+      imageEntries,
+      brandSpec,
+      vehicleDetailSpecs,
+      getSpecEntry,
+      setFieldError,
+      clearFieldError,
     ],
   );
 
   const handleNext = () => {
+    setFieldErrorsForStep(activeStep);
     const err = validateStep(activeStep);
     if (err) {
       setError(err);
@@ -610,14 +743,15 @@ export function BuySellForm({
   };
 
   const goToStep = (step: number) => {
-    // Only allow jumping to a step already reachable (all prior steps valid)
     for (let i = 0; i < step; i++) {
       if (validateStep(i)) {
+        setFieldErrorsForStep(i);
         setError(validateStep(i) as string);
         setActiveStep(i);
         return;
       }
     }
+    setFieldErrorsForStep(step);
     setError("");
     setActiveStep(step);
   };
@@ -636,11 +770,13 @@ export function BuySellForm({
 
     const stepZeroErr = validateStep(0);
     if (stepZeroErr) {
+      setFieldErrorsForStep(0);
       setActiveStep(0);
       return setError(stepZeroErr);
     }
     const stepTwoErr = validateStep(2);
     if (stepTwoErr) {
+      setFieldErrorsForStep(2);
       setActiveStep(2);
       return setError(stepTwoErr);
     }
@@ -856,36 +992,61 @@ export function BuySellForm({
               variant="form"
               categoryId={values.category_id}
               subcategoryId={values.subcategory_id}
-              onCategoryChange={(id) => setFieldValue("category_id", id)}
-              onSubcategoryChange={(id) => setFieldValue("subcategory_id", id)}
+              onCategoryChange={(id) => {
+                setFieldValue("category_id", id);
+                clearFieldError("category_id");
+              }}
+              onSubcategoryChange={(id) => {
+                setFieldValue("subcategory_id", id);
+                clearFieldError("subcategory_id");
+              }}
               required
+              categoryError={!!fieldErrors["category_id"]}
+              subcategoryError={!!fieldErrors["subcategory_id"]}
             />
 
             {brandSpec && (
               <SpecField
                 spec={brandSpec}
                 value={getSpecEntry(brandSpec._id).value}
-                onChange={(v) => updateSpecValue(brandSpec._id, v)}
+                onChange={(v) => {
+                  updateSpecValue(brandSpec._id, v);
+                  clearFieldError(`spec_${brandSpec._id}`);
+                }}
                 values={specValueMap[brandSpec._id] ?? []}
                 loading={brandLoading}
                 disabled={!values.subcategory_id}
+                required
+                error={!!fieldErrors[`spec_${brandSpec._id}`]}
+                helperText={fieldErrors[`spec_${brandSpec._id}`]}
               />
             )}
 
             <FormTextField
               label="Price (₹)"
               value={values.price}
-              onChange={(v) => setFieldValue("price", v)}
+              onChange={(v) => {
+                setFieldValue("price", v);
+                clearFieldError("price");
+              }}
               required
+              error={!!fieldErrors["price"]}
+              helperText={fieldErrors["price"]}
             />
 
             <FormGridFull>
               <FormTextField
                 label="Description"
                 value={values.description}
-                onChange={(v) => setFieldValue("description", v)}
+                onChange={(v) => {
+                  setFieldValue("description", v);
+                  clearFieldError("description");
+                }}
                 multiline
                 rows={3}
+                required
+                error={!!fieldErrors["description"]}
+                helperText={fieldErrors["description"]}
               />
             </FormGridFull>
           </FormGrid>
@@ -897,7 +1058,7 @@ export function BuySellForm({
         <Box>
           <StepIntro
             title="Vehicle Details"
-            subtitle="Fill in the details you know — you can leave the rest blank."
+            subtitle="All fields below are required."
           />
           {vehicleDetailSpecs.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
@@ -910,9 +1071,15 @@ export function BuySellForm({
                   key={spec._id}
                   spec={spec}
                   value={getSpecEntry(spec._id).value}
-                  onChange={(v) => updateSpecValue(spec._id, v)}
+                  onChange={(v) => {
+                    updateSpecValue(spec._id, v);
+                    clearFieldError(`spec_${spec._id}`);
+                  }}
                   values={specValueMap[spec._id] ?? []}
                   loading={!!specValueLoadingMap[spec._id]}
+                  required
+                  error={!!fieldErrors[`spec_${spec._id}`]}
+                  helperText={fieldErrors[`spec_${spec._id}`]}
                 />
               ))}
             </FormGrid>
@@ -933,20 +1100,38 @@ export function BuySellForm({
               onChange={setLocation}
               disabled={submitting}
               required
+              countryError={!!fieldErrors["country_id"]}
+              stateError={!!fieldErrors["state_id"]}
+              cityError={!!fieldErrors["city_id"]}
+              countryHelperText={fieldErrors["country_id"]}
+              stateHelperText={fieldErrors["state_id"]}
+              cityHelperText={fieldErrors["city_id"]}
             />
 
             <FormGridFull>
               <FormTextField
                 label="Address"
                 value={values.address}
-                onChange={(v) => setFieldValue("address", v)}
+                onChange={(v) => {
+                  setFieldValue("address", v);
+                  clearFieldError("address");
+                }}
+                required
+                error={!!fieldErrors["address"]}
+                helperText={fieldErrors["address"]}
               />
             </FormGridFull>
 
             <FormTextField
               label="Pincode"
               value={values.pincode}
-              onChange={(v) => setFieldValue("pincode", v)}
+              onChange={(v) => {
+                setFieldValue("pincode", v);
+                clearFieldError("pincode");
+              }}
+              required
+              error={!!fieldErrors["pincode"]}
+              helperText={fieldErrors["pincode"]}
             />
           </FormGrid>
         </Box>
@@ -982,6 +1167,16 @@ export function BuySellForm({
                 ? "Maximum 4 images reached"
                 : "Add More Images"}{" "}
           </Button>
+
+          {fieldErrors["images"] && (
+            <Typography
+              variant="caption"
+              color="error"
+              sx={{ display: "block", mb: 2 }}
+            >
+              {fieldErrors["images"]}
+            </Typography>
+          )}
 
           {imageEntries.length > 0 ? (
             <Box
@@ -1144,6 +1339,7 @@ export function BuySellForm({
                     if (statusLocked) return;
                     setFieldValue("status", s.value);
                     setIsDraft(s.value === "draft");
+                    clearFieldError("status");
                   }}
                   sx={{
                     cursor: statusLocked ? "not-allowed" : "pointer",
@@ -1158,6 +1354,16 @@ export function BuySellForm({
               );
             })}
           </Box>
+
+          {fieldErrors["status"] && (
+            <Typography
+              variant="caption"
+              color="error"
+              sx={{ display: "block", mb: 1 }}
+            >
+              {fieldErrors["status"]}
+            </Typography>
+          )}
 
           {isEdit &&
           !["draft", "active", "inactive"].includes(
