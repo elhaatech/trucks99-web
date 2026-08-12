@@ -141,6 +141,10 @@ const sendNotification = async (token, title, body, options = {}) => {
     requestId = "",
     postType = "",
     status = "",
+    bidAmount = "",
+    bidderId = "",
+    ownerId = "",
+    bitReason = "",
   } = options || {};
 
   const message = {
@@ -154,6 +158,10 @@ const sendNotification = async (token, title, body, options = {}) => {
       route: String(route || "/admin/portal"),
       title: String(title || ""),
       body: String(body || ""),
+      bidAmount: String(bidAmount || ""),
+      bidderId: String(bidderId || ""),
+      ownerId: String(ownerId || ""),
+      bitReason: String(bitReason || ""),
     },
     token,
   };

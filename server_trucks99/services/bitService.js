@@ -170,6 +170,342 @@ function userOwnsEntity(entityType, entityDoc, userOid) {
   return getEntityOwnerObjectIds(entityType, entityDoc).includes(uid);
 }
 
+function bitRecordPublicId(record) {
+  if (!record) return '';
+  return record.id || (record._id != null ? String(record._id) : '');
+}
+
+function loadLabel(loadDoc) {
+  if (!loadDoc) return 'load';
+  return loadDoc.loadNumber || loadDoc.title || 'load';
+}
+
+function truckLabel(truckDoc) {
+  if (!truckDoc) return 'truck';
+  return (
+    truckDoc.truckNumber ||
+    truckDoc.registrationNumber ||
+    truckDoc.truckType ||
+    'truck'
+  );
+}
+
+function dispatchBidNotify({ userId, event, data, metadata, dedupeKey }) {
+  if (!userId) return;
+  notify({ userId, event, data, metadata, dedupeKey }).catch((err) =>
+    console.error(`[bitService] notify ${event} failed:`, err.message),
+  );
+}
+
+function buildBidMetadata({
+  kind,
+  record,
+  postDoc,
+  postType,
+  postId,
+  route,
+  productDoc,
+  loadDoc,
+  truckDoc,
+  extra = {},
+}) {
+  const entityType = postType || (kind === 'product' ? 'PRODUCT' : kind.toUpperCase());
+  return {
+    postId: postId || null,
+    requestId: bitRecordPublicId(record),
+    bitRecordId: record?._id || null,
+    postType: entityType,
+    entityType,
+    entityId: postId || null,
+    productId: record?.productId || productDoc?._id || null,
+    loadId: record?.loadId || loadDoc?._id || null,
+    truckId: record?.truckId || truckDoc?._id || null,
+    bidAmount: record?.bit,
+    bitReason: record?.bitReason || '',
+    bidderId: record?.userId || null,
+    bidderName: record?.userName || '',
+    route: route || '/admin/portal/notifications',
+    ...extra,
+  };
+}
+
+async function resolveBidNotificationContext(kind, record) {
+  const [loadDoc, truckDoc, productDoc] = await Promise.all([
+    record.loadId ? Load.findById(record.loadId).lean() : null,
+    record.truckId ? Truck.findById(record.truckId).lean() : null,
+    record.productId ? BuySellProduct.findById(record.productId).lean() : null,
+  ]);
+
+  if (kind === 'product') {
+    const productName = productLabel(productDoc);
+    const postId = entityPublicId(productDoc);
+    return {
+      postType: 'PRODUCT',
+      postDoc: productDoc,
+      postId,
+      route: `/portal/products/${postId || ''}`,
+      productName,
+      entityLabel: productName,
+      relatedLabel: '',
+      metadata: buildBidMetadata({
+        kind,
+        record,
+        postDoc: productDoc,
+        postType: 'PRODUCT',
+        postId,
+        route: `/portal/products/${postId || ''}`,
+        productDoc,
+      }),
+    };
+  }
+
+  if (kind === 'truck') {
+    const postId = entityPublicId(truckDoc);
+    const relatedLabel = loadDoc ? loadLabel(loadDoc) : '';
+    return {
+      postType: 'TRUCK',
+      postDoc: truckDoc,
+      postId,
+      route: `/portal/trucks/${postId || ''}`,
+      entityLabel: truckLabel(truckDoc),
+      relatedLabel: relatedLabel ? `Load: ${relatedLabel}` : '',
+      metadata: buildBidMetadata({
+        kind,
+        record,
+        postDoc: truckDoc,
+        postType: 'TRUCK',
+        postId,
+        route: `/portal/trucks/${postId || ''}`,
+        loadDoc,
+        truckDoc,
+      }),
+    };
+  }
+
+  // load bid
+  const postId = entityPublicId(loadDoc);
+  const relatedLabel = truckDoc ? truckLabel(truckDoc) : '';
+  return {
+    postType: 'LOAD',
+    postDoc: loadDoc,
+    postId,
+    route: `/portal/loads/${postId || ''}`,
+    entityLabel: loadLabel(loadDoc),
+    relatedLabel: relatedLabel ? `Truck: ${relatedLabel}` : '',
+    metadata: buildBidMetadata({
+      kind,
+      record,
+      postDoc: loadDoc,
+      postType: 'LOAD',
+      postId,
+      route: `/portal/loads/${postId || ''}`,
+      loadDoc,
+      truckDoc,
+    }),
+  };
+}
+
+async function notifyOwnersNewBid({ kind, record, userOid, userName, bit, bitReason }) {
+  let entityDoc;
+  let entityType;
+
+  if (kind === 'load') {
+    entityDoc = await Load.findById(record.loadId).lean();
+    entityType = 'load';
+  } else if (kind === 'truck') {
+    entityDoc = await Truck.findById(record.truckId).lean();
+    entityType = 'truck';
+  } else if (kind === 'product') {
+    entityDoc = await BuySellProduct.findById(record.productId).lean();
+    entityType = 'product';
+  } else {
+    return;
+  }
+
+  if (!entityDoc) return;
+
+  const ctx = await resolveBidNotificationContext(kind, record);
+  const ownerIds = getEntityOwnerObjectIds(entityType, entityDoc);
+  const bidderIdStr = userOid ? String(userOid) : '';
+
+  for (const ownerId of ownerIds) {
+    if (bidderIdStr && ownerId === bidderIdStr) continue;
+
+    if (kind === 'product') {
+      dispatchBidNotify({
+        userId: ownerId,
+        event: NOTIFICATION_EVENTS.BID_PLACED,
+        data: {
+          userName: userName || 'Buyer',
+          productName: ctx.productName,
+          amount: bit,
+        },
+        metadata: {
+          ...ctx.metadata,
+          status: 'pending',
+          senderId: userOid,
+          ownerId,
+          bitReason: bitReason || '',
+        },
+        dedupeKey: `bid_new_${bitRecordPublicId(record)}_${ownerId}`,
+      });
+      continue;
+    }
+
+    const postTypeLabel = kind === 'truck' ? 'truck' : 'load';
+    let bodyContext = '';
+    if (kind === 'load' && record.truckId && ctx.relatedLabel) {
+      bodyContext = ctx.relatedLabel;
+    } else if (kind === 'truck' && record.loadId && ctx.relatedLabel) {
+      bodyContext = ctx.relatedLabel;
+    }
+
+    dispatchBidNotify({
+      userId: ownerId,
+      event: NOTIFICATION_EVENTS.NEW_REQUEST,
+      data: {
+        userName: userName || 'User',
+        postType: postTypeLabel,
+        amount: bit,
+        entityLabel: ctx.entityLabel,
+        relatedLabel: bodyContext,
+      },
+      metadata: {
+        ...ctx.metadata,
+        status: 'pending',
+        senderId: userOid,
+        ownerId,
+        bitReason: bitReason || '',
+      },
+      dedupeKey: `bid_new_${bitRecordPublicId(record)}_${ownerId}`,
+    });
+  }
+}
+
+async function notifyBidderAccepted({ kind, record, reqUser }) {
+  if (!record?.userId) return;
+  const ctx = await resolveBidNotificationContext(kind, record);
+
+  if (kind === 'product') {
+    dispatchBidNotify({
+      userId: record.userId,
+      event: NOTIFICATION_EVENTS.BID_ACCEPTED,
+      data: {
+        productName: ctx.productName,
+        amount: record.bit,
+      },
+      metadata: {
+        ...ctx.metadata,
+        status: 'accept',
+        senderId: reqUser?._id,
+      },
+      dedupeKey: `bid_accept_${bitRecordPublicId(record)}`,
+    });
+    return;
+  }
+
+  dispatchBidNotify({
+    userId: record.userId,
+    event: NOTIFICATION_EVENTS.REQUEST_ACCEPTED,
+    data: {
+      postType: ctx.postType.toLowerCase(),
+      amount: record.bit,
+      entityLabel: ctx.entityLabel,
+    },
+    metadata: {
+      ...ctx.metadata,
+      status: 'accept',
+      senderId: reqUser?._id,
+    },
+    dedupeKey: `bid_accept_${bitRecordPublicId(record)}`,
+  });
+}
+
+async function notifyBidderRejected({
+  kind,
+  record,
+  reqUser,
+  rejectionReason,
+  rejectionType = 'manual',
+}) {
+  if (!record?.userId) return;
+  const ctx = await resolveBidNotificationContext(kind, record);
+  const reason =
+    rejectionReason ||
+    (rejectionType === 'sibling'
+      ? 'Another bid was accepted.'
+      : 'The post owner declined your request.');
+
+  if (kind === 'product') {
+    dispatchBidNotify({
+      userId: record.userId,
+      event: NOTIFICATION_EVENTS.BID_REJECTED,
+      data: {
+        amount: record.bit,
+        productName: ctx.productName,
+        rejectionReason: reason,
+      },
+      metadata: {
+        ...ctx.metadata,
+        status: 'reject',
+        rejectionType,
+        senderId: reqUser?._id || null,
+      },
+      dedupeKey: `bid_reject_${bitRecordPublicId(record)}_${rejectionType}`,
+    });
+    return;
+  }
+
+  dispatchBidNotify({
+    userId: record.userId,
+    event: NOTIFICATION_EVENTS.REQUEST_REJECTED,
+    data: {
+      postType: ctx.postType.toLowerCase(),
+      amount: record.bit,
+      entityLabel: ctx.entityLabel,
+      rejectionReason: reason,
+    },
+    metadata: {
+      ...ctx.metadata,
+      status: 'reject',
+      rejectionType,
+      senderId: reqUser?._id || null,
+    },
+    dedupeKey: `bid_reject_${bitRecordPublicId(record)}_${rejectionType}`,
+  });
+}
+
+async function rejectPendingRecords(Model, filter, excludeId, sourceKind) {
+  const pending = await Model.find({
+    ...filter,
+    status: 'pending',
+    _id: { $ne: excludeId },
+  }).lean();
+  if (!pending.length) return [];
+  await Model.updateMany(
+    { _id: { $in: pending.map((r) => r._id) } },
+    { $set: { status: 'reject' } },
+  );
+  return pending.map((r) => ({ ...r, _sourceKind: sourceKind }));
+}
+
+async function notifyAutoRejectedSiblings(acceptedKind, acceptedRecord, rejectedRows, reqUser) {
+  for (const row of rejectedRows) {
+    const kind = row._sourceKind || 'load';
+    if (acceptedRecord.userId && row.userId && String(row.userId) === String(acceptedRecord.userId)) {
+      continue;
+    }
+    // eslint-disable-next-line no-await-in-loop
+    await notifyBidderRejected({
+      kind,
+      record: row,
+      reqUser,
+      rejectionReason: 'Another bid was accepted.',
+      rejectionType: 'sibling',
+    });
+  }
+}
+
 async function findBitRecordById(id) {
   if (!id) return null;
   const raw = String(id).trim();
@@ -576,7 +912,7 @@ async function resolveBidderFields(body, reqUser, options = {}) {
   return { userOid, userName, userEmail };
 }
 
-async function rejectSiblingBids(kind, record) {
+async function rejectSiblingBids(kind, record, reqUser = null) {
   if (!record || !kind) return;
 
   /**
@@ -597,23 +933,31 @@ async function rejectSiblingBids(kind, record) {
    *    Reject ALL ProductBitRecords with same productId
    */
 
+  const rejectedRows = [];
+
   if (kind === 'load' && record.loadId) {
-    // Load offer accepted: reject all competing offers for this Load
-    // Competition could be from other LoadBitRecords, TruckBitRecords, or ProductBitRecords
-    await Promise.all([
-      LoadBitRecord.updateMany(
-        { loadId: record.loadId, _id: { $ne: record._id } },
-        { $set: { status: 'reject' } },
+    const [fromLoad, fromTruck, fromProduct] = await Promise.all([
+      rejectPendingRecords(
+        LoadBitRecord,
+        { loadId: record.loadId },
+        record._id,
+        'load',
       ),
-      TruckBitRecord.updateMany(
-        { loadId: record.loadId, _id: { $ne: record._id } },
-        { $set: { status: 'reject' } },
+      rejectPendingRecords(
+        TruckBitRecord,
+        { loadId: record.loadId },
+        record._id,
+        'truck',
       ),
-      ProductBitRecord.updateMany(
-        { loadId: record.loadId, _id: { $ne: record._id } },
-        { $set: { status: 'reject' } },
+      rejectPendingRecords(
+        ProductBitRecord,
+        { loadId: record.loadId },
+        record._id,
+        'product',
       ),
     ]);
+    rejectedRows.push(...fromLoad, ...fromTruck, ...fromProduct);
+
     await Load.findByIdAndUpdate(record.loadId, {
       $set: { status: 'accepted', bit: record.bit, bitReason: record.bitReason || '' },
     });
@@ -629,56 +973,64 @@ async function rejectSiblingBids(kind, record) {
         status: 'accept',
       });
     }
+    await notifyAutoRejectedSiblings(kind, record, rejectedRows, reqUser);
     return;
   }
 
   if (kind === 'truck') {
-    // Truck bid accepted: competition context depends on whether it's bidding FOR a Load or RECEIVING from Loads
-    
     if (record.loadId) {
-      // CASE: Truck is bidding FOR a Load (competing with other trucks for the same load)
-      // Reject all TruckBitRecords and LoadBitRecords competing for this load
-      // KEY FIX: Group by loadId, NOT truckId
-      await Promise.all([
-        TruckBitRecord.updateMany(
-          { loadId: record.loadId, _id: { $ne: record._id } },
-          { $set: { status: 'reject' } },
+      const [fromTruck, fromLoad] = await Promise.all([
+        rejectPendingRecords(
+          TruckBitRecord,
+          { loadId: record.loadId },
+          record._id,
+          'truck',
         ),
-        LoadBitRecord.updateMany(
-          { loadId: record.loadId, _id: { $ne: record._id } },
-          { $set: { status: 'reject' } },
+        rejectPendingRecords(
+          LoadBitRecord,
+          { loadId: record.loadId },
+          record._id,
+          'load',
         ),
       ]);
+      rejectedRows.push(...fromTruck, ...fromLoad);
     } else if (record.truckId) {
-      // CASE: Truck is RECEIVING bids from multiple loads (multiple loads bidding FOR this truck)
-      // Reject all TruckBitRecords and LoadBitRecords competing for this truck
-      await Promise.all([
-        TruckBitRecord.updateMany(
-          { truckId: record.truckId, _id: { $ne: record._id } },
-          { $set: { status: 'reject' } },
+      const [fromTruck, fromLoad] = await Promise.all([
+        rejectPendingRecords(
+          TruckBitRecord,
+          { truckId: record.truckId },
+          record._id,
+          'truck',
         ),
-        LoadBitRecord.updateMany(
-          { truckId: record.truckId, _id: { $ne: record._id } },
-          { $set: { status: 'reject' } },
+        rejectPendingRecords(
+          LoadBitRecord,
+          { truckId: record.truckId },
+          record._id,
+          'load',
         ),
       ]);
+      rejectedRows.push(...fromTruck, ...fromLoad);
     }
 
-    // Update the truck entity with the accepted bid details
     if (record.truckId) {
       await Truck.findByIdAndUpdate(record.truckId, {
         $set: { bit: record.bit, bitReason: record.bitReason || '' },
       });
     }
+
+    await notifyAutoRejectedSiblings(kind, record, rejectedRows, reqUser);
     return;
   }
 
   if (kind === 'product' && record.productId) {
-    // Product offer accepted: reject all competing offers for this Product
-    await ProductBitRecord.updateMany(
-      { productId: record.productId, _id: { $ne: record._id } },
-      { $set: { status: 'reject' } },
+    const fromProduct = await rejectPendingRecords(
+      ProductBitRecord,
+      { productId: record.productId },
+      record._id,
+      'product',
     );
+    rejectedRows.push(...fromProduct);
+    await notifyAutoRejectedSiblings(kind, record, rejectedRows, reqUser);
   }
 }
 
@@ -795,68 +1147,14 @@ async function createBid(body, reqUser) {
 
   const bitRecord = await mapBitRecordRow(saved, type);
 
-  if (type === 'load' && saved.loadId) {
-    const loadDoc = await Load.findById(saved.loadId).lean();
-    const ownerIds = getEntityOwnerObjectIds('load', loadDoc);
-    for (const ownerId of ownerIds) {
-      if (userOid && ownerId === String(userOid)) continue;
-      notify({
-        userId: ownerId,
-        event: NOTIFICATION_EVENTS.NEW_REQUEST,
-        data: { userName: userName || 'User', postType: 'load' },
-        metadata: {
-          postId: entityPublicId(loadDoc),
-          requestId: saved.id || String(saved._id),
-          postType: 'LOAD',
-          status: 'pending',
-          senderId: userOid,
-          route: `/portal/loads/${entityPublicId(loadDoc) || ''}`,
-        },
-      }).catch((err) =>
-        console.error('[bitService] new request notification failed:', err.message),
-      );
-    }
-  } else if (type === 'truck' && saved.truckId) {
-    const truckDoc = await Truck.findById(saved.truckId).lean();
-    const ownerIds = getEntityOwnerObjectIds('truck', truckDoc);
-    for (const ownerId of ownerIds) {
-      if (userOid && ownerId === String(userOid)) continue;
-      notify({
-        userId: ownerId,
-        event: NOTIFICATION_EVENTS.NEW_REQUEST,
-        data: { userName: userName || 'User', postType: 'truck' },
-        metadata: {
-          postId: entityPublicId(truckDoc),
-          requestId: saved.id || String(saved._id),
-          postType: 'TRUCK',
-          status: 'pending',
-          senderId: userOid,
-          route: `/portal/trucks/${entityPublicId(truckDoc) || ''}`,
-        },
-      }).catch((err) =>
-        console.error('[bitService] new request notification failed:', err.message),
-      );
-    }
-  } else if (type === 'product' && saved.productId) {
-    const productDoc = await BuySellProduct.findById(saved.productId).lean();
-    const ownerIds = getEntityOwnerObjectIds('product', productDoc);
-    const pName = productLabel(productDoc);
-    for (const ownerId of ownerIds) {
-      if (ownerId === String(userOid)) continue;
-      notify({
-        userId: ownerId,
-        event: NOTIFICATION_EVENTS.BID_PLACED,
-        data: {
-          userName: userName || 'Buyer',
-          productName: pName,
-          amount: bit,
-        },
-        metadata: { productId: saved.productId, bitRecordId: saved._id, senderId: userOid },
-      }).catch((err) =>
-        console.error('[bitService] bid notification failed:', err.message),
-      );
-    }
-  }
+  await notifyOwnersNewBid({
+    kind: type,
+    record: saved.toObject ? saved.toObject() : saved,
+    userOid,
+    userName,
+    bit,
+    bitReason,
+  });
 
   return {
     statusCode: 201,
@@ -955,6 +1253,7 @@ async function updateBid(id, body, reqUser) {
   if (!found) throw new BitServiceError('Bit record not found', 404);
 
   const { doc, kind } = found;
+  const previousStatus = normalizeStatus(doc.status);
   const updates = {};
 
   if (body.bit != null) {
@@ -1006,9 +1305,12 @@ async function updateBid(id, body, reqUser) {
   Object.assign(doc, updates);
   await doc.save();
 
-  if (updates.status === 'accept') {
-    const recordObj = doc.toObject ? doc.toObject() : doc;
-    await rejectSiblingBids(kind, recordObj);
+  const recordObj = doc.toObject ? doc.toObject() : doc;
+  const newStatus = updates.status != null ? updates.status : previousStatus;
+  const statusChanged = updates.status != null && newStatus !== previousStatus;
+
+  if (statusChanged && newStatus === 'accept') {
+    await rejectSiblingBids(kind, recordObj, reqUser);
 
     if (kind === 'product' && recordObj.productId) {
       try {
@@ -1034,82 +1336,18 @@ async function updateBid(id, body, reqUser) {
         );
       }
     }
+
+    await notifyBidderAccepted({ kind, record: recordObj, reqUser });
+  } else if (statusChanged && newStatus === 'reject') {
+    await notifyBidderRejected({
+      kind,
+      record: recordObj,
+      reqUser,
+      rejectionType: 'manual',
+    });
   }
 
   const bitRecord = await mapBitRecordRow(doc, kind);
-
-  async function resolveRequestPost() {
-    // For a load bid, the "post" is always the Load.
-    // For a truck bid, it's the Truck if this bid targets a truck post, else the Load it bid for.
-    const postType = kind === 'truck' && doc.truckId ? 'TRUCK' : kind === 'load' ? 'LOAD' : (doc.truckId ? 'TRUCK' : 'LOAD');
-    const postObjectId = postType === 'TRUCK' ? doc.truckId : doc.loadId;
-    if (!postObjectId) return { postType, postDoc: null };
-    const postDoc =
-      postType === 'TRUCK'
-        ? await Truck.findById(postObjectId).lean()
-        : await Load.findById(postObjectId).lean();
-    return { postType, postDoc };
-  }
-
-  if (updates.status === 'accept' && kind === 'product' && doc.productId) {
-    const productDoc = await BuySellProduct.findById(doc.productId).lean();
-    if (productDoc && doc.userId) {
-      notify({
-        userId: doc.userId,
-        event: NOTIFICATION_EVENTS.BID_ACCEPTED,
-        data: {
-          productName: productLabel(productDoc),
-          amount: doc.bit,
-        },
-        metadata: { productId: doc.productId, bitRecordId: doc._id, senderId: reqUser?._id },
-      }).catch((err) =>
-        console.error('[bitService] bid accepted notification failed:', err.message),
-      );
-    }
-  } else if (updates.status === 'accept' && (kind === 'load' || kind === 'truck') && doc.userId) {
-    const { postType, postDoc } = await resolveRequestPost();
-    notify({
-      userId: doc.userId,
-      event: NOTIFICATION_EVENTS.REQUEST_ACCEPTED,
-      data: { postType: postType.toLowerCase() },
-      metadata: {
-        postId: postDoc ? entityPublicId(postDoc) : null,
-        requestId: doc.id || String(doc._id),
-        postType,
-        status: 'accepted',
-        senderId: reqUser?._id,
-        route: `/portal/${postType.toLowerCase()}s/${postDoc ? entityPublicId(postDoc) : ''}`,
-      },
-    }).catch((err) =>
-      console.error('[bitService] request accepted notification failed:', err.message),
-    );
-  } else if (updates.status === 'reject' && kind === 'product' && doc.userId) {
-    notify({
-      userId: doc.userId,
-      event: NOTIFICATION_EVENTS.BID_REJECTED,
-      data: { amount: doc.bit },
-      metadata: { bitRecordId: doc._id, senderId: reqUser?._id },
-    }).catch((err) =>
-      console.error('[bitService] bid rejected notification failed:', err.message),
-    );
-  } else if (updates.status === 'reject' && doc.userId) {
-    const { postType, postDoc } = await resolveRequestPost();
-    notify({
-      userId: doc.userId,
-      event: NOTIFICATION_EVENTS.REQUEST_REJECTED,
-      data: { postType: postType.toLowerCase() },
-      metadata: {
-        postId: postDoc ? entityPublicId(postDoc) : null,
-        requestId: doc.id || String(doc._id),
-        postType,
-        status: 'rejected',
-        senderId: reqUser?._id,
-        route: `/portal/${postType.toLowerCase()}s/${postDoc ? entityPublicId(postDoc) : ''}`,
-      },
-    }).catch((err) =>
-      console.error('[bitService] request rejected notification failed:', err.message),
-    );
-  }
 
   return {
     statusCode: 200,

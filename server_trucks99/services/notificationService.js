@@ -191,7 +191,7 @@ const DEFAULT_TEMPLATES = [
       whatsapp: {
         body: 'New offer on {{productName}}: ₹{{amount}} from {{userName}}.',
       },
-      push: { title: 'New offer', body: '₹{{amount}} on {{productName}}' },
+      push: { title: 'New offer', body: '{{userName}} bid ₹{{amount}} on {{productName}}' },
     },
   },
   {
@@ -206,20 +206,24 @@ const DEFAULT_TEMPLATES = [
       whatsapp: {
         body: 'TRUCKS99: Your offer of ₹{{amount}} on {{productName}} was accepted.',
       },
-      push: { title: 'Offer accepted', body: '{{productName}} — ₹{{amount}}' },
+      push: { title: 'Offer accepted', body: 'Your bid of ₹{{amount}} for {{productName}} was accepted.' },
     },
   },
   {
     event: NOTIFICATION_EVENTS.BID_REJECTED,
     label: 'Bid Rejected',
-    placeholders: ['amount', 'productName'],
+    placeholders: ['amount', 'productName', 'rejectionReason'],
     templates: {
       in_app: {
         title: 'Offer declined',
-        body: 'Your offer of ₹{{amount}} was not accepted.',
+        body: 'Your offer of ₹{{amount}} on {{productName}} was not accepted. {{rejectionReason}}',
       },
       whatsapp: {
-        body: 'TRUCKS99: Your offer of ₹{{amount}} was not accepted at this time.',
+        body: 'TRUCKS99: Your offer of ₹{{amount}} on {{productName}} was not accepted. {{rejectionReason}}',
+      },
+      push: {
+        title: 'Offer declined',
+        body: 'Your bid of ₹{{amount}} on {{productName}} was declined. {{rejectionReason}}',
       },
     },
   },
@@ -227,18 +231,18 @@ const DEFAULT_TEMPLATES = [
     event: NOTIFICATION_EVENTS.NEW_REQUEST,
     label: 'New Request',
     description: 'Sent to a post owner when a load/truck post receives a new request.',
-    placeholders: ['userName', 'postType'],
+    placeholders: ['userName', 'postType', 'amount', 'entityLabel', 'relatedLabel'],
     templates: {
       in_app: {
         title: 'New request received',
-        body: 'Your {{postType}} post received a new request from {{userName}}.',
+        body: '{{userName}} requested your {{postType}} ({{entityLabel}}) with a bid of ₹{{amount}}.',
       },
       whatsapp: {
-        body: 'TRUCKS99: Your {{postType}} post received a new request from {{userName}}.',
+        body: 'TRUCKS99: {{userName}} requested your {{postType}} with a bid of ₹{{amount}}.',
       },
       push: {
-        title: 'New request received',
-        body: 'Your {{postType}} post received a new request from {{userName}}.',
+        title: 'New {{postType}} request',
+        body: '{{userName}} requested your {{postType}} with a bid of ₹{{amount}}.',
       },
     },
   },
@@ -246,18 +250,18 @@ const DEFAULT_TEMPLATES = [
     event: NOTIFICATION_EVENTS.REQUEST_ACCEPTED,
     label: 'Request Accepted',
     description: 'Sent to the requesting user when the post owner accepts their request.',
-    placeholders: ['postType'],
+    placeholders: ['postType', 'amount', 'entityLabel'],
     templates: {
       in_app: {
         title: 'Request accepted',
-        body: 'Your request for this {{postType}} has been accepted by the post owner.',
+        body: 'Your {{postType}} bid of ₹{{amount}} was accepted.',
       },
       whatsapp: {
-        body: 'TRUCKS99: Your request for this {{postType}} has been accepted by the post owner.',
+        body: 'TRUCKS99: Your request for this {{postType}} was accepted.',
       },
       push: {
         title: 'Request accepted',
-        body: 'Your request for this {{postType}} has been accepted by the post owner.',
+        body: 'Your {{postType}} bid of ₹{{amount}} was accepted.',
       },
     },
   },
@@ -265,18 +269,18 @@ const DEFAULT_TEMPLATES = [
     event: NOTIFICATION_EVENTS.REQUEST_REJECTED,
     label: 'Request Rejected',
     description: 'Sent to the requesting user when the post owner rejects their request.',
-    placeholders: ['postType'],
+    placeholders: ['postType', 'amount', 'entityLabel', 'rejectionReason'],
     templates: {
       in_app: {
         title: 'Request declined',
-        body: 'Your request for this {{postType}} has been rejected by the post owner.',
+        body: 'Your {{postType}} bid of ₹{{amount}} was declined. {{rejectionReason}}',
       },
       whatsapp: {
-        body: 'TRUCKS99: Your request for this {{postType}} has been rejected by the post owner.',
+        body: 'TRUCKS99: Your request for this {{postType}} was declined. {{rejectionReason}}',
       },
       push: {
         title: 'Request declined',
-        body: 'Your request for this {{postType}} has been rejected by the post owner.',
+        body: 'Your {{postType}} bid of ₹{{amount}} was declined. {{rejectionReason}}',
       },
     },
   },
@@ -621,11 +625,16 @@ async function notify({
     // Structured data payload so the frontend/app can deep-link straight to the post/request.
     const push = await sendPushToUser(userOid, title, body, {
       type: event,
-      postId: metadata.postId || metadata.productId || metadata.loadId || metadata.truckId || '',
+      postId: metadata.postId || metadata.productId || metadata.loadId || metadata.truckId || metadata.entityId || '',
       requestId: metadata.requestId || metadata.bitRecordId || '',
-      postType: metadata.postType || '',
+      postType: metadata.postType || metadata.entityType || '',
       status: metadata.status || '',
       route: metadata.route || '/admin/portal/notifications',
+      id: metadata.postId || metadata.productId || metadata.entityId || '',
+      bidAmount: metadata.bidAmount != null ? String(metadata.bidAmount) : (data.amount != null ? String(data.amount) : ''),
+      bidderId: metadata.bidderId || metadata.senderId ? String(metadata.bidderId || metadata.senderId) : '',
+      ownerId: metadata.ownerId ? String(metadata.ownerId) : '',
+      bitReason: metadata.bitReason ? String(metadata.bitReason) : '',
     });
     await logDelivery({
       userId: userOid,
@@ -658,26 +667,56 @@ async function notifyMultiple(userIds, params) {
 
 async function seedDefaultTemplates() {
   for (const def of DEFAULT_TEMPLATES) {
+    const isBidEvent = [
+      NOTIFICATION_EVENTS.BID_PLACED,
+      NOTIFICATION_EVENTS.BID_ACCEPTED,
+      NOTIFICATION_EVENTS.BID_REJECTED,
+      NOTIFICATION_EVENTS.NEW_REQUEST,
+      NOTIFICATION_EVENTS.REQUEST_ACCEPTED,
+      NOTIFICATION_EVENTS.REQUEST_REJECTED,
+    ].includes(def.event);
+
     // eslint-disable-next-line no-await-in-loop
     await NotificationTemplate.findOneAndUpdate(
       { event: def.event },
-      {
-        $setOnInsert: {
-          event: def.event,
-          label: def.label,
-          description: def.description || '',
-          enabled: true,
-          channels: {
-            in_app: true,
-            whatsapp: true,
-            sms: false,
-            email: false,
-            push: true,
+      isBidEvent
+        ? {
+            $set: {
+              label: def.label,
+              description: def.description || '',
+              templates: def.templates,
+              placeholders: def.placeholders || [],
+              'channels.push': true,
+            },
+            $setOnInsert: {
+              event: def.event,
+              enabled: true,
+              channels: {
+                in_app: true,
+                whatsapp: true,
+                sms: false,
+                email: false,
+                push: true,
+              },
+            },
+          }
+        : {
+            $setOnInsert: {
+              event: def.event,
+              label: def.label,
+              description: def.description || '',
+              enabled: true,
+              channels: {
+                in_app: true,
+                whatsapp: true,
+                sms: false,
+                email: false,
+                push: true,
+              },
+              templates: def.templates,
+              placeholders: def.placeholders || [],
+            },
           },
-          templates: def.templates,
-          placeholders: def.placeholders || [],
-        },
-      },
       { upsert: true },
     );
   }
