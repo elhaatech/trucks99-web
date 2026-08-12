@@ -6,10 +6,6 @@ node_modules/
 .env.*
 !.env.example
 
-# Firebase / GCP credentials (never commit)
-firebase-service-account.json
-*-firebase-adminsdk*.json
-
 # Logs
 logs
 *.log
@@ -51,4 +47,11 @@ temp/
 *.tsbuildinfo
 
 # Uploads
-server/uploads/
+server/uploads/s
+
+# Firebase credentials (never commit)
+firebase-service-account.json
+google-services.json
+GoogleService-Info.plist
+*-firebase-adminsdk-*.json
+

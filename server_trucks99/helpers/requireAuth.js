@@ -23,7 +23,6 @@ const PUBLIC_PATHS = [
   "/api/auth/resend-otp",
   "/api/company-start-country",
   "/api/role",
-  "/api/test-firebase-easy",
 ];
 
 /** Path + method combinations that are public */
@@ -68,6 +67,7 @@ const PUBLIC_METHOD_PATHS = [
   { method: "POST", path: "/api/buy-sell/recent-vehicles" },
   { method: "POST", path: "/api/buysell/recent-vehicles" },
   {"method": "POST", "path": "/api/buy-sell/featured-vehicles/list"},
+  { method: "POST", path: "/api/test-firebase-easy" },
 ];
 
 const { isPublicBuySellMarketplaceRoute } = require("./buySellPublicRoutes");
