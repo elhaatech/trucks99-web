@@ -4,11 +4,10 @@ const Notification = require('../schema/notification');
 const NotificationLog = require('../schema/notificationLog');
 const NotificationTemplate = require('../schema/notificationTemplate');
 const User = require('../schema/user');
-const FcmToken = require('../schema/firebaseusear');
 const sendSMS = require('../helpers/sendSMS');
 const sendWhatsApp = require('../helpers/sendWhatsApp');
 const sendEmail = require('../helpers/email/sendEmail');
-const sendNotification = require('../Firebase/firebase');
+const { sendPushToUser } = require('./fcmPushService');
 const { resolveToObjectId } = require('../helpers/uuidHelper');
 
 /** Canonical business events */
@@ -435,42 +434,6 @@ async function getTemplate(event) {
     }
   }
   return tpl;
-}
-
-// Sends a push message to every active device for a user (multi-device support).
-// Any token FCM reports as dead is flipped to isActive:false so it stops being used.
-async function sendPushToUser(userId, title, body, options = {}) {
-  const oid = await resolveToObjectId(User, String(userId));
-  if (!oid) return { sent: false, error: 'User not found' };
-
-  const tokenDocs = await FcmToken.find({ userId: oid, isActive: true })
-    .sort({ lastUsed: -1 })
-    .lean();
-
-  if (!tokenDocs.length) {
-    return { sent: false, error: 'No FCM token' };
-  }
-
-  const perToken = await Promise.all(
-    tokenDocs.map(async (tokenDoc) => {
-      const result = await sendNotification(tokenDoc.token, title, body, options);
-      if (!result?.success && result?.invalidToken) {
-        FcmToken.updateOne({ _id: tokenDoc._id }, { $set: { isActive: false } }).catch(
-          (err) => console.error('[notificationService] failed to deactivate dead token:', err.message),
-        );
-      } else if (result?.success) {
-        FcmToken.updateOne({ _id: tokenDoc._id }, { $set: { lastUsed: new Date() } }).catch(() => {});
-      }
-      return result;
-    }),
-  );
-
-  const anySent = perToken.some((r) => r?.success);
-  const firstError = perToken.find((r) => !r?.success);
-
-  return anySent
-    ? { sent: true, messageId: perToken.find((r) => r.success)?.message, deviceCount: perToken.length }
-    : { sent: false, error: firstError?.message || 'Push failed' };
 }
 
 /**

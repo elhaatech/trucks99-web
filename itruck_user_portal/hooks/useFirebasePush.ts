@@ -38,9 +38,18 @@ export function useFirebasePush() {
           return;
         }
 
-        // Get token
+        // Get token (requires registered service worker for web push)
         const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
-        const currentToken = await getToken(messaging, { vapidKey });
+        if (!vapidKey) {
+          console.warn("NEXT_PUBLIC_FIREBASE_VAPID_KEY is not set; skipping FCM token registration");
+          return;
+        }
+
+        const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+        const currentToken = await getToken(messaging, {
+          vapidKey,
+          serviceWorkerRegistration: registration,
+        });
         
         if (currentToken) {
           setFcmToken(currentToken);

@@ -49,3 +49,9 @@ temp/
 # Uploads
 server/uploads/s
 
+# Firebase credentials (never commit)
+firebase-service-account.json
+google-services.json
+GoogleService-Info.plist
+*-firebase-adminsdk-*.json
+

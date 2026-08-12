@@ -13,10 +13,8 @@ const User = require("../schema/user");
 const Role = require("../schema/role");
 const VehicleType = require("../schema/vehicleType");
 const VehicleBodyType = require("../schema/vehicleBodyType");
-const FcmToken = require("../schema/firebaseusear");
 const IncomeExpense = require("../schema/incomeExpense");
 const IncomeExpenseCategory = require("../schema/incomeExpenseCategory");
-const sendNotification = require("../Firebase/firebase");
 const {
   findByIdOrUuid,
   findByIdOrUuidDoc,
@@ -25,31 +23,8 @@ const {
   toResponse,
   toResponseList,
 } = require("../helpers/uuidHelper");
-const publishLoadBidEvent = sendNotification.publishLoadBidEvent;
 
 const loadRouter = express.Router();
-
-async function sendBidPushToUser(userId, title, body) {
-  if (!userId) return;
-  const tokenDocs = await FcmToken.find({ userId, isActive: true })
-    .sort({ lastUsed: -1 })
-    .lean();
-  
-  if (!tokenDocs || tokenDocs.length === 0) return;
-
-  await Promise.all(
-    tokenDocs.map(async (tokenDoc) => {
-      if (tokenDoc?.token) {
-        const result = await sendNotification(tokenDoc.token, title, body);
-        if (result?.success) {
-           FcmToken.updateOne({ _id: tokenDoc._id }, { $set: { lastUsed: new Date() } }).catch(() => {});
-        } else if (result?.invalidToken) {
-           FcmToken.updateOne({ _id: tokenDoc._id }, { $set: { isActive: false } }).catch(() => {});
-        }
-      }
-    })
-  );
-}
 
 async function generateNextLoadNumber() {
   const last = await Truck.findOne(
