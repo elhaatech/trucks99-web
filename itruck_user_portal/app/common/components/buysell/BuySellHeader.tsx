@@ -177,12 +177,12 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
           <Image
             src="/assets/logo.png"
             alt="TRUCKS99"
-            width={52}
-            height={34}
+            width={60}
+            height={40}
             priority
             style={{
               width: "auto",
-              height: 34,
+              height: 40,
               objectFit: "contain",
               display: "block",
             }}
@@ -190,7 +190,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
           <Box sx={{ display: { xs: "none", sm: "block" } }}>
             <Typography
               sx={{
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: 600,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",

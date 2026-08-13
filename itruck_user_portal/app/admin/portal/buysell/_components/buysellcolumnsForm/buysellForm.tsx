@@ -1339,53 +1339,62 @@ export function BuySellForm({
 
           <Box
             sx={{
-              display: "inline-flex",
+              display: "flex",
               alignItems: "center",
-              gap: 1,
-              mb: 1,
+              gap: 2,
             }}
           >
-            <Typography
-              variant="caption"
+            <Box
               sx={{
-                color: "text.secondary",
-                fontWeight: 600,
-                fontSize: "0.68rem",
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 1,
               }}
             >
-              Status
-            </Typography>
-            <ProductStatusChip status={isDraft ? "draft" : "pending"} />
-          </Box>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                  fontWeight: 600,
+                  fontSize: "0.68rem",
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Status
+              </Typography>
+              <ProductStatusChip status={isDraft ? "draft" : "pending"} />
+            </Box>
 
-          <Box
-            sx={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 1,
-              px: 1.5,
-              py: 0.75,
-              border: "1px solid",
-              borderColor: "divider",
-              borderRadius: 2,
-              bgcolor: "transparent",
-              cursor: "pointer",
-              transition: "all 0.15s",
-            }}
-            onClick={() => setIsDraft((prev) => !prev)}
-          >
-            <Checkbox
-              checked={isDraft}
-              onChange={(e) => setIsDraft(e.target.checked)}
-              size="small"
-              sx={{ p: 0 }}
-              onClick={(e) => e.stopPropagation()}
-            />
-            <Typography variant="body2" fontWeight={isDraft ? 600 : 400}>
-              {isDraft ? "Draft" : "Pending"}
-            </Typography>
+            {(!isEdit || toStatus(product?.status) !== "pending") && (
+              <Box
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 1,
+                  px: 1.5,
+                  py: 0.75,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  bgcolor: "transparent",
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                }}
+                onClick={() => setIsDraft((prev) => !prev)}
+              >
+                <Checkbox
+                  checked={isDraft}
+                  onChange={(e) => setIsDraft(e.target.checked)}
+                  size="small"
+                  sx={{ p: 0 }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <Typography variant="body2" fontWeight={isDraft ? 600 : 400}>
+                  {isDraft ? "Draft" : "Pending"}
+                </Typography>
+              </Box>
+            )}
           </Box>
         </Box>
       )}

@@ -195,8 +195,9 @@ export default function UserProductListContent() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          gap: 1.5,
+          gap: 2,
           mb: 3,
+          flexWrap: "wrap",
         }}
       >
         <VehicleListHeader
@@ -205,7 +206,14 @@ export default function UserProductListContent() {
           loading={list.loading}
         />
 
-        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+        <Box
+          sx={{
+            display: "flex",
+            gap: 0.5,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
           <SearchableSelect
             label="Sort by"
             value={sortBy}
@@ -217,13 +225,18 @@ export default function UserProductListContent() {
               { value: "views", label: "Most viewed" },
             ]}
             fullWidth={false}
-            sx={{ minWidth: 200, "& .MuiAutocomplete-clearIndicator": { display: "none" } }}
+            sx={{
+              minWidth: 180,
+              flexShrink: 0,
+              "& .MuiAutocomplete-clearIndicator": { display: "none" },
+            }}
           />
           <ToggleButtonGroup
             size="small"
             exclusive
             value={layout}
             onChange={(_, v) => v && setLayout(v)}
+            sx={{ flexShrink: 0 }}
           >
             <ToggleButton value="grid" aria-label="Grid view">
               <ViewModuleOutlinedIcon fontSize="small" />

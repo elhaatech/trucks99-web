@@ -9,7 +9,7 @@ import IconButton from "@mui/material/IconButton";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import CloseIcon from "@mui/icons-material/Close";
 import { SearchableSelect, type SelectOption } from "@/components/common/SearchableSelect";
-import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
+import { PRODUCT_THEME as T, INFO, LAYOUT } from "@/lib/theme";
 import { useCategorySubcategories } from "@/hooks/useCategorySubcategories";
 import { CityFilterDropdown } from "./CityFilterDropdown";
 import {
@@ -20,9 +20,8 @@ import {
 const STATUS_OPTIONS: SelectOption[] = [
   { value: "", label: "All statuses" },
   { value: "active", label: "Active" },
+  { value: "draft", label: "Draft" },
   { value: "pending", label: "Pending" },
-  { value: "booking", label: "Booked" },
-  { value: "purchased", label: "Purchased" },
   { value: "inactive", label: "Inactive" },
 ];
 
@@ -185,7 +184,9 @@ export function VehicleFilterPanel(props: VehicleFilterPanelProps) {
           border: `1px solid ${T.color.border}`,
           bgcolor: T.color.surface,
           position: "sticky",
-          top: 88,
+          top: LAYOUT.navbarHeight,
+          alignSelf: "start",
+          overflow: "hidden",
         }}
       >
         <FilterFields {...fieldProps} applyLoading={applyLoading} />
