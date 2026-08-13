@@ -13,17 +13,18 @@ export interface AuthLayoutProps {
 
 export function AuthLayout({ leftContent, rightContent }: AuthLayoutProps) {
   return (
-    <Grid container sx={{ minHeight: "100vh", overflow: "hidden" }}>
+    <Grid container sx={{ height: "100vh", overflow: "hidden" }}>
       <Grid size={{ xs: 0, md: 5 }} sx={{ display: { xs: "none", md: "block" } }}>
         <Box
           sx={{
             position: "relative",
-            minHeight: "100vh",
+            height: "100vh",
             background: GRADIENT_AUTH,
             display: "flex",
             flexDirection: "column",
-            justifyContent: "space-between",
-            p: { md: 5, lg: 6 },
+            justifyContent: "flex-start",
+            p: { md: 4, lg: 5 },
+            pb: { md: 6, lg: 8 },
             overflow: "hidden",
           }}
         >
@@ -56,7 +57,6 @@ export function AuthLayout({ leftContent, rightContent }: AuthLayoutProps) {
             sx={{
               position: "relative",
               zIndex: 1,
-              flex: 1,
               display: "flex",
               flexDirection: "column",
             }}
@@ -68,13 +68,14 @@ export function AuthLayout({ leftContent, rightContent }: AuthLayoutProps) {
       <Grid size={{ xs: 12, md: 7 }}>
         <Box
           sx={{
-            minHeight: "100vh",
+            height: { xs: "auto", md: "100vh" },
+            overflow: { xs: "auto", md: "hidden" },
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            justifyContent: "center",
+            justifyContent: { xs: "flex-start", md: "center" },
             bgcolor: NEUTRAL[50],
-            p: { xs: 3, sm: 5, md: 6 },
+            p: { xs: 2, sm: 3, md: 3 },
             backgroundImage: `
               radial-gradient(ellipse at 100% 0%, ${alpha(PRIMARY, 0.06)} 0%, transparent 50%),
               radial-gradient(ellipse at 0% 100%, ${alpha(PRIMARY, 0.04)} 0%, transparent 40%)
@@ -85,7 +86,7 @@ export function AuthLayout({ leftContent, rightContent }: AuthLayoutProps) {
             sx={{
               width: "100%",
               maxWidth: 440,
-              p: { xs: 3, sm: 4 },
+              p: { xs: 2, sm: 2.5, md: 2.5 },
               borderRadius: 3,
               bgcolor: "#fff",
               border: `1px solid ${NEUTRAL[200]}`,

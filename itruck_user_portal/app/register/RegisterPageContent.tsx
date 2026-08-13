@@ -1,20 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Alert from "@mui/material/Alert";
+import Avatar from "@mui/material/Avatar";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import CameraAltOutlinedIcon from "@mui/icons-material/CameraAltOutlined";
 import { SearchableSelect, type SelectOption } from "@/components/common/SearchableSelect";
-import {
-  registerMarketplaceUser,
+import { registerMarketplaceUser,
   getLocationCountriesAll,
   getLocationStatesByCountry,
   getLocationCitiesByState,
 } from "@/model/api";
+import { uploadFile } from "@/model/services/uploadapi";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 import { WelcomePanel } from "@/components/layout/WelcomePanel";
 import { AuthTextField } from "@/components/ui/AuthTextField";
@@ -66,6 +68,11 @@ export default function MarketplaceRegisterPage() {
     state: "",
     city: "",
   });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     void isMarketplaceUserLoggedIn().then((loggedIn) => {
@@ -185,6 +192,26 @@ export default function MarketplaceRegisterPage() {
     };
   }, [form.stateId]);
 
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setPhotoError("");
+    if (!file.type.startsWith("image/")) {
+      setPhotoError("Please select a valid image file.");
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setPhotoError("Image must be smaller than 5MB.");
+      return;
+    }
+
+    setProfileImagePreview(URL.createObjectURL(file));
+  };
+
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -204,6 +231,24 @@ export default function MarketplaceRegisterPage() {
 
     try {
       setLoading(true);
+      let profileImageUrl: string | undefined;
+      if (profileImagePreview) {
+        setUploadingPhoto(true);
+        try {
+          const file = fileInputRef.current?.files?.[0];
+          if (file) {
+            profileImageUrl = await uploadFile(file, "user_profile");
+          }
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Failed to upload photo.");
+          setLoading(false);
+          setUploadingPhoto(false);
+          return;
+        } finally {
+          setUploadingPhoto(false);
+        }
+      }
+
       await registerMarketplaceUser({
         name: form.name.trim(),
         mobile: form.mobile.trim(),
@@ -211,6 +256,7 @@ export default function MarketplaceRegisterPage() {
         city: form.city || undefined,
         state: form.state || undefined,
         country: "India",
+        profileImage: profileImageUrl,
         termsAccepted: true,
       });
 
@@ -252,7 +298,7 @@ export default function MarketplaceRegisterPage() {
             sx={{
               fontWeight: 800,
               textAlign: "center",
-              mb: 1,
+              mb: 0.5,
               letterSpacing: "-0.03em",
               fontSize: { xs: "1.5rem", sm: "1.75rem" },
             }}
@@ -262,13 +308,56 @@ export default function MarketplaceRegisterPage() {
           <Typography
             variant="body2"
             color="text.secondary"
-            sx={{ textAlign: "center", mb: 3, lineHeight: 1.6 }}
+            sx={{ textAlign: "center", mb: 2, lineHeight: 1.6 }}
           >
             Your account will be set up as a Buy/Sell marketplace user.
           </Typography>
 
           <form onSubmit={handleRegister}>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.25 }}>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  hidden
+                  accept="image/*"
+                  onChange={handlePhotoSelect}
+                />
+                <Avatar
+                  onClick={() => fileInputRef.current?.click()}
+                  sx={{
+                    width: 80,
+                    height: 80,
+                    cursor: "pointer",
+                    border: "2px dashed",
+                    borderColor: photoError ? "error.main" : "divider",
+                    bgcolor: "background.paper",
+                    "&:hover": {
+                      borderColor: "primary.main",
+                      opacity: 0.85,
+                    },
+                  }}
+                >
+                  {profileImagePreview ? (
+                    <img
+                      src={profileImagePreview}
+                      alt="Profile preview"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <CameraAltOutlinedIcon sx={{ fontSize: 28, color: "text.secondary" }} />
+                  )}
+                </Avatar>
+                <Typography variant="caption" color="text.secondary">
+                  {profileImagePreview ? "Click to change photo" : "Click to upload profile photo (optional)"}
+                </Typography>
+                {photoError && (
+                  <Typography variant="caption" color="error.main">
+                    {photoError}
+                  </Typography>
+                )}
+              </Box>
+
               <AuthTextField
                 label="Name"
                 value={form.name}
@@ -328,43 +417,43 @@ export default function MarketplaceRegisterPage() {
               />
             </Box>
 
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={termsAccepted}
-                  onChange={(e) => setTermsAccepted(e.target.checked)}
-                  disabled={loading}
-                />
-              }
-              label={
-                <Typography variant="body2">
-                  I agree to the{" "}
-                  <Link
-                    href={userProductRoutes.legal("terms")}
-                    target="_blank"
-                    style={{ fontWeight: 600, textDecoration: "none" }}
-                  >
-                    Terms and Conditions
-                  </Link>
-                </Typography>
-              }
-              sx={{ mt: 1 }}
-            />
+             <FormControlLabel
+               control={
+                 <Checkbox
+                   checked={termsAccepted}
+                   onChange={(e) => setTermsAccepted(e.target.checked)}
+                   disabled={loading}
+                 />
+               }
+               label={
+                 <Typography variant="body2">
+                   I agree to the{" "}
+                   <Link
+                     href={userProductRoutes.legal("terms")}
+                     target="_blank"
+                     style={{ fontWeight: 600, textDecoration: "none" }}
+                   >
+                     Terms and Conditions
+                   </Link>
+                 </Typography>
+               }
+               sx={{ mt: 0.5 }}
+             />
 
-            {error ? (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                {error}
-              </Alert>
-            ) : null}
+             {error ? (
+               <Alert severity="error" sx={{ mt: 1.5 }}>
+                 {error}
+               </Alert>
+             ) : null}
 
-            <Box sx={{ mt: 3 }}>
-              <GradientButton type="submit" disabled={loading}>
-                {loading ? "Creating account…" : "Create account"}
-              </GradientButton>
-            </Box>
-          </form>
+             <Box sx={{ mt: 2 }}>
+               <GradientButton type="submit" disabled={loading}>
+                 {loading ? "Creating account…" : "Create account"}
+               </GradientButton>
+             </Box>
+           </form>
 
-          <Typography variant="body2" sx={{ textAlign: "center", mt: 3 }}>
+           <Typography variant="body2" sx={{ textAlign: "center", mt: 2 }}>
             Already have an account?{" "}
             <Link href={loginHref} style={{ fontWeight: 600, textDecoration: "none" }}>
               Sign in

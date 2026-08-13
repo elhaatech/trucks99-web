@@ -20,7 +20,7 @@ export function WelcomePanel({
 }: WelcomePanelProps) {
   return (
     <>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 8 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 4 }}>
         <BrandLogo height={52} priority />
         <Typography
           sx={{
@@ -52,7 +52,7 @@ export function WelcomePanel({
         sx={{
           color: alpha("#fff", 0.88),
           fontSize: "1.05rem",
-          mb: 6,
+          mb: 3,
           lineHeight: 1.65,
           maxWidth: 420,
         }}
@@ -60,7 +60,7 @@ export function WelcomePanel({
         {subtitle}
       </Typography>
 
-      <Box sx={{ display: "flex", gap: 4, mb: 6, flexWrap: "wrap" }}>
+      <Box sx={{ display: "flex", gap: 4, mb: 3, flexWrap: "wrap" }}>
         {[
           { value: "Verified", label: "Seller listings" },
           { value: "Secure", label: "OTP sign-in" },
@@ -77,7 +77,7 @@ export function WelcomePanel({
         ))}
       </Box>
 
-      <Box sx={{ mt: "auto", pt: 4 }}>
+      <Box sx={{ mt: 3 }}>
         <Link
           href="/"
           style={{
