@@ -134,8 +134,8 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
       <Toolbar
         disableGutters
         sx={{
-          minHeight: `${LAYOUT.navbarHeight}px !important`,
-          maxHeight: `${LAYOUT.navbarHeight}px`,
+          minHeight: { xs: "72px !important", md: "80px !important" },
+          maxHeight: { xs: "72px", md: "80px" },
           width: "100%",
           maxWidth: LAYOUT.contentMaxWidth,
           mx: "auto",
@@ -174,19 +174,28 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
           }}
           onClick={() => router.push(userProductRoutes.dashboard())}
         >
-          <Image
-            src="/assets/logo.png"
-            alt="TRUCKS99"
-            width={60}
-            height={40}
-            priority
-            style={{
-              width: "auto",
-              height: 40,
-              objectFit: "contain",
-              display: "block",
+          <Box
+            sx={{
+              width: { xs: 72, md: 90 },
+              height: { xs: 48, md: 60 },
+              flexShrink: 0,
+              lineHeight: 0,
             }}
-          />
+          >
+            <Image
+              src="/assets/logo.png"
+              alt="TRUCKS99"
+              width={60}
+              height={40}
+              priority
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                display: "block",
+              }}
+            />
+          </Box>
           <Box sx={{ display: { xs: "none", sm: "block" } }}>
             <Typography
               sx={{
