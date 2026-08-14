@@ -174,17 +174,7 @@ export function CategorySubcategoriesList({
       </Box>
 
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center" }}>
-        {onFilterChange ? (
-          <Chip
-            label="All types"
-            size="medium"
-            clickable
-            color={showAllSelected ? "primary" : "default"}
-            variant={showAllSelected ? "filled" : "outlined"}
-            onClick={() => handleSelect(null)}
-            sx={{ fontWeight: showAllSelected ? 600 : 400 }}
-          />
-        ) : null}
+        
 
         {subcategories.map((sub) => {
           const subId = getSubCategoryRowId(sub);

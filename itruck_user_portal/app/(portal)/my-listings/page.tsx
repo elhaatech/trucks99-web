@@ -1,3 +1,6 @@
+
+
+
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -17,7 +20,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { Spinner } from "@/components/ui";
 import { BuySellErrorState } from "@/app/common/components/buysell";
 import { userProductRoutes } from "@/lib/userProductRoutes";
-import { PRODUCT_THEME as T } from "@/lib/theme";
+import { PRODUCT_THEME as T, LAYOUT } from "@/lib/theme";
 import {
   deleteBuySellProducts,
   getBuySellListPage,
@@ -70,6 +73,26 @@ const FeaturedVehiclePlansDialog = dynamic(
     ),
   { ssr: false },
 );
+
+// Sticky filter column: stays pinned while the page scrolls, but no longer
+// owns its own independent scrollbar. The whole page is one normal scroll now.
+const stickyFilterSx = {
+  position: "sticky" as const,
+  top: { xs: 0, lg: LAYOUT.navbarHeight + 16 },
+  alignSelf: "flex-start" as const,
+  maxHeight: { xs: "none", lg: `calc(100vh - ${LAYOUT.navbarHeight + 32}px)` },
+  overflowY: { xs: "visible", lg: "auto" } as const,
+  pr: 0.75,
+  "&::-webkit-scrollbar": { width: 6 },
+  "&::-webkit-scrollbar-track": { background: "transparent" },
+  "&::-webkit-scrollbar-thumb": {
+    backgroundColor: "rgba(0,0,0,0.18)",
+    borderRadius: 4,
+  },
+  "&::-webkit-scrollbar-thumb:hover": {
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+};
 
 const DEFAULT_SELL_FILTERS: FilterState = {
   ...EMPTY_FILTERS,
@@ -350,13 +373,23 @@ function SellVehicleContent() {
   }
 
   return (
-    <Box sx={{ width: "100%" }}>
-      <SellVehiclePageHeader
-        title="My listings"
-        description="Manage your ads, edit details, or list another vehicle on TRUCK99."
-        action={listNewVehicleButton}
-      />
+    <Box
+      sx={{
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* ---- Header: page title + "List new vehicle" ---- */}
+      <Box>
+        <SellVehiclePageHeader
+          title="My listings"
+          description="Manage your ads, edit details, or list another vehicle on TRUCK99."
+          action={listNewVehicleButton}
+        />
+      </Box>
 
+      {/* ---- Body row: sticky filter pane + normal-flow listings pane ---- */}
       <Box
         sx={{
           display: "grid",
@@ -365,17 +398,26 @@ function SellVehicleContent() {
           width: "100%",
         }}
       >
-        <VehicleFilterPanel
-          values={filters}
-          onChange={handleFilterChange}
-          onApply={handleApplyFilters}
-          onClear={handleClearFilters}
-          mobileOpen={mobileFiltersOpen}
-          onMobileClose={() => setMobileFiltersOpen(false)}
-          applyLoading={applyLoading}
-        />
+        {/* Filters — sticky, pins in place while the page scrolls */}
+        <Box sx={stickyFilterSx}>
+          <VehicleFilterPanel
+            values={filters}
+            onChange={handleFilterChange}
+            onApply={handleApplyFilters}
+            onClear={handleClearFilters}
+            mobileOpen={mobileFiltersOpen}
+            onMobileClose={() => setMobileFiltersOpen(false)}
+            applyLoading={applyLoading}
+          />
+        </Box>
 
-        <Box>
+        {/* Right column: sub-header (count + mobile filter btn) + grid, both in normal flow */}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
           <Box
             sx={{
               display: "flex",
@@ -402,31 +444,35 @@ function SellVehicleContent() {
             <MobileFilterButton onClick={() => setMobileFiltersOpen(true)} />
           </Box>
 
-          {listError && !loading ? (
-            <BuySellErrorState
-              title="Couldn't load your listings"
-              message={listError}
-              onRetry={() => reloadListings()}
-            />
-          ) : (
-            <VehicleGrid
-              products={products}
-              loading={loading}
-              layout="grid"
-              onProductClick={(id) => router.push(userProductRoutes.view(id))}
-              onEdit={handleEdit}
-              onDelete={handleDeleteRequest}
-              deletingIds={deletingIds}
-              showOwnerFeaturedControls
-              onFeaturePayNow={openFeaturePlansForProduct}
-              emptyTitle="No listings yet"
-              emptyDescription='Tap "List new vehicle" to create your first ad. It only takes a few minutes.'
-            />
-          )}
+          <Box>
+            {listError && !loading ? (
+              <BuySellErrorState
+                title="Couldn't load your listings"
+                message={listError}
+                onRetry={() => reloadListings()}
+              />
+            ) : (
+              <VehicleGrid
+                products={products}
+                loading={loading}
+                layout="grid"
+                onProductClick={(id) => router.push(userProductRoutes.view(id))}
+                onEdit={handleEdit}
+                onDelete={handleDeleteRequest}
+                deletingIds={deletingIds}
+                showOwnerFeaturedControls
+                onFeaturePayNow={openFeaturePlansForProduct}
+                emptyTitle="No listings yet"
+                emptyDescription='Tap "List new vehicle" to create your first ad. It only takes a few minutes.'
+              />
+            )}
 
-          {!loading ? (
-            <Box sx={{ display: { xs: "flex", sm: "none" }, mt: 3 }}>{listNewVehicleButton}</Box>
-          ) : null}
+            {!loading ? (
+              <Box sx={{ display: { xs: "flex", sm: "none" }, mt: 3 }}>
+                {listNewVehicleButton}
+              </Box>
+            ) : null}
+          </Box>
         </Box>
       </Box>
 

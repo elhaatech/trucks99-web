@@ -1,3 +1,5 @@
+
+
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -31,6 +33,27 @@ import { useNotification } from "@/hooks/useNotification";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { isAbortError } from "@/lib/apiCache";
 import { toErrorMessage } from "@/lib/errors";
+import { LAYOUT } from "@/lib/theme";
+
+// Sticky filter column: stays pinned while the page scrolls, but no longer
+// owns its own independent scrollbar. The whole page is one normal scroll now.
+const stickyFilterSx = {
+  position: "sticky" as const,
+  top: { xs: 0, lg: LAYOUT.navbarHeight + 16 },
+  alignSelf: "flex-start" as const,
+  maxHeight: { xs: "none", lg: `calc(100vh - ${LAYOUT.navbarHeight + 32}px)` },
+  overflowY: { xs: "visible", lg: "auto" } as const,
+  pr: 0.75,
+  "&::-webkit-scrollbar": { width: 6 },
+  "&::-webkit-scrollbar-track": { background: "transparent" },
+  "&::-webkit-scrollbar-thumb": {
+    backgroundColor: "rgba(0,0,0,0.18)",
+    borderRadius: 4,
+  },
+  "&::-webkit-scrollbar-thumb:hover": {
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+};
 
 function filtersFromSearchParams(searchParams: URLSearchParams): VehicleFilterValues {
   return {
@@ -189,14 +212,22 @@ export default function UserProductListContent() {
   }, []);
 
   return (
-    <Box sx={{ width: "100%" }}>
+    <Box
+      sx={{
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* ---- Header: title, sort, layout toggle ---- */}
       <Box
         sx={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          gap: 1.5,
+          gap: 2,
           mb: 3,
+          flexWrap: "wrap",
         }}
       >
         <VehicleListHeader
@@ -205,7 +236,14 @@ export default function UserProductListContent() {
           loading={list.loading}
         />
 
-        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+        <Box
+          sx={{
+            display: "flex",
+            gap: 0.5,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
           <SearchableSelect
             label="Sort by"
             value={sortBy}
@@ -216,14 +254,27 @@ export default function UserProductListContent() {
               { value: "price_desc", label: "Price: High to Low" },
               { value: "views", label: "Most viewed" },
             ]}
-            fullWidth={false}
-            sx={{ minWidth: 200, "& .MuiAutocomplete-clearIndicator": { display: "none" } }}
+            fullWidth={true}
+            size="small"
+            sx={{
+              width: { xs: "100%", sm: 220 },
+              flexShrink: 0,
+              mr: 0,
+              "& .MuiAutocomplete-clearIndicator": { display: "none" },
+              "& .MuiOutlinedInput-root": { height: 40 },
+            }}
           />
           <ToggleButtonGroup
             size="small"
             exclusive
             value={layout}
             onChange={(_, v) => v && setLayout(v)}
+            sx={{
+              flexShrink: 0,
+              height: 40,
+              ml: 0,
+              "& .MuiToggleButton-root": { height: 40 },
+            }}
           >
             <ToggleButton value="grid" aria-label="Grid view">
               <ViewModuleOutlinedIcon fontSize="small" />
@@ -236,6 +287,7 @@ export default function UserProductListContent() {
         </Box>
       </Box>
 
+      {/* ---- Body row: sticky filter pane + normal-flow product pane ---- */}
       <Box
         sx={{
           display: "grid",
@@ -244,28 +296,34 @@ export default function UserProductListContent() {
           width: "100%",
         }}
       >
-        <VehicleFilterPanel
-          values={filters}
-          onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
-          onApply={handleApplyFilters}
-          onClear={handleClearFilters}
-          mobileOpen={mobileFiltersOpen}
-          onMobileClose={() => setMobileFiltersOpen(false)}
-          applyLoading={applyLoading}
-        />
+        {/* Filters — sticky, pins in place while the page scrolls */}
+        <Box sx={stickyFilterSx}>
+          <VehicleFilterPanel
+            values={filters}
+            onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
+            onApply={handleApplyFilters}
+            onClear={handleClearFilters}
+            mobileOpen={mobileFiltersOpen}
+            onMobileClose={() => setMobileFiltersOpen(false)}
+            applyLoading={applyLoading}
+          />
+        </Box>
 
-        <VehicleGrid
-          products={list.items}
-          loading={list.loading}
-          isLoadingMore={list.loadingMore}
-          hasMore={list.hasMore}
-          sentinelRef={list.sentinelRef}
-          layout={layout}
-          favoriteIds={favoriteIds}
-          togglingFavoriteIds={togglingIds}
-          onFavoriteToggle={handleFavoriteToggle}
-          onProductClick={(id) => void handleViewProduct(id)}
-        />
+        {/* Products — flows normally, scrolls with the rest of the page */}
+        <Box>
+          <VehicleGrid
+            products={list.items}
+            loading={list.loading}
+            isLoadingMore={list.loadingMore}
+            hasMore={list.hasMore}
+            sentinelRef={list.sentinelRef}
+            layout={layout}
+            favoriteIds={favoriteIds}
+            togglingFavoriteIds={togglingIds}
+            onFavoriteToggle={handleFavoriteToggle}
+            onProductClick={(id) => void handleViewProduct(id)}
+          />
+        </Box>
       </Box>
     </Box>
   );
