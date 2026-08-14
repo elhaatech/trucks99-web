@@ -11,8 +11,8 @@ import Avatar from "@mui/material/Avatar";
 import CircularProgress from "@mui/material/CircularProgress";
 import CameraAltOutlinedIcon from "@mui/icons-material/CameraAltOutlined";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
-import { uploadFile } from "@/model/services/uploadapi";
+import { getBuySellImageUrl, handleBuySellImageError } from "@/lib/buysellUtils";
+import { uploadFile, validateProfileImageFile } from "@/model/services/uploadapi";
 import {
   getCurrentUser,
   updateUser,
@@ -42,6 +42,7 @@ export default function ProfilePage() {
   const [state, setState] = useState("");
   const [country, setCountry] = useState("India");
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [savedProfileImage, setSavedProfileImage] = useState<string | null>(null);
   const [userId, setUserId] = useState("");
 
   useEffect(() => {
@@ -65,6 +66,7 @@ export default function ProfilePage() {
         setState(u.state || "");
         setCountry(u.country || "India");
         setProfileImage(u.profileImage || null);
+        setSavedProfileImage(u.profileImage || null);
       })
       .catch((err: unknown) => {
         if (!cancelled) {
@@ -84,13 +86,25 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+
+    const validationError = validateProfileImageFile(file);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    const blobUrl = URL.createObjectURL(file);
+    setProfileImage(blobUrl);
     setUploading(true);
     setError("");
     try {
       const url = await uploadFile(file, "user_profile");
+      URL.revokeObjectURL(blobUrl);
       setProfileImage(url);
       notify({ type: "success", message: "Photo uploaded. Save profile to apply." });
     } catch (err: unknown) {
+      URL.revokeObjectURL(blobUrl);
+      setProfileImage(savedProfileImage);
       setError(err instanceof Error ? err.message : "Failed to upload photo");
     } finally {
       setUploading(false);
@@ -103,6 +117,9 @@ export default function ProfilePage() {
     setSaving(true);
     setError("");
     try {
+      const imageToSave = profileImage?.startsWith("blob:")
+        ? savedProfileImage
+        : profileImage;
       await updateUser(userId, {
         name: name.trim(),
         mobile: mobile.trim() || undefined,
@@ -110,14 +127,15 @@ export default function ProfilePage() {
         city: city.trim(),
         state: state.trim(),
         country: country.trim() || "India",
-        profileImage,
+        profileImage: imageToSave,
         user: {
           name: authUser.name,
           role: typeof authUser.role === "object" ? authUser.role?.name : authUser.role,
         },
       });
+      setSavedProfileImage(imageToSave);
       invalidateCurrentUserCache();
-      await refresh();
+      await refresh({ force: true });
       notify({ type: "success", message: "Profile updated successfully." });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to update profile";
@@ -168,6 +186,7 @@ export default function ProfilePage() {
           <Box sx={{ position: "relative" }}>
             <Avatar
               src={avatarSrc || undefined}
+              slotProps={{ img: { onError: handleBuySellImageError } }}
               sx={{ width: 88, height: 88, bgcolor: INFO, fontSize: 32, fontWeight: 700 }}
             >
               {(name || "U").charAt(0).toUpperCase()}

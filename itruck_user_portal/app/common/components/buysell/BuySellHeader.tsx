@@ -40,7 +40,7 @@ import {
   Z_INDEX,
 } from "@/lib/theme";
 import { isSellHubPath, userProductRoutes } from "@/lib/userProductRoutes";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getBuySellImageUrl, handleBuySellImageError } from "@/lib/buysellUtils";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import {
   MARKETPLACE_FAVORITES_CHANGED_EVENT,
@@ -366,6 +366,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                 <Avatar
                   src={getBuySellImageUrl(user.profileImage) || undefined}
                   alt={user.name || "Account"}
+                  slotProps={{ img: { onError: handleBuySellImageError } }}
                   sx={{
                     width: 32,
                     height: 32,
@@ -393,6 +394,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                   <Avatar
                     src={getBuySellImageUrl(user.profileImage) || undefined}
                     alt={user.name || "Account"}
+                    slotProps={{ img: { onError: handleBuySellImageError } }}
                     sx={{ width: 40, height: 40, bgcolor: PRIMARY, fontSize: 15, fontWeight: 700 }}
                   >
                     {(user.name || "U").charAt(0).toUpperCase()}

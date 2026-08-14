@@ -21,14 +21,28 @@ axiosClient.interceptors.request.use((config) => {
   const headers = config.headers || {};
 
   if (token) {
-    (headers as any).Authorization = `Bearer ${token}`;
+    if (typeof (headers as any).set === "function") {
+      (headers as any).set("Authorization", `Bearer ${token}`);
+    } else {
+      (headers as any).Authorization = `Bearer ${token}`;
+    }
   }
 
-  if (config.data instanceof FormData) {
-    delete (headers as any)["Content-Type"];
-    delete (headers as any)["content-type"];
+  // Let the browser/Axios set multipart boundary. AxiosHeaders.delete is required —
+  // `delete headers["Content-Type"]` does not clear the accessor on Axios 1.x.
+  if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+    if (typeof (headers as any).delete === "function") {
+      (headers as any).delete("Content-Type");
+    } else {
+      delete (headers as any)["Content-Type"];
+      delete (headers as any)["content-type"];
+    }
   } else if (!headers["Content-Type"] && !headers["content-type"]) {
-    (headers as any)["Content-Type"] = "application/json";
+    if (typeof (headers as any).set === "function") {
+      (headers as any).set("Content-Type", "application/json");
+    } else {
+      (headers as any)["Content-Type"] = "application/json";
+    }
   }
 
   config.headers = headers;

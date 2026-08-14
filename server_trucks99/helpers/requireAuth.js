@@ -73,6 +73,9 @@ const PUBLIC_METHOD_PATHS = [
   {"method": "POST", "path": "/api/buy-sell/featured-vehicles/list"},
   { method: "POST", path: "/api/test-firebase-easy" },
   { method: "POST", path: "/api/test-firebase-token" },
+  // Marketplace register uploads a profile photo before the user has a token.
+  // Anonymous callers are restricted to `user_profile` in views/upload.js.
+  { method: "POST", path: "/api/upload" },
 ];
 
 const { isPublicBuySellMarketplaceRoute } = require("./buySellPublicRoutes");
