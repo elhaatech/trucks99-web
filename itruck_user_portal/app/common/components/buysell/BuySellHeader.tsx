@@ -516,4 +516,4 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
   );
 }
 
-export { NAV_LINKS as BUYSELL_NAV_LINKS, MOBILE_EXTRA_LINKS, getBuySellNavLinks };
+export { NAV_LINKS as BUYSELL_NAV_LINKS, MOBILE_EXTRA_LINKS };
