@@ -82,6 +82,17 @@ function findOption(options: LocationOption[], storedId: string): LocationOption
   return options.find((o) => o.id === storedId || o.aliases.includes(storedId));
 }
 
+/**
+ * Finds an option by name (case-insensitive). Used as a fallback so a listing
+ * saved with a state/city *name* string (instead of an id) still pre-selects
+ * the correct dropdown option once the option list has loaded.
+ */
+function findOptionByName(options: LocationOption[], name: string): LocationOption | undefined {
+  if (!name) return undefined;
+  const needle = name.trim().toLowerCase();
+  return options.find((o) => o.name.trim().toLowerCase() === needle);
+}
+
 // ─── Component ────────────────────────────────────────────────────────────
 
 export function LocationSelector({
@@ -217,7 +228,7 @@ export function LocationSelector({
       return;
     }
 
-    const match = findOption(states, value.stateId);
+    const match = findOption(states, value.stateId) ?? findOptionByName(states, value.state);
     if (!match) return;
 
     if (value.stateId !== match.id || value.state !== match.name) {
@@ -252,8 +263,8 @@ export function LocationSelector({
 
   // ── Resolve the currently-selected city name/id once cities are loaded ─
   useEffect(() => {
-    if (citiesLoading || !value.cityId) return;
-    const match = findOption(cities, value.cityId);
+    if (citiesLoading || (!value.cityId && !value.city)) return;
+    const match = findOption(cities, value.cityId) ?? findOptionByName(cities, value.city);
     if (match && (value.cityId !== match.id || value.city !== match.name)) {
       onChangeRef.current({ ...value, cityId: match.id, city: match.name });
     }
@@ -261,8 +272,10 @@ export function LocationSelector({
   }, [cities, citiesLoading, value.cityId]);
 
   const selectedCountry = findOption(countries, value.countryId) ?? null;
-  const selectedState = findOption(states, value.stateId) ?? null;
-  const selectedCity = findOption(cities, value.cityId) ?? null;
+  const selectedState =
+    findOption(states, value.stateId) ?? findOptionByName(states, value.state) ?? null;
+  const selectedCity =
+    findOption(cities, value.cityId) ?? findOptionByName(cities, value.city) ?? null;
 
   const showCountryField = !onlyCountry || countries.length > 1;
 

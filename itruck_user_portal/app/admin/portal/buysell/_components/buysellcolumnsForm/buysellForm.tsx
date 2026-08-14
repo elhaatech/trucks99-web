@@ -540,11 +540,11 @@ export function BuySellForm({
 
     setLocation({
       countryId: extractId(product.country_id),
-      country: "",
-      stateId: extractId(product.state_id),
-      state: "",
-      cityId: extractId(product.city_id),
-      city: "",
+      country: product.country_info?.name ?? "",
+      stateId: extractId(product.state_id) || extractId(product.state_info),
+      state: product.state_info?.name ?? "",
+      cityId: extractId(product.city_id) || extractId(product.city_info),
+      city: product.city_info?.name ?? "",
     });
 
     // toStatus() converts any API string → valid BuySellStatus union member

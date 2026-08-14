@@ -138,6 +138,19 @@ export default function ProfilePage() {
 
   const avatarSrc = getBuySellImageUrl(profileImage);
 
+  const textFieldSx = {
+    "& .MuiOutlinedInput-root": {
+      borderRadius: T.radius.md,
+    },
+    "& .MuiInputLabel-root": {
+      fontWeight: 600,
+      color: T.color.textSecondary,
+    },
+    "& .MuiInputLabel-root.Mui-focused": {
+      color: INFO,
+    },
+  };
+
   return (
     <Box>
       <Typography sx={{ fontWeight: 800, fontSize: { xs: 22, md: 28 }, color: T.color.textPrimary }}>
@@ -152,19 +165,20 @@ export default function ProfilePage() {
         onSubmit={handleSave}
         sx={{
           maxWidth: 640,
-          p: { xs: 2, md: 3 },
+          mx: "auto",
+          p: { xs: 2.5, md: 4 },
           borderRadius: T.radius.lg,
           border: `1px solid ${T.color.border}`,
           bgcolor: T.color.surface,
           boxShadow: T.shadow.card,
           display: "flex",
           flexDirection: "column",
-          gap: 2.25,
+          gap: 1.25,
         }}
       >
-        {error ? <Alert severity="error">{error}</Alert> : null}
+        {error ? <Alert severity="error" sx={{ mb: 1.25 }}>{error}</Alert> : null}
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 0.5 }}>
           <Box sx={{ position: "relative" }}>
             <Avatar
               src={avatarSrc || undefined}
@@ -201,9 +215,9 @@ export default function ProfilePage() {
               onChange={handleImagePick}
             />
           </Box>
-          <Box>
-            <Typography sx={{ fontWeight: 700, fontSize: 16 }}>{name || "Your name"}</Typography>
-            <Typography sx={{ fontSize: 13, color: T.color.textSecondary }}>
+          <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <Typography sx={{ fontWeight: 700, fontSize: 16, lineHeight: 1.3 }}>{name || "Your name"}</Typography>
+            <Typography sx={{ fontSize: 13, color: T.color.textSecondary, lineHeight: 1.3 }}>
               Tap the camera icon to change your photo
             </Typography>
           </Box>
@@ -214,6 +228,7 @@ export default function ProfilePage() {
           required
           fullWidth
           size="small"
+          sx={textFieldSx}
           value={name}
           onChange={(e) => setName(e.target.value)}
           disabled={saving}
@@ -222,6 +237,7 @@ export default function ProfilePage() {
           label="Mobile number"
           fullWidth
           size="small"
+          sx={textFieldSx}
           value={mobile}
           onChange={(e) => setMobile(e.target.value)}
           disabled={saving}
@@ -231,6 +247,7 @@ export default function ProfilePage() {
           label="Email"
           fullWidth
           size="small"
+          sx={textFieldSx}
           value={email}
           disabled
           helperText={email ? "Email from your account" : "Email not set for OTP accounts"}
@@ -239,15 +256,17 @@ export default function ProfilePage() {
           label="Company name"
           fullWidth
           size="small"
+          sx={textFieldSx}
           value={companyName}
           onChange={(e) => setCompanyName(e.target.value)}
           disabled={saving}
         />
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.25 }}>
           <TextField
             label="City"
             fullWidth
             size="small"
+            sx={textFieldSx}
             value={city}
             onChange={(e) => setCity(e.target.value)}
             disabled={saving}
@@ -256,6 +275,7 @@ export default function ProfilePage() {
             label="State"
             fullWidth
             size="small"
+            sx={textFieldSx}
             value={state}
             onChange={(e) => setState(e.target.value)}
             disabled={saving}
@@ -265,17 +285,26 @@ export default function ProfilePage() {
           label="Country"
           fullWidth
           size="small"
+          sx={textFieldSx}
           value={country}
           onChange={(e) => setCountry(e.target.value)}
           disabled={saving}
         />
 
-        <Box sx={{ display: "flex", gap: 1.5, mt: 1, flexWrap: "wrap" }}>
+        <Box sx={{ display: "flex", gap: 1.5, mt: 0.5, flexWrap: "wrap" }}>
           <Button
             type="submit"
             variant="contained"
             disabled={saving || uploading}
-            sx={{ textTransform: "none", fontWeight: 700, bgcolor: INFO, px: 3 }}
+            sx={{
+              textTransform: "none",
+              fontWeight: 700,
+              bgcolor: T.color.trustNavy,
+              "&:hover": { bgcolor: T.color.trustNavyDark },
+              px: 3.5,
+              py: 1,
+              minWidth: 140,
+            }}
           >
             {saving ? <CircularProgress size={20} color="inherit" /> : "Save profile"}
           </Button>
@@ -284,7 +313,16 @@ export default function ProfilePage() {
             variant="outlined"
             disabled={saving}
             onClick={() => router.push(userProductRoutes.dashboard())}
-            sx={{ textTransform: "none" }}
+            sx={{
+              textTransform: "none",
+              fontWeight: 600,
+              color: T.color.textSecondary,
+              borderColor: T.color.border,
+              "&:hover": { borderColor: T.color.borderStrong, bgcolor: T.color.surfaceMuted },
+              px: 3.5,
+              py: 1,
+              minWidth: 140,
+            }}
           >
             Cancel
           </Button>
