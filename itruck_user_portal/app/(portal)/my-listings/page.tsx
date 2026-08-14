@@ -1,7 +1,6 @@
 
 
 
-
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -75,10 +74,14 @@ const FeaturedVehiclePlansDialog = dynamic(
   { ssr: false },
 );
 
-// Reusable thin scrollbar styling so the scrollable pane looks clean, not default-ugly
-const scrollPaneSx = {
-  height: "100%",
-  overflowY: "auto" as const,
+// Sticky filter column: stays pinned while the page scrolls, but no longer
+// owns its own independent scrollbar. The whole page is one normal scroll now.
+const stickyFilterSx = {
+  position: "sticky" as const,
+  top: { xs: 0, lg: LAYOUT.navbarHeight + 16 },
+  alignSelf: "flex-start" as const,
+  maxHeight: { xs: "none", lg: `calc(100vh - ${LAYOUT.navbarHeight + 32}px)` },
+  overflowY: { xs: "visible", lg: "auto" } as const,
   pr: 0.75,
   "&::-webkit-scrollbar": { width: 6 },
   "&::-webkit-scrollbar-track": { background: "transparent" },
@@ -375,14 +378,10 @@ function SellVehicleContent() {
         width: "100%",
         display: "flex",
         flexDirection: "column",
-        // Full viewport minus navbar. This outer box never scrolls —
-        // only the product-grid pane inside does.
-        height: { xs: "auto", lg: `calc(100vh - ${LAYOUT.navbarHeight}px)` },
-        overflow: { xs: "visible", lg: "hidden" },
       }}
     >
-      {/* ---- Fixed header: page title + "List new vehicle" ---- */}
-      <Box sx={{ flexShrink: 0 }}>
+      {/* ---- Header: page title + "List new vehicle" ---- */}
+      <Box>
         <SellVehiclePageHeader
           title="My listings"
           description="Manage your ads, edit details, or list another vehicle on TRUCK99."
@@ -390,20 +389,17 @@ function SellVehicleContent() {
         />
       </Box>
 
-      {/* ---- Body row: filter pane (fixed) + listings pane (scrolls) ---- */}
+      {/* ---- Body row: sticky filter pane + normal-flow listings pane ---- */}
       <Box
         sx={{
           display: "grid",
           gridTemplateColumns: { xs: "1fr", lg: "280px 1fr" },
           gap: 3,
           width: "100%",
-          flex: { xs: "unset", lg: 1 },
-          minHeight: 0,
-          overflow: { xs: "visible", lg: "hidden" },
         }}
       >
-        {/* Filters — stays put */}
-        <Box sx={{ ...scrollPaneSx, height: { xs: "auto", lg: "100%" } }}>
+        {/* Filters — sticky, pins in place while the page scrolls */}
+        <Box sx={stickyFilterSx}>
           <VehicleFilterPanel
             values={filters}
             onChange={handleFilterChange}
@@ -415,13 +411,11 @@ function SellVehicleContent() {
           />
         </Box>
 
-        {/* Right column: its own fixed sub-header (count + mobile filter btn) + scrolling grid */}
+        {/* Right column: sub-header (count + mobile filter btn) + grid, both in normal flow */}
         <Box
           sx={{
             display: "flex",
             flexDirection: "column",
-            height: { xs: "auto", lg: "100%" },
-            minHeight: 0,
           }}
         >
           <Box
@@ -432,7 +426,6 @@ function SellVehicleContent() {
               alignItems: "center",
               gap: 2,
               mb: 2,
-              flexShrink: 0,
             }}
           >
             <Box>
@@ -451,7 +444,7 @@ function SellVehicleContent() {
             <MobileFilterButton onClick={() => setMobileFiltersOpen(true)} />
           </Box>
 
-          <Box sx={{ ...scrollPaneSx, flex: 1 }}>
+          <Box>
             {listError && !loading ? (
               <BuySellErrorState
                 title="Couldn't load your listings"

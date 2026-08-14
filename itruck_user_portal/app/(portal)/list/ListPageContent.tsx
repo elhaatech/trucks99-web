@@ -1,6 +1,5 @@
 
 
-
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -36,10 +35,14 @@ import { isAbortError } from "@/lib/apiCache";
 import { toErrorMessage } from "@/lib/errors";
 import { LAYOUT } from "@/lib/theme";
 
-// Reusable thin scrollbar styling so the scrollable panes look clean, not default-ugly
-const scrollPaneSx = {
-  height: "100%",
-  overflowY: "auto" as const,
+// Sticky filter column: stays pinned while the page scrolls, but no longer
+// owns its own independent scrollbar. The whole page is one normal scroll now.
+const stickyFilterSx = {
+  position: "sticky" as const,
+  top: { xs: 0, lg: LAYOUT.navbarHeight + 16 },
+  alignSelf: "flex-start" as const,
+  maxHeight: { xs: "none", lg: `calc(100vh - ${LAYOUT.navbarHeight + 32}px)` },
+  overflowY: { xs: "visible", lg: "auto" } as const,
   pr: 0.75,
   "&::-webkit-scrollbar": { width: 6 },
   "&::-webkit-scrollbar-track": { background: "transparent" },
@@ -214,13 +217,9 @@ export default function UserProductListContent() {
         width: "100%",
         display: "flex",
         flexDirection: "column",
-        // Full viewport minus navbar. This box itself never scrolls —
-        // only the inner panes (filters / grid) do.
-        height: { xs: "auto", lg: `calc(100vh - ${LAYOUT.navbarHeight}px)` },
-        overflow: { xs: "visible", lg: "hidden" },
       }}
     >
-      {/* ---- Fixed header: title, sort, layout toggle ---- */}
+      {/* ---- Header: title, sort, layout toggle ---- */}
       <Box
         sx={{
           display: "flex",
@@ -229,7 +228,6 @@ export default function UserProductListContent() {
           gap: 2,
           mb: 3,
           flexWrap: "wrap",
-          flexShrink: 0,
         }}
       >
         <VehicleListHeader
@@ -238,7 +236,7 @@ export default function UserProductListContent() {
           loading={list.loading}
         />
 
-            <Box
+        <Box
           sx={{
             display: "flex",
             gap: 0.5,
@@ -289,20 +287,17 @@ export default function UserProductListContent() {
         </Box>
       </Box>
 
-      {/* ---- Body row: filter pane (fixed) + product pane (scrolls) ---- */}
+      {/* ---- Body row: sticky filter pane + normal-flow product pane ---- */}
       <Box
         sx={{
           display: "grid",
           gridTemplateColumns: { xs: "1fr", lg: "280px 1fr" },
           gap: 3,
           width: "100%",
-          flex: { xs: "unset", lg: 1 },
-          minHeight: 0,
-          overflow: { xs: "visible", lg: "hidden" },
         }}
       >
-        {/* Filters — stays put, own scroll only if it overflows its column */}
-        <Box sx={{ ...scrollPaneSx, height: { xs: "auto", lg: "100%" } }}>
+        {/* Filters — sticky, pins in place while the page scrolls */}
+        <Box sx={stickyFilterSx}>
           <VehicleFilterPanel
             values={filters}
             onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
@@ -314,8 +309,8 @@ export default function UserProductListContent() {
           />
         </Box>
 
-        {/* Products — this is the only pane meant to scroll on desktop */}
-        <Box sx={{ ...scrollPaneSx, height: { xs: "auto", lg: "100%" } }}>
+        {/* Products — flows normally, scrolls with the rest of the page */}
+        <Box>
           <VehicleGrid
             products={list.items}
             loading={list.loading}
@@ -333,4 +328,3 @@ export default function UserProductListContent() {
     </Box>
   );
 }
-
