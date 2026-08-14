@@ -294,8 +294,6 @@ export default function FeaturedVehiclesMarketplacePage() {
           <VehicleGrid
             products={products}
             loading={loading}
-            favoriteIds={new Set()}
-            togglingFavoriteIds={new Set()}
             onProductClick={(id) => void handleViewProduct(id)}
           />
         </>

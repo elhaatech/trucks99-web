@@ -9,7 +9,7 @@ import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
 import StarOutlineIcon from "@mui/icons-material/StarOutline";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 import type { BuySellOwnerProductsOwner } from "@/model/services/buysellapi";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getBuySellImageUrl, handleBuySellImageError } from "@/lib/buysellUtils";
 
 type SellerCardProps = {
   owner: BuySellOwnerProductsOwner;
@@ -43,7 +43,11 @@ export function SellerCard({
       }}
     >
       <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
-        <Avatar src={avatarSrc} sx={{ width: 64, height: 64, bgcolor: INFO }}>
+        <Avatar
+          src={avatarSrc || undefined}
+          slotProps={{ img: { onError: handleBuySellImageError } }}
+          sx={{ width: 64, height: 64, bgcolor: INFO }}
+        >
           {(owner.name ?? "S").charAt(0).toUpperCase()}
         </Avatar>
         <Box sx={{ flex: 1 }}>

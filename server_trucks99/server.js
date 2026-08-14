@@ -11,6 +11,7 @@ if (dotenvResult.error) {
 }
 
 const express = require('express');
+const http = require('http');
 const mongoose = require('mongoose');
 const seedDatabase = require('./seedData');
 require('./Firebase/firebase');
@@ -20,6 +21,34 @@ const DB = process.env.MONGODB_ATLAS;
 const RETRY_DELAY_MS = 5000;
 let isStarting = false;
 let hasMountedApp = false;
+
+function getPreferredPort() {
+    const configuredPort = Number(process.env.PORT);
+    return Number.isInteger(configuredPort) && configuredPort > 0 ? configuredPort : 3003;
+}
+
+function startHttpServer(port = getPreferredPort()) {
+    return new Promise((resolve, reject) => {
+        const httpServer = http.createServer(server);
+
+        httpServer.once('error', (err) => {
+            if (err && err.code === 'EADDRINUSE') {
+                console.error(
+                    `[startup] Port ${port} is already in use. Stop the other Node process and restart.`,
+                );
+                console.error(
+                    `[startup] Windows: Get-NetTCPConnection -LocalPort ${port} | Select OwningProcess`,
+                );
+            }
+            reject(err);
+        });
+
+        httpServer.listen(port, () => {
+            console.log(`Server running on port ${port}`);
+            resolve(httpServer);
+        });
+    });
+}
 
 if (!DB) {
     console.error('MONGODB_ATLAS is not set in server/.env');
@@ -40,6 +69,13 @@ async function startServer() {
     try {
         await mongoose.connect(DB);
         console.log("Successfully connected to database!!");
+
+        try {
+            const { checkOtpDependencies } = require('./helpers/otpStartupCheck');
+            await checkOtpDependencies();
+        } catch (err) {
+            console.error('[OTP] Startup check failed:', err.message || err);
+        }
 
         if (!hasMountedApp) {
             // Load routes only after DB is reachable to avoid startup crashes from DB-dependent middlewares.
@@ -72,27 +108,29 @@ async function startServer() {
             console.error("Notification template seed error:", err.message || err);
         }
 
-        const PORT = process.env.PORT || 3003;
-        server.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
+        const requestedPort = getPreferredPort();
+        await startHttpServer(requestedPort);
 
-            // Start the daily subscription expiry scheduler
-            try {
-                const { startScheduler } = require('./services/subscriptionScheduler');
-                startScheduler();
-            } catch (err) {
-                console.error("Failed to start subscription scheduler:", err.message || err);
-            }
+        // Start the daily subscription expiry scheduler
+        try {
+            const { startScheduler } = require('./services/subscriptionScheduler');
+            startScheduler();
+        } catch (err) {
+            console.error("Failed to start subscription scheduler:", err.message || err);
+        }
 
-            try {
-                const { startReminderScheduler } = require('./services/notificationReminderScheduler');
-                startReminderScheduler();
-            } catch (err) {
-                console.error("Failed to start reminder scheduler:", err.message || err);
-            }
-        });
+        try {
+            const { startReminderScheduler } = require('./services/notificationReminderScheduler');
+            startReminderScheduler();
+        } catch (err) {
+            console.error("Failed to start reminder scheduler:", err.message || err);
+        }
     } catch (err) {
         console.error("Server startup failed:", err.message || err);
+        if (err && err.code === "EADDRINUSE") {
+            console.error("[startup] Free the port above, then run npm run start again.");
+            process.exit(1);
+        }
         console.log(`Retrying DB connection in ${RETRY_DELAY_MS / 1000}s...`);
         setTimeout(() => {
             isStarting = false;
@@ -103,5 +141,9 @@ async function startServer() {
     isStarting = false;
 }
 
-startServer();
+module.exports = { startServer, startHttpServer, getPreferredPort };
+
+if (require.main === module) {
+    startServer();
+}
 

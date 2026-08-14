@@ -18,6 +18,8 @@ const PUBLIC_PATHS = [
   "/api/auth/github",
   "/api/otp/send",
   "/api/otp/verify",
+  "/api/otp/resend",
+  "/api/otp/health",
   "/api/auth/send-otp",
   "/api/auth/verify-otp",
   "/api/auth/resend-otp",
@@ -34,6 +36,8 @@ const PUBLIC_METHOD_PATHS = [
 
   { method: "POST", path: "/api/permission/edit" },
   { method: "POST", path: "/api/otp/verify" },
+  { method: "POST", path: "/api/otp/resend" },
+  { method: "GET", path: "/api/otp/health" },
   { method: "POST", path: "/api/auth/send-otp" },
   { method: "POST", path: "/api/auth/verify-otp" },
   { method: "POST", path: "/api/auth/resend-otp" },
@@ -69,6 +73,9 @@ const PUBLIC_METHOD_PATHS = [
   {"method": "POST", "path": "/api/buy-sell/featured-vehicles/list"},
   { method: "POST", path: "/api/test-firebase-easy" },
   { method: "POST", path: "/api/test-firebase-token" },
+  // Marketplace register uploads a profile photo before the user has a token.
+  // Anonymous callers are restricted to `user_profile` in views/upload.js.
+  { method: "POST", path: "/api/upload" },
 ];
 
 const { isPublicBuySellMarketplaceRoute } = require("./buySellPublicRoutes");

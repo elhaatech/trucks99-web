@@ -26,7 +26,7 @@ import {
 } from "@/model/services/buysellapi";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { VehicleGridSkeleton } from "@/app/common/components/buysell/LoadingSkeleton";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getBuySellImageUrl, handleBuySellImageError } from "@/lib/buysellUtils";
 
 export default function SellerProfilePage() {
   const params = useParams();
@@ -98,6 +98,7 @@ export default function SellerProfilePage() {
         <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
           <Avatar
             src={ownerImage ? getBuySellImageUrl(ownerImage) : undefined}
+            slotProps={{ img: { onError: handleBuySellImageError } }}
             sx={{ width: 72, height: 72, bgcolor: INFO, fontSize: 28 }}
           >
             {(ownerName || "S").charAt(0).toUpperCase()}

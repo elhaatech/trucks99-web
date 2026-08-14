@@ -8,14 +8,7 @@ import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
 import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 import { MetaIconLine, PhoneMetaLine } from "@/app/common/components/buysell/MetaIconLine";
-
-export const BUYSELL_API_BASE_URL = "http://truck.elhaa.com:3003";
-
-export function getBuySellImageUrl(path?: string | null): string | undefined {
-  if (!path) return undefined;
-  if (/^https?:\/\//i.test(path)) return path;
-  return `${BUYSELL_API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
-}
+import { getBuySellImageUrl, handleBuySellImageError } from "@/lib/buysellUtils";
 
 type ProductSellerInfoProps = {
   sellerName?: string;
@@ -55,7 +48,8 @@ export function ProductSellerInfo({
 
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
         <Avatar
-          src={avatarSrc}
+          src={avatarSrc || undefined}
+          slotProps={{ img: { onError: handleBuySellImageError } }}
           sx={{ width: 52, height: 52, bgcolor: INFO, fontWeight: 700, fontSize: 20 }}
         >
           {sellerName.charAt(0).toUpperCase()}

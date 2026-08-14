@@ -13,7 +13,6 @@ import { getCurrentUser, logout as logoutApi, type User, invalidateCurrentUserCa
 import {
   hasMarketplaceBearerToken,
   MARKETPLACE_AUTH_CHANGED_EVENT,
-  notifyMarketplaceAuthChanged,
   resolveMarketplaceUserIdFromUser,
 } from "@/lib/marketplaceAuth";
 
@@ -44,6 +43,10 @@ export function MarketplaceAuthProvider({ children }: { children: ReactNode }) {
     try {
       if (opts?.force) invalidateCurrentUserCache();
       const profile = await getCurrentUser();
+      if (!hasMarketplaceBearerToken()) {
+        setUser(null);
+        return;
+      }
       setUser(profile);
       resolveMarketplaceUserIdFromUser(profile);
     } catch {
@@ -54,9 +57,8 @@ export function MarketplaceAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await logoutApi();
     setUser(null);
-    notifyMarketplaceAuthChanged();
+    await logoutApi();
   }, []);
 
   useEffect(() => {
@@ -79,7 +81,7 @@ export function MarketplaceAuthProvider({ children }: { children: ReactNode }) {
       user,
       userId,
       authReady,
-      isLoggedIn: Boolean(userId && hasMarketplaceBearerToken()),
+      isLoggedIn: Boolean(user) && hasMarketplaceBearerToken(),
       refresh,
       logout,
     };

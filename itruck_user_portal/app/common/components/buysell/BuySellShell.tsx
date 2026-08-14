@@ -27,7 +27,8 @@ import {
   Z_INDEX,
   TRANSITION,
 } from "@/lib/theme";
-import { BuySellHeader, BUYSELL_NAV_LINKS, MOBILE_EXTRA_LINKS } from "./BuySellHeader";
+import { BuySellHeader, getBuySellNavLinks, MOBILE_EXTRA_LINKS } from "./BuySellHeader";
+import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 
 import { BuySellPageBack } from "./BuySellPageBack";
 import { BrandLogo } from "@/components/ui/BrandLogo";
@@ -60,8 +61,10 @@ function navIcon(label: string) {
 export function BuySellShell({ children }: BuySellShellProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { isLoggedIn } = useMarketplaceAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
+  const navLinks = getBuySellNavLinks(isLoggedIn);
 
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0, behavior: "auto" });
@@ -126,7 +129,7 @@ export function BuySellShell({ children }: BuySellShellProps) {
         </Box>
         <Divider />
         <List sx={{ px: 1.5, py: 1.5 }}>
-          {[...BUYSELL_NAV_LINKS, ...MOBILE_EXTRA_LINKS].map((link) => {
+          {[...navLinks, ...MOBILE_EXTRA_LINKS].map((link) => {
             const selected =
               link.label === "My Listings"
                 ? isSellHubPath(pathname)

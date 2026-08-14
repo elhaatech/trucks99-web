@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Box from "@mui/material/Box";
 import { PRIMARY } from "@/lib/theme";
+import { BuySellImage } from "@/components/common/BuySellImage";
 
 export function renderClickableName(
   value: string,
@@ -29,21 +30,18 @@ export function renderImage(
   src?: string,
   alt?: string
 ) {
-  if (!src) return "—";
-
   return (
     <Box
-      component="img"
-      src={src}
-      alt={alt || "Image"}
       sx={{
         width: 48,
         height: 36,
-        objectFit: "cover",
         borderRadius: 1,
+        overflow: "hidden",
         border: "1px solid",
         borderColor: "divider",
       }}
-    />
+    >
+      <BuySellImage src={src} alt={alt || "Image"} />
+    </Box>
   );
 }

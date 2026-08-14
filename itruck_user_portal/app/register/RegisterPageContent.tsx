@@ -16,7 +16,8 @@ import { registerMarketplaceUser,
   getLocationStatesByCountry,
   getLocationCitiesByState,
 } from "@/model/api";
-import { uploadFile } from "@/model/services/uploadapi";
+import { uploadFile, validateProfileImageFile } from "@/model/services/uploadapi";
+import { handleBuySellImageError } from "@/lib/buysellUtils";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 import { WelcomePanel } from "@/components/layout/WelcomePanel";
 import { AuthTextField } from "@/components/ui/AuthTextField";
@@ -70,6 +71,7 @@ export default function MarketplaceRegisterPage() {
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState("");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -192,24 +194,32 @@ export default function MarketplaceRegisterPage() {
     };
   }, [form.stateId]);
 
-  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
 
+    const validationError = validateProfileImageFile(file);
+    if (validationError) {
+      setPhotoError(validationError);
+      return;
+    }
+
     setPhotoError("");
-    if (!file.type.startsWith("image/")) {
-      setPhotoError("Please select a valid image file.");
-      return;
-    }
+    setProfileImageFile(file);
+    setProfileImagePreview((prev) => {
+      if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+  };
 
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
-      setPhotoError("Image must be smaller than 5MB.");
-      return;
-    }
-
-    setProfileImagePreview(URL.createObjectURL(file));
+  const handlePhotoRemove = () => {
+    setProfileImageFile(null);
+    setPhotoError("");
+    setProfileImagePreview((prev) => {
+      if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+      return null;
+    });
   };
 
   async function handleRegister(e: React.FormEvent) {
@@ -232,13 +242,10 @@ export default function MarketplaceRegisterPage() {
     try {
       setLoading(true);
       let profileImageUrl: string | undefined;
-      if (profileImagePreview) {
+      if (profileImageFile) {
         setUploadingPhoto(true);
         try {
-          const file = fileInputRef.current?.files?.[0];
-          if (file) {
-            profileImageUrl = await uploadFile(file, "user_profile");
-          }
+          profileImageUrl = await uploadFile(profileImageFile, "user_profile");
         } catch (err) {
           setError(err instanceof Error ? err.message : "Failed to upload photo.");
           setLoading(false);
@@ -249,7 +256,7 @@ export default function MarketplaceRegisterPage() {
         }
       }
 
-      await registerMarketplaceUser({
+      const result = await registerMarketplaceUser({
         name: form.name.trim(),
         mobile: form.mobile.trim(),
         company_name: form.company_name.trim() || undefined,
@@ -263,6 +270,9 @@ export default function MarketplaceRegisterPage() {
       const params = new URLSearchParams();
       params.set("registered", "1");
       params.set("mobile", form.mobile.trim());
+      if (!result.otpSentToMobile && !result.otpSentViaSms) {
+        params.set("smsFailed", "1");
+      }
       if (returnTo) params.set("returnTo", returnTo);
       router.replace(`${userProductRoutes.login()}?${params.toString()}`);
     } catch (err) {
@@ -342,6 +352,7 @@ export default function MarketplaceRegisterPage() {
                     <img
                       src={profileImagePreview}
                       alt="Profile preview"
+                      onError={handleBuySellImageError}
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
                   ) : (
@@ -351,6 +362,25 @@ export default function MarketplaceRegisterPage() {
                 <Typography variant="caption" color="text.secondary">
                   {profileImagePreview ? "Click to change photo" : "Click to upload profile photo (optional)"}
                 </Typography>
+                {profileImagePreview ? (
+                  <Typography
+                    component="button"
+                    type="button"
+                    variant="caption"
+                    onClick={handlePhotoRemove}
+                    disabled={loading}
+                    sx={{
+                      border: 0,
+                      background: "none",
+                      cursor: loading ? "default" : "pointer",
+                      color: "text.secondary",
+                      textDecoration: "underline",
+                      p: 0,
+                    }}
+                  >
+                    Remove photo
+                  </Typography>
+                ) : null}
                 {photoError && (
                   <Typography variant="caption" color="error.main">
                     {photoError}
@@ -448,7 +478,11 @@ export default function MarketplaceRegisterPage() {
 
              <Box sx={{ mt: 2 }}>
                <GradientButton type="submit" disabled={loading}>
-                 {loading ? "Creating account…" : "Create account"}
+                 {loading
+                   ? uploadingPhoto
+                     ? "Uploading photo…"
+                     : "Creating account…"
+                   : "Create account"}
                </GradientButton>
              </Box>
            </form>

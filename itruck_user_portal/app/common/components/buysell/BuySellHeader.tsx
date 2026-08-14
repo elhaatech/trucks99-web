@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
@@ -40,7 +40,7 @@ import {
   Z_INDEX,
 } from "@/lib/theme";
 import { isSellHubPath, userProductRoutes } from "@/lib/userProductRoutes";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getBuySellImageUrl, handleBuySellImageError } from "@/lib/buysellUtils";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import {
   MARKETPLACE_FAVORITES_CHANGED_EVENT,
@@ -54,6 +54,13 @@ const NAV_LINKS = [
   { label: "Favorites", href: userProductRoutes.favorites() },
 ];
 
+const AUTH_ONLY_NAV_LABELS = new Set(["My Listings"]);
+
+export function getBuySellNavLinks(isLoggedIn: boolean) {
+  if (isLoggedIn) return NAV_LINKS;
+  return NAV_LINKS.filter((link) => !AUTH_ONLY_NAV_LABELS.has(link.label));
+}
+
 const MOBILE_EXTRA_LINKS = [
   { label: "AI Chatbot", href: userProductRoutes.assistant() },
 ];
@@ -65,7 +72,8 @@ type BuySellHeaderProps = {
 export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, logout: marketplaceLogout } = useMarketplaceAuth();
+  const { user, isLoggedIn, logout: marketplaceLogout } = useMarketplaceAuth();
+  const navLinks = useMemo(() => getBuySellNavLinks(isLoggedIn), [isLoggedIn]);
   const [favoriteCount, setFavoriteCount] = useState(0);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [headerSearch, setHeaderSearch] = useState("");
@@ -75,14 +83,14 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
     pathname.startsWith(`${userProductRoutes.assistant()}/`);
 
   const refreshCounts = useCallback(() => {
-    if (!user) {
+    if (!isLoggedIn) {
       setFavoriteCount(0);
       return;
     }
     getBuySellFavoriteCount()
       .then(setFavoriteCount)
       .catch(() => setFavoriteCount(0));
-  }, [user]);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     refreshCounts();
@@ -213,7 +221,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
         </Box>
 
         <Box sx={{ display: { xs: "none", lg: "flex" }, gap: 0.5, ml: 1.5 }}>
-          {NAV_LINKS.map((link) => {
+          {navLinks.map((link) => {
             const active = isLinkActive(link);
             const showFavoriteBadge =
               (link.label === "Favorites" || link.label === "My Favorite List") &&
@@ -366,6 +374,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                 <Avatar
                   src={getBuySellImageUrl(user.profileImage) || undefined}
                   alt={user.name || "Account"}
+                  slotProps={{ img: { onError: handleBuySellImageError } }}
                   sx={{
                     width: 32,
                     height: 32,
@@ -393,6 +402,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                   <Avatar
                     src={getBuySellImageUrl(user.profileImage) || undefined}
                     alt={user.name || "Account"}
+                    slotProps={{ img: { onError: handleBuySellImageError } }}
                     sx={{ width: 40, height: 40, bgcolor: PRIMARY, fontSize: 15, fontWeight: 700 }}
                   >
                     {(user.name || "U").charAt(0).toUpperCase()}

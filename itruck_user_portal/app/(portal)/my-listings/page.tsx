@@ -105,7 +105,7 @@ function SellVehicleContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { notify } = useNotification();
-  const { user: currentUser, authReady } = useMarketplaceAuth();
+  const { user: currentUser, authReady, isLoggedIn } = useMarketplaceAuth();
 
   const isCreate = searchParams.get("tab") === "create";
   const [products, setProducts] = useState<BuySellProduct[]>([]);
@@ -194,10 +194,21 @@ function SellVehicleContent() {
   );
 
   useEffect(() => {
-    if (!isCreate) {
+    if (!authReady) return;
+    if (!isLoggedIn) {
+      router.replace(
+        userProductRoutes.login(
+          userProductRoutes.sellVehicle(isCreate ? "create" : undefined),
+        ),
+      );
+    }
+  }, [authReady, isLoggedIn, isCreate, router]);
+
+  useEffect(() => {
+    if (!isCreate && authReady && isLoggedIn) {
       void loadListings({ page, filters: appliedFilters });
     }
-  }, [isCreate, page, appliedFilters, loadListings]);
+  }, [isCreate, page, appliedFilters, loadListings, authReady, isLoggedIn]);
 
   const handleCreateSuccess = (ctx?: BuySellFormSuccessContext) => {
     router.replace(userProductRoutes.sellVehicle());

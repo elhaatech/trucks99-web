@@ -3,6 +3,8 @@ import { getAuthHeaders } from "@/services";
 import { persistMarketplaceUserId, clearMarketplaceUserId } from "@/lib/marketplaceUser";
 import { clearMarketplaceGuestKey } from "@/lib/marketplaceGuest";
 import { notifyMarketplaceAuthChanged } from "@/lib/marketplaceAuth";
+import { clearPendingFavorite } from "@/lib/pendingFavorite";
+import { invalidateBuySellFavoritesCache } from "@/model/services/favoriteapi";
 import { cachedRequest, invalidateCache } from "@/lib/apiCache";
 import { normalizeRolePermissionsInput, type Role, getRoles as listRolesViaPost } from "./role";
 import {
@@ -71,28 +73,108 @@ function normalizeUserRoleEmbedded(user: User): User {
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
+export class OtpError extends Error {
+  remainingAttempts?: number;
+  retryAfterSeconds?: number;
+
+  constructor(
+    message: string,
+    options?: { remainingAttempts?: number; retryAfterSeconds?: number },
+  ) {
+    super(message);
+    this.name = "OtpError";
+    this.remainingAttempts = options?.remainingAttempts;
+    this.retryAfterSeconds = options?.retryAfterSeconds;
+  }
+}
+
+async function postOtpJson<T>(
+  path: string,
+  body: Record<string, string>,
+  timeoutMs = 30000,
+): Promise<T> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const base = resolveApiBase();
+
+  try {
+    const res = await fetch(`${base}${path}`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const data = (await res.json().catch(() => ({}))) as T & {
+      message?: string;
+      remainingAttempts?: number;
+      retryAfterSeconds?: number;
+    };
+
+    if (!res.ok) {
+      throw new OtpError(data.message || res.statusText || "Request failed", {
+        remainingAttempts: data.remainingAttempts,
+        retryAfterSeconds: data.retryAfterSeconds,
+      });
+    }
+
+    return data as T;
+  } catch (err) {
+    if (err instanceof OtpError) throw err;
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error(
+        "OTP request timed out. Is the backend server running on port 3003?",
+      );
+    }
+    if (err instanceof TypeError) {
+      throw new Error(
+        "Cannot reach backend API. Start server_trucks99 on port 3003.",
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /** POST /api/otp/send — body: { mobile } */
 export async function sendOtp(mobile: string) {
   const normalized = normalizeMobileInput(mobile);
   if (!normalized) throw new Error("Mobile number is required.");
-  return api<{
+
+  return postOtpJson<{
     message: string;
     otpForDev?: string;
     otpSentViaSms?: boolean;
-  }>("/api/otp/send", {
-    method: "POST",
-    body: JSON.stringify({ mobile: normalized }),
-  });
+    retryAfterSeconds?: number;
+  }>("/api/otp/send", { mobile: normalized });
+}
+
+/** POST /api/otp/resend — body: { mobile } */
+export async function resendOtp(mobile: string) {
+  const normalized = normalizeMobileInput(mobile);
+  if (!normalized) throw new Error("Mobile number is required.");
+
+  return postOtpJson<{
+    message: string;
+    otpForDev?: string;
+    otpSentViaSms?: boolean;
+    retryAfterSeconds?: number;
+  }>("/api/otp/resend", { mobile: normalized });
 }
 
 /** POST /api/otp/verify — body: { mobile, otp } */
 export async function verifyOtp(mobile: string, otp: string) {
   const normalized = normalizeMobileInput(mobile);
-  if (!normalized || !otp?.trim()) throw new Error("Mobile number and OTP are required.");
-  const res = await api<{ message: string; token?: string; user: User }>("/api/otp/verify", {
-    method: "POST",
-    body: JSON.stringify({ mobile: normalized, otp: otp.trim() }),
-  });
+  if (!normalized || !otp?.trim()) {
+    throw new Error("Mobile number and OTP are required.");
+  }
+
+  const res = await postOtpJson<{ message: string; token?: string; user: User }>(
+    "/api/otp/verify",
+    { mobile: normalized, otp: otp.trim() },
+  );
+
   if (res.token) setToken(res.token);
   const uid = res.user?.id ?? res.user?._id;
   if (uid != null) persistMarketplaceUserId(String(uid));
@@ -138,15 +220,24 @@ export function invalidateCurrentUserCache(): void {
 }
 
 export async function logout(): Promise<void> {
-  await fetch(`${resolveApiBase()}/api/logout`, {
-    method: "DELETE",
-    credentials: "include",
-    headers: getAuthHeaders(),
-  });
+  const headers = getAuthHeaders();
+  // Drop local auth first so the navbar cannot keep a stale session if the
+  // API call is slow or fails.
   clearToken();
   clearMarketplaceUserId();
+  clearPendingFavorite();
   invalidateCurrentUserCache();
+  invalidateBuySellFavoritesCache();
   notifyMarketplaceAuthChanged();
+  try {
+    await fetch(`${resolveApiBase()}/api/logout`, {
+      method: "DELETE",
+      credentials: "include",
+      headers,
+    });
+  } catch {
+    // Server session may already be gone; client auth is already cleared.
+  }
 }
 
 // ─── Current user ─────────────────────────────────────────────────────────────
@@ -223,7 +314,9 @@ export async function createUser(body: {
     userObj?: User;
     loginType?: string;
     otpSentToMobile?: boolean;
+    otpSentViaSms?: boolean;
     otpForDev?: string;
+    otpSendError?: string;
   }>("/api/signup", {
     method: "POST",
     body: JSON.stringify(payload),

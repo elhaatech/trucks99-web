@@ -24,12 +24,10 @@ import {
   getBuySellFeaturedVehicles,
   getBuySellListPage,
   getBuySellRecentVehicles,
-  getBuySellRowId,
   type BuySellProduct,
   type BuySellDashboardStatsResponse,
 } from "@/model/services/buysellapi";
 import { getCategories, type Category } from "@/model/services/category";
-import { addFavorite, removeFavorite } from "@/model/services/favoriteapi";
 import { useNotification } from "@/hooks/useNotification";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { ensureLoggedInToViewProduct } from "@/lib/requireMarketplaceLogin";
@@ -46,16 +44,6 @@ const EMPTY_STATS: MarketplaceStats = {
   soldVehicles: 0,
   totalOffers: 0,
 };
-
-function seedFavoritesFromProducts(products: BuySellProduct[]): Set<string> {
-  const ids = new Set<string>();
-  for (const p of products) {
-    if (p.is_favorite) {
-      ids.add(getBuySellRowId(p));
-    }
-  }
-  return ids;
-}
 
 export default function UserProductDashboardPage() {
   const router = useRouter();
@@ -79,10 +67,6 @@ export default function UserProductDashboardPage() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [featuredLoading, setFeaturedLoading] = useState(true);
   const [recentVehiclesLoading, setRecentVehiclesLoading] = useState(true);
-  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
-  const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
-  const favoriteIdsRef = useRef(favoriteIds);
-  favoriteIdsRef.current = favoriteIds;
 
   const loadExplorePage = useCallback(
     async (page: number, signal: AbortSignal) => {
@@ -105,16 +89,6 @@ export default function UserProductDashboardPage() {
   );
 
   const exploreList = useInfiniteScroll(loadExplorePage);
-
-  useEffect(() => {
-    setFavoriteIds((prev) => {
-      const next = new Set(prev);
-      for (const p of exploreList.items) {
-        if (p.is_favorite) next.add(getBuySellRowId(p));
-      }
-      return next;
-    });
-  }, [exploreList.items]);
 
   useEffect(() => {
     if (
@@ -166,13 +140,6 @@ export default function UserProductDashboardPage() {
         if (signal.aborted) return;
         const items = data ?? [];
         setRecentVehicles(items);
-        setFavoriteIds((prev) => {
-          const next = new Set(prev);
-          for (const p of items) {
-            if (p.is_favorite) next.add(getBuySellRowId(p));
-          }
-          return next;
-        });
       })
       .catch((err) => {
         if (signal.aborted) return;
@@ -199,13 +166,6 @@ export default function UserProductDashboardPage() {
         if (cancelled) return;
         const items = data ?? [];
         setFeaturedVehicles(items);
-        setFavoriteIds((prev) => {
-          const next = new Set(prev);
-          for (const p of items) {
-            if (p.is_favorite) next.add(getBuySellRowId(p));
-          }
-          return next;
-        });
       })
       .catch((err) => {
         if (cancelled) return;
@@ -253,43 +213,6 @@ export default function UserProductDashboardPage() {
       }),
     );
   };
-
-  const handleFavoriteToggle = useCallback(
-    async (productId: string) => {
-      const isFav = favoriteIdsRef.current.has(productId);
-      setTogglingIds((prev) => new Set(prev).add(productId));
-      setFavoriteIds((prev) => {
-        const next = new Set(prev);
-        isFav ? next.delete(productId) : next.add(productId);
-        return next;
-      });
-
-      try {
-        if (isFav) {
-          await removeFavorite("buySell", productId);
-        } else {
-          await addFavorite("buySell", productId);
-        }
-      } catch (err) {
-        setFavoriteIds((prev) => {
-          const next = new Set(prev);
-          isFav ? next.add(productId) : next.delete(productId);
-          return next;
-        });
-        notify({
-          type: "error",
-          message: toErrorMessage(err, "Favorite update failed"),
-        });
-      } finally {
-        setTogglingIds((prev) => {
-          const next = new Set(prev);
-          next.delete(productId);
-          return next;
-        });
-      }
-    },
-    [notify],
-  );
 
   const handleViewProduct = useCallback(
     async (productId: string) => {
@@ -439,9 +362,6 @@ export default function UserProductDashboardPage() {
         <VehicleGrid
           products={recentVehicles}
           loading={recentVehiclesLoading}
-          favoriteIds={favoriteIds}
-          togglingFavoriteIds={togglingIds}
-          onFavoriteToggle={handleFavoriteToggle}
           onProductClick={(id) => void handleViewProduct(id)}
           emptyDescription="No recent vehicles yet. Check back soon for newly listed trucks."
         />
@@ -494,9 +414,6 @@ export default function UserProductDashboardPage() {
           isLoadingMore={exploreList.loadingMore}
           hasMore={exploreList.hasMore}
           sentinelRef={exploreList.sentinelRef}
-          favoriteIds={favoriteIds}
-          togglingFavoriteIds={togglingIds}
-          onFavoriteToggle={handleFavoriteToggle}
           onProductClick={(id) => void handleViewProduct(id)}
           emptyDescription="No vehicles to explore yet. Be the first to list on TRUCKS99."
         />

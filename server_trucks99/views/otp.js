@@ -14,6 +14,31 @@ const { transformRolePermissions } = require('../helpers/rolePermissions');
 
 const otpRouter = express.Router();
 
+// GET /api/otp/health — deployment check (Redis + SMS config, no secrets)
+otpRouter.get('/health', async (_req, res) => {
+  const sendSMS = require('../helpers/draft4sms/sendSMS');
+  const { ensureRedisConnected } = require('../config/redisClient');
+
+  let redisOk = false;
+  let redisError;
+  try {
+    await ensureRedisConnected();
+    redisOk = true;
+  } catch (err) {
+    redisError = err.message || String(err);
+  }
+
+  const smsConfigured = sendSMS.isDraft4SmsConfigured();
+
+  return res.status(redisOk && smsConfigured ? 200 : 503).json({
+    ok: redisOk && smsConfigured,
+    redis: redisOk ? 'connected' : 'unavailable',
+    ...(redisError ? { redisError } : {}),
+    draft4sms: smsConfigured ? 'configured' : 'missing_api_key_or_sender',
+    nodeEnv: process.env.NODE_ENV || 'development',
+  });
+});
+
 function loginResponse(req, res, user) {
   const token = signToken(user);
   req.logIn(user, (err) => {
@@ -37,7 +62,7 @@ function loginResponse(req, res, user) {
   });
 }
 
-// POST /api/otp/send — body: { mobile }. OTP sent via Twilio SMS.
+// POST /api/otp/send — body: { mobile }. OTP sent via Draft4SMS.
 otpRouter.post('/send', async (req, res) => {
   try {
     const { mobile } = req.body;
@@ -52,9 +77,11 @@ otpRouter.post('/send', async (req, res) => {
 
     const result = await createAndSendOtp(normalizedMobile);
     if (!result.ok) {
-      return res.status(503).json({
+      const status = result.retryAfterSeconds ? 429 : 503;
+      return res.status(status).json({
         message: result.error || 'Could not send OTP.',
         otpSentViaSms: false,
+        ...(result.retryAfterSeconds ? { retryAfterSeconds: result.retryAfterSeconds } : {}),
       });
     }
 
@@ -70,6 +97,40 @@ otpRouter.post('/send', async (req, res) => {
       message: 'Failed to send OTP.',
       ...(isDev ? { error: err.message } : {}),
     });
+  }
+});
+
+// POST /api/otp/resend — body: { mobile }
+otpRouter.post('/resend', async (req, res) => {
+  try {
+    const { mobile } = req.body;
+    const normalizedMobile = normalizeMobile(mobile);
+    if (!normalizedMobile) {
+      return res.status(400).json({ message: 'Mobile number is required.' });
+    }
+    const user = await User.findOne({ mobile: normalizedMobile }).exec();
+    if (!user) {
+      return res.status(404).json({ message: 'User not found with this mobile number.' });
+    }
+
+    const result = await createAndSendOtp(normalizedMobile, { isResend: true });
+    if (!result.ok) {
+      const status = result.retryAfterSeconds ? 429 : 400;
+      return res.status(status).json({
+        message: result.error || 'Could not resend OTP.',
+        otpSentViaSms: false,
+        ...(result.retryAfterSeconds ? { retryAfterSeconds: result.retryAfterSeconds } : {}),
+      });
+    }
+
+    return res.status(200).json({
+      message: result.message || 'OTP resent to your mobile number.',
+      otpSentViaSms: Boolean(result.sent),
+      ...(result.otpForDev ? { otpForDev: result.otpForDev } : {}),
+    });
+  } catch (err) {
+    console.error('OTP resend error:', err);
+    return res.status(500).json({ message: 'Failed to resend OTP.' });
   }
 });
 
@@ -91,7 +152,13 @@ otpRouter.post('/verify', async (req, res) => {
 
     const verification = await verifyOtpCode(normalizedMobile, otp);
     if (!verification.ok) {
-      return res.status(401).json({ message: verification.error });
+      return res.status(401).json({
+        message: verification.error,
+        ...(verification.remainingAttempts !== null &&
+        verification.remainingAttempts !== undefined
+          ? { remainingAttempts: verification.remainingAttempts }
+          : {}),
+      });
     }
 
     return loginResponse(req, res, user);
@@ -101,7 +168,7 @@ otpRouter.post('/verify', async (req, res) => {
   }
 });
 
-// POST /api/otp/mobile/send — logged-in user verifies mobile via Twilio SMS OTP
+// POST /api/otp/mobile/send — logged-in user verifies mobile via SMS OTP
 otpRouter.post('/mobile/send', async (req, res) => {
   try {
     if (!req.isAuthenticated() || !req.user) {

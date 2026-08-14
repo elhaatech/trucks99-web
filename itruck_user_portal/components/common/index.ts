@@ -81,3 +81,5 @@ export type {
   ViewPageSectionProps,
   FormPageLayoutProps,
 } from "./layout";
+export { BuySellImage } from "./BuySellImage";
+export type { BuySellImageProps } from "./BuySellImage";

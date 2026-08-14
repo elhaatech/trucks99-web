@@ -4,6 +4,28 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: import.meta.dirname,
   },
+  /**
+   * Proxy backend API through the Next.js origin (same host/port as the UI).
+   * Fixes HTTPS mixed-content and avoids exposing :3003 to browsers in production.
+   * Set BACKEND_INTERNAL_URL on the server (default http://127.0.0.1:3003).
+   */
+  async rewrites() {
+    const backend = (
+      process.env.BACKEND_INTERNAL_URL || "http://127.0.0.1:3003"
+    ).replace(/\/$/, "");
+    return {
+      afterFiles: [
+        {
+          source: "/api/:path*",
+          destination: `${backend}/api/:path*`,
+        },
+        {
+          source: "/uploads/:path*",
+          destination: `${backend}/uploads/:path*`,
+        },
+      ],
+    };
+  },
   images: {
     remotePatterns: [
       { protocol: "http", hostname: "localhost", port: "3003", pathname: "/**" },

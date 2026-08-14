@@ -10,10 +10,10 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import Avatar from "@mui/material/Avatar";
-import { getBuySellImageUrl, getFirstBuySellImageUrl } from "@/lib/buysellUtils";
+import { getFirstBuySellImageUrl } from "@/lib/buysellUtils";
 import { formatProductPrice, getProductTitle } from "./utils";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
+import { BuySellImage } from "@/components/common/BuySellImage";
 import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
 import { PhoneMetaLine } from "./MetaIconLine";
 import type { ProductBitRecord } from "@/model/services/bitRecord";
@@ -170,11 +170,18 @@ export function OfferTable({
               >
                 <TableCell sx={{ py: 1.75 }}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                    <Avatar
-                      variant="rounded"
-                      src={getBuySellImageUrl(image)}
-                      sx={{ width: 48, height: 40, borderRadius: 1, bgcolor: T.color.border }}
-                    />
+                    <Box
+                      sx={{
+                        width: 48,
+                        height: 40,
+                        borderRadius: 1,
+                        overflow: "hidden",
+                        bgcolor: T.color.border,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <BuySellImage src={image} alt={title} />
+                    </Box>
                     <Typography fontWeight={600} fontSize={14} sx={{ color: T.color.textPrimary }}>
                       {title}
                     </Typography>

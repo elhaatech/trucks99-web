@@ -1,5 +1,5 @@
 import type { User } from "@/model/services/user";
-import { getAuthHeaders } from "@/services";
+import { getAuthHeaders } from "@/model/services/getAuthHeaders";
 import {
   getMarketplaceUserId,
   persistMarketplaceUserId,
@@ -28,6 +28,7 @@ export function notifyMarketplaceFavoritesChanged(): void {
 export function resolveMarketplaceUserIdFromUser(
   user: User | null | undefined,
 ): string | null {
+  if (!hasMarketplaceBearerToken()) return null;
   if (user) {
     const id = String(user._id ?? user.id ?? "").trim();
     if (id) {

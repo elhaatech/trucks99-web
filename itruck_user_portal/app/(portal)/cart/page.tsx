@@ -25,31 +25,35 @@ import {
 import { formatProductPrice } from "@/app/common/components/buysell/utils";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { useNotification } from "@/hooks/useNotification";
-import { useBuySellFavorites } from "@/lib/useBuySellFavorites";
+import { useMarketplaceFavorites } from "@/components/marketplace/MarketplaceFavoritesProvider";
 import { listBuySellFavoriteProducts } from "@/model/services/favoriteapi";
 import { getBuySellRowId, type BuySellProduct } from "@/model/services/buysellapi";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { PRODUCT_THEME as T } from "@/lib/theme";
+import { MARKETPLACE_FAVORITES_CHANGED_EVENT } from "@/lib/marketplaceAuth";
 
 export default function UserProductFavoritesPage() {
   const router = useRouter();
   const { notify } = useNotification();
-  const { isLoggedIn } = useMarketplaceAuth();
+  const { isLoggedIn, authReady } = useMarketplaceAuth();
   const [products, setProducts] = useState<BuySellProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [layout, setLayout] = useState<"grid" | "list">("list");
   const [page, setPage] = useState(1);
 
-  const { favoriteIds, togglingIds, syncFromProducts, toggleFavorite } =
-    useBuySellFavorites(notify);
+  const { favoriteIds, togglingIds, toggleFavorite } = useMarketplaceFavorites();
 
   const loadFavorites = useCallback(async () => {
+    if (!isLoggedIn) {
+      setProducts([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const items = await listBuySellFavoriteProducts();
       setProducts(items);
-      syncFromProducts(items);
     } catch (err) {
       notify({
         type: "error",
@@ -59,18 +63,27 @@ export default function UserProductFavoritesPage() {
     } finally {
       setLoading(false);
     }
-  }, [notify, syncFromProducts]);
+  }, [isLoggedIn, notify]);
 
   useEffect(() => {
+    if (!authReady) return;
     void loadFavorites();
-  }, [loadFavorites]);
+  }, [authReady, isLoggedIn, loadFavorites]);
+
+  useEffect(() => {
+    const onFavoritesChanged = () => {
+      if (isLoggedIn) void loadFavorites();
+    };
+    window.addEventListener(MARKETPLACE_FAVORITES_CHANGED_EVENT, onFavoritesChanged);
+    return () =>
+      window.removeEventListener(
+        MARKETPLACE_FAVORITES_CHANGED_EVENT,
+        onFavoritesChanged,
+      );
+  }, [isLoggedIn, loadFavorites]);
 
   const handleFavoriteToggle = useCallback(
     async (productId: string) => {
-      if (!isLoggedIn) {
-        notify({ type: "error", message: "Please log in to manage favourites." });
-        return;
-      }
       const wasFavorite = favoriteIds.has(String(productId));
       await toggleFavorite(productId);
       if (wasFavorite) {
@@ -81,7 +94,7 @@ export default function UserProductFavoritesPage() {
         void loadFavorites();
       }
     },
-    [isLoggedIn, favoriteIds, toggleFavorite, loadFavorites, notify],
+    [favoriteIds, toggleFavorite, loadFavorites],
   );
 
   const displayProducts = useMemo(() => sortProducts(products, sortBy), [products, sortBy]);

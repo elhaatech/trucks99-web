@@ -38,11 +38,11 @@ import {
   postBuySellProductsByOwner,
   type BuySellOwnerProductsOwner,
 } from "@/model/services/buysellapi";
-import { addFavorite, removeFavorite } from "@/model/services/favoriteapi";
+import { useMarketplaceFavorites } from "@/components/marketplace/MarketplaceFavoritesProvider";
 import { ProductLifecycleSection } from "@/app/admin/portal/buysell/view/[id]/_components/ProductLifecycleSection";
 import { UserRelatedProductsSection } from "../_components/UserRelatedProductsSection";
 import { extractId } from "@/app/common/components/buysell/utils";
-import { getBuySellImageUrl, getFirstBuySellImageUrl } from "@/lib/buysellUtils";
+import { getFirstBuySellImageUrl } from "@/lib/buysellUtils";
 import { ProductViewGallery } from "../_components/ProductViewGallery";
 import { ProductViewBreadcrumbs } from "../_components/ProductViewBreadcrumbs";
 import { ProductViewSummary } from "../_components/ProductViewSummary";
@@ -85,7 +85,8 @@ export default function UserProductViewPage() {
   const hasValidId = useInvalidIdRedirect(id, userProductRoutes.list());
   const goBack = useSmartBack(userProductRoutes.list());
   const { notify } = useNotification();
-  const { user: currentUser, userId: marketplaceUserId, authReady } = useMarketplaceAuth();
+  const { user: currentUser, userId: marketplaceUserId, authReady, isLoggedIn } = useMarketplaceAuth();
+  const { favoriteIds, togglingIds, toggleFavorite } = useMarketplaceFavorites();
 
   const [item, setItem] = useState<BuySellProduct | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,8 +95,6 @@ export default function UserProductViewPage() {
   const [chatProductId, setChatProductId] = useState("");
   const [offerOpen, setOfferOpen] = useState(false);
   const [emiOpen, setEmiOpen] = useState(false);
-  const [wishlisted, setWishlisted] = useState(false);
-  const [favoriteBusy, setFavoriteBusy] = useState(false);
   const [offerTab, setOfferTab] = useState<ProductOfferTab>("my");
   const [offerCounts, setOfferCounts] = useState({ my: 0, received: 0 });
   const [offerRefreshKey, setOfferRefreshKey] = useState(0);
@@ -128,7 +127,6 @@ export default function UserProductViewPage() {
             ? { ...product, viewCount: viewResult.viewCount }
             : product,
         );
-        setWishlisted(Boolean(product.is_favorite));
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
       .finally(() => setLoading(false));
@@ -140,7 +138,7 @@ export default function UserProductViewPage() {
     (async () => {
       const allowed = await ensureLoggedInToViewProduct(id, {
         notify,
-        isLoggedIn: Boolean(currentUser || marketplaceUserId),
+        isLoggedIn,
         authReady,
         onNeedLogin: (loginPath) => router.replace(loginPath),
       });
@@ -154,7 +152,7 @@ export default function UserProductViewPage() {
     return () => {
       cancelled = true;
     };
-  }, [id, loadProduct, notify, router, authReady, currentUser, marketplaceUserId]);
+  }, [id, loadProduct, notify, router, authReady, isLoggedIn]);
 
   useEffect(() => {
     if (!item || !featuredActivated) return;
@@ -189,30 +187,10 @@ export default function UserProductViewPage() {
     setChatOpen(true);
   };
 
-  const handleFavorite = async () => {
-    if (!currentUser) {
-      notify({ type: "error", message: "Please log in to save favourites." });
-      return;
-    }
-    setFavoriteBusy(true);
-    try {
-      if (wishlisted) {
-        await removeFavorite("buySell", id);
-        setWishlisted(false);
-        notify({ type: "success", message: "Removed from favourites." });
-      } else {
-        await addFavorite("buySell", id);
-        setWishlisted(true);
-        notify({ type: "success", message: "Added to your favourite list." });
-      }
-    } catch (err) {
-      notify({
-        type: "error",
-        message: err instanceof Error ? err.message : "Failed to update favourite",
-      });
-    } finally {
-      setFavoriteBusy(false);
-    }
+  const wishlisted = favoriteIds.has(String(id));
+  const favoriteBusy = togglingIds.has(String(id));
+  const handleFavorite = () => {
+    void toggleFavorite(id);
   };
 
   if (!hasValidId) return null;
@@ -292,7 +270,7 @@ export default function UserProductViewPage() {
     year: year ? String(year) : undefined,
     wishlisted,
     favoriteBusy,
-    onFavoriteToggle: canShop ? () => void handleFavorite() : undefined,
+    onFavoriteToggle: () => void handleFavorite(),
     shareUrl: productUrl,
     productTitle: title,
   };
@@ -479,7 +457,7 @@ export default function UserProductViewPage() {
                    : getSellerDisplayName(item)
                }
                excludeProductId={id}
-               isLoggedIn={authReady && Boolean(currentUserId)}
+               isLoggedIn={isLoggedIn}
                isOwnerView={isOwner}
                onAddVehicle={() => router.push(userProductRoutes.sellVehicle("create"))}
                onNotify={notify}

@@ -1,6 +1,7 @@
-import { persistMarketplaceUserId } from "@/lib/marketplaceUser";
+import { persistMarketplaceUserId, clearMarketplaceAuthStorage } from "@/lib/marketplaceUser";
 import { resolveApiBase } from "@/lib/apiBase";
 import { STORAGE_KEYS } from "@/constants/storageKeys";
+import { notifyMarketplaceAuthChanged } from "@/lib/marketplaceAuth";
 
 /**
  * Fixed copy of model/services/common.ts that uses a correct Authorization header.
@@ -35,9 +36,7 @@ export function setToken(token: string): void {
 }
 
 export function clearToken(): void {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem(TOKEN_KEY);
-  }
+  clearMarketplaceAuthStorage();
 }
 
 export function getAuthHeaders(): Record<string, string> {
@@ -81,6 +80,7 @@ export async function api<T = unknown>(path: string, options: RequestOptions = {
     if (!res.ok) {
       if (res.status === 401) {
         clearToken();
+        notifyMarketplaceAuthChanged();
         throw new Error(data?.message || "Token missing or expired. Please log in again.");
       }
       throw new Error(data?.message || res.statusText || "Request failed");

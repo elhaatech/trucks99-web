@@ -1,7 +1,8 @@
 import { getAuthHeaders } from "@/services";
-import { setReturnUrl } from "@/lib/navigation/navigation";
+import { setReturnUrl, getCurrentPath } from "@/lib/navigation/navigation";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { hasMarketplaceBearerToken } from "@/lib/marketplaceAuth";
+import { setPendingFavorite } from "@/lib/pendingFavorite";
 
 export function getMarketplaceLoginPath(returnTo?: string): string {
   const fromEnv =
@@ -62,6 +63,40 @@ export async function ensureLoggedInToViewProduct(
   actions.notify?.({
     type: "error",
     message: "Please sign in to view this vehicle.",
+  });
+  actions.onNeedLogin?.(getMarketplaceLoginPath(returnPath));
+  return false;
+}
+
+/**
+ * Returns true when the user may call the favourite API.
+ * Guests are sent to login with the original product id stored so the
+ * favourite can complete after a successful sign-in.
+ *
+ * When `authReady` is false, returns false without redirecting.
+ */
+export function ensureLoggedInToFavorite(
+  productId: string,
+  actions: EnsureLoginActions = {},
+): boolean {
+  if (actions.authReady === false) return false;
+  if (typeof actions.isLoggedIn === "boolean") {
+    if (actions.isLoggedIn) return true;
+  } else if (isMarketplaceTokenPresent()) {
+    return true;
+  }
+
+  const returnPath =
+    (typeof window !== "undefined" ? getCurrentPath() : "") ||
+    userProductRoutes.view(productId);
+  setPendingFavorite(productId, returnPath);
+  if (typeof window !== "undefined") {
+    setReturnUrl(returnPath);
+  }
+
+  actions.notify?.({
+    type: "error",
+    message: "Please log in to save favourites.",
   });
   actions.onNeedLogin?.(getMarketplaceLoginPath(returnPath));
   return false;

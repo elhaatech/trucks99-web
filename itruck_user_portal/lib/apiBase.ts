@@ -1,14 +1,14 @@
 /**
  * Resolve backend API base URL.
- * - localhost / 127.0.0.1 / private LAN → same host on port 3003
- * - truck.elhaa.com / server IP → same host port 3003
- * - Otherwise NEXT_PUBLIC_API_URL or localhost:3003
+ * - Deployed hosts → same origin (Next.js proxies /api/* to backend on :3003)
+ * - localhost / LAN → host on port 3003
+ * - Override anytime with NEXT_PUBLIC_API_URL
  */
 export function resolveApiBase(): string {
   const fromEnv = (process.env.NEXT_PUBLIC_API_URL || "").trim().replace(/\/$/, "");
 
   if (typeof window !== "undefined") {
-    const { hostname, protocol } = window.location;
+    const { hostname, protocol, port } = window.location;
 
     const isLoopback =
       hostname === "localhost" || hostname === "127.0.0.1";
@@ -32,7 +32,9 @@ export function resolveApiBase(): string {
       hostname === "46.202.176.124";
 
     if (isDeployedHost) {
-      return `${protocol}//${hostname}:3003`;
+      if (fromEnv) return fromEnv;
+      const hostWithPort = port ? `${hostname}:${port}` : hostname;
+      return `${protocol}//${hostWithPort}`;
     }
   }
 

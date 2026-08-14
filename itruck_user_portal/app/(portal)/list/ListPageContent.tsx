@@ -22,7 +22,7 @@ import {
 } from "@/app/common/components/buysell";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { toBuySellListPayload } from "@/lib/buySellListUtils";
-import { useBuySellFavorites } from "@/lib/useBuySellFavorites";
+import { useMarketplaceFavorites } from "@/components/marketplace/MarketplaceFavoritesProvider";
 import { ensureLoggedInToViewProduct } from "@/lib/requireMarketplaceLogin";
 import {
   getBuySellListPage,
@@ -117,8 +117,7 @@ export default function UserProductListContent() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [applyLoading, setApplyLoading] = useState(false);
 
-  const { favoriteIds, togglingIds, syncFromProducts, toggleFavorite } =
-    useBuySellFavorites(notify);
+  const { toggleFavorite } = useMarketplaceFavorites();
 
   const loadPage = useCallback(
     async (page: number, signal: AbortSignal) => {
@@ -144,10 +143,6 @@ export default function UserProductListContent() {
   );
 
   const list = useInfiniteScroll(loadPage);
-
-  useEffect(() => {
-    syncFromProducts(list.items);
-  }, [list.items, syncFromProducts]);
 
   useEffect(() => {
     if (applyLoading && !list.loading) {
@@ -189,9 +184,9 @@ export default function UserProductListContent() {
 
   const handleFavoriteToggle = useCallback(
     (productId: string) => {
-      void toggleFavorite(productId, { requireLogin: !isLoggedIn });
+      void toggleFavorite(productId);
     },
-    [isLoggedIn, toggleFavorite],
+    [toggleFavorite],
   );
 
   const handleViewProduct = useCallback(
@@ -318,8 +313,6 @@ export default function UserProductListContent() {
             hasMore={list.hasMore}
             sentinelRef={list.sentinelRef}
             layout={layout}
-            favoriteIds={favoriteIds}
-            togglingFavoriteIds={togglingIds}
             onFavoriteToggle={handleFavoriteToggle}
             onProductClick={(id) => void handleViewProduct(id)}
           />
