@@ -6,12 +6,15 @@ import { AuthLayout } from "@/components/layout/AuthLayout";
 import { WelcomePanel } from "@/components/layout/WelcomePanel";
 import { MarketplaceLoginPanel } from "@/app/common/components/buysell/MarketplaceLoginPanel";
 import { consumeReturnUrl, peekReturnUrl } from "@/lib/navigation/navigation";
+import { peekPendingFavorite } from "@/lib/pendingFavorite";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { isMarketplaceUserLoggedIn } from "@/lib/requireMarketplaceLogin";
 
 function resolveReturnTarget(searchParams: URLSearchParams): string | null {
   const fromQuery = searchParams.get("returnTo")?.trim();
   if (fromQuery && fromQuery.startsWith("/")) return fromQuery;
+  const pendingFavorite = peekPendingFavorite();
+  if (pendingFavorite?.returnTo?.startsWith("/")) return pendingFavorite.returnTo;
   return peekReturnUrl();
 }
 

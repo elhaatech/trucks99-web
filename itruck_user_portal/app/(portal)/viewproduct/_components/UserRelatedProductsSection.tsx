@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
@@ -15,7 +15,6 @@ import {
   getBuySellRowId,
   postBuySellProductsByOwner,
 } from "@/model/services/buysellapi";
-import { addFavorite, removeFavorite } from "@/model/services/favoriteapi";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 import { VehicleCard } from "@/app/common/components/buysell/VehicleCard";
@@ -55,7 +54,6 @@ export function UserRelatedProductsSection({
   isLoggedIn,
   isOwnerView = false,
   onAddVehicle,
-  onNotify,
   categoryId,
   categoryName,
   currentSubcategoryId,
@@ -65,8 +63,6 @@ export function UserRelatedProductsSection({
   const [products, setProducts] = useState<BuySellProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
-  const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [subcategoryFilter, setSubcategoryFilter] = useState<SubcategoryFilterValue>(null);
   const [cityFilter, setCityFilter] = useState("");
 
@@ -99,53 +95,12 @@ export function UserRelatedProductsSection({
       .then((data) => {
         const items = data.products ?? [];
         setProducts(items);
-        setFavoriteIds(
-          new Set(items.filter((p) => p.is_favorite).map((p) => getBuySellRowId(p))),
-        );
       })
       .catch((err) =>
         setError(err instanceof Error ? err.message : "Could not load related listings"),
       )
       .finally(() => setLoading(false));
   }, [sellerId, excludeProductId, isLoggedIn, cityFilter]);
-
-  const handleFavorite = useCallback(
-    async (productId: string) => {
-      const isFav = favoriteIds.has(productId);
-      setTogglingIds((prev) => new Set(prev).add(productId));
-      setFavoriteIds((prev) => {
-        const next = new Set(prev);
-        isFav ? next.delete(productId) : next.add(productId);
-        return next;
-      });
-      try {
-        if (isFav) {
-          await removeFavorite("buySell", productId);
-          onNotify?.({ type: "success", message: "Removed from favourites." });
-        } else {
-          await addFavorite("buySell", productId);
-          onNotify?.({ type: "success", message: "Added to favourites." });
-        }
-      } catch (err) {
-        setFavoriteIds((prev) => {
-          const next = new Set(prev);
-          isFav ? next.add(productId) : next.delete(productId);
-          return next;
-        });
-        onNotify?.({
-          type: "error",
-          message: err instanceof Error ? err.message : "Favourite update failed",
-        });
-      } finally {
-        setTogglingIds((prev) => {
-          const next = new Set(prev);
-          next.delete(productId);
-          return next;
-        });
-      }
-    },
-    [favoriteIds, onNotify],
-  );
 
   if (!sellerId) return null;
 
@@ -276,9 +231,6 @@ export function UserRelatedProductsSection({
                 <Grid key={productId} size={{ xs: 12, sm: 6, md: 4 }}>
                   <VehicleCard
                     product={product}
-                    isFavorite={favoriteIds.has(productId)}
-                    favoriteLoading={togglingIds.has(productId)}
-                    onFavoriteToggle={() => void handleFavorite(productId)}
                     onClick={() => router.push(userProductRoutes.view(productId))}
                   />
                 </Grid>

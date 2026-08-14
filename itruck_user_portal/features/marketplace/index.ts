@@ -26,6 +26,7 @@ export {
 } from "@/model/services/favoriteapi";
 
 export { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
+export { useMarketplaceFavorites } from "@/components/marketplace/MarketplaceFavoritesProvider";
 export { userProductRoutes } from "@/lib/userProductRoutes";
 export { toBuySellListPayload, filterBuySellBySearch } from "@/lib/buySellListUtils";
 export { MARKETPLACE, BUY_SELL_ENTITY } from "@/constants/marketplace";

@@ -3,6 +3,8 @@ import { getAuthHeaders } from "@/services";
 import { persistMarketplaceUserId, clearMarketplaceUserId } from "@/lib/marketplaceUser";
 import { clearMarketplaceGuestKey } from "@/lib/marketplaceGuest";
 import { notifyMarketplaceAuthChanged } from "@/lib/marketplaceAuth";
+import { clearPendingFavorite } from "@/lib/pendingFavorite";
+import { invalidateBuySellFavoritesCache } from "@/model/services/favoriteapi";
 import { cachedRequest, invalidateCache } from "@/lib/apiCache";
 import { normalizeRolePermissionsInput, type Role, getRoles as listRolesViaPost } from "./role";
 import {
@@ -223,7 +225,9 @@ export async function logout(): Promise<void> {
   // API call is slow or fails.
   clearToken();
   clearMarketplaceUserId();
+  clearPendingFavorite();
   invalidateCurrentUserCache();
+  invalidateBuySellFavoritesCache();
   notifyMarketplaceAuthChanged();
   try {
     await fetch(`${resolveApiBase()}/api/logout`, {

@@ -24,3 +24,13 @@ export function toError(error: unknown, fallback = "Request failed"): Error {
 export function toErrorMessage(error: unknown, fallback = "Request failed"): string {
   return toError(error, fallback).message;
 }
+
+export function isAuthFailure(error: unknown): boolean {
+  const message = toErrorMessage(error).toLowerCase();
+  return (
+    /token missing|token expired|unauthorized|please log in|please sign in|authentication/i.test(
+      message,
+    ) || (error as { status?: number; response?: { status?: number } })?.response?.status === 401
+    || (error as { status?: number })?.status === 401
+  );
+}

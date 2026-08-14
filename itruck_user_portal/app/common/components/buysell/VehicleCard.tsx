@@ -21,10 +21,8 @@ import {
   getListingCardTitle,
 } from "./utils";
 import { VehicleSpecChips } from "./VehicleSpecChips";
-import {
-  getFeaturedStatus,
-  resolveFeaturedListingUi,
-} from "@/lib/featuredVehicleListingStatus";
+import { getFeaturedStatus, resolveFeaturedListingUi } from "@/lib/featuredVehicleListingStatus";
+import { useMarketplaceFavoritesOptional } from "@/components/marketplace/MarketplaceFavoritesProvider";
 
 type VehicleCardProps = {
   product: BuySellProduct;
@@ -54,7 +52,7 @@ type VehicleCardProps = {
 
 export const VehicleCard = memo(function VehicleCard({
   product,
-  isFavorite = false,
+  isFavorite,
   favoriteLoading = false,
   onFavoriteToggle,
   onClick,
@@ -69,12 +67,17 @@ export const VehicleCard = memo(function VehicleCard({
   badge,
   featuredMeta,
 }: VehicleCardProps) {
+  const favorites = useMarketplaceFavoritesOptional();
   const productId = getBuySellRowId(product);
   const featuredStatus = showOwnerFeaturedControls ? getFeaturedStatus(product) : null;
   const featuredUi =
     showOwnerFeaturedControls ? resolveFeaturedListingUi(product) : null;
-  const isFavorited =
-    Boolean(isFavorite) || Boolean(product.is_favorite);
+  const isFavorited = favorites
+    ? favorites.favoriteIds.has(productId)
+    : Boolean(isFavorite) || Boolean(product.is_favorite);
+  const isFavoriteBusy = favorites
+    ? favorites.togglingIds.has(productId)
+    : favoriteLoading;
   /** Pay Now only for own listings that are not favorited and not actively featured. */
   const showFeaturePayNow =
     showOwnerFeaturedControls &&
@@ -96,7 +99,12 @@ export const VehicleCard = memo(function VehicleCard({
   };
   const handleFavorite = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!favoriteLoading) onFavoriteToggle?.(productId);
+    if (isFavoriteBusy) return;
+    if (onFavoriteToggle) {
+      onFavoriteToggle(productId);
+      return;
+    }
+    void favorites?.toggleFavorite(productId);
   };
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -211,11 +219,10 @@ export const VehicleCard = memo(function VehicleCard({
           </Box>
 
 
-          {onFavoriteToggle ? (
-            <IconButton
+          <IconButton
               size="small"
-              aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-              disabled={favoriteLoading}
+              aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
+              disabled={isFavoriteBusy}
               onClick={handleFavorite}
               sx={{
                 position: "absolute",
@@ -227,13 +234,12 @@ export const VehicleCard = memo(function VehicleCard({
                 "&:hover": { bgcolor: "#fff" },
               }}
             >
-              {isFavorite ? (
+              {isFavorited ? (
                 <FavoriteIcon fontSize="small" sx={{ color: T.color.danger }} />
               ) : (
                 <FavoriteBorderIcon fontSize="small" />
               )}
             </IconButton>
-          ) : null}
         </Box>
 
         <Box

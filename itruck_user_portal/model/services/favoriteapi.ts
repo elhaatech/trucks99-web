@@ -32,6 +32,10 @@ function invalidateFavoritesCache(): void {
   invalidateCache("favorites:");
 }
 
+export function invalidateBuySellFavoritesCache(): void {
+  invalidateFavoritesCache();
+}
+
 export async function addFavorite(entity: FavoriteEntity, entity_id: string) {
   const result = await api<{ message: string }>("/api/favorite/add", {
     method: "POST",

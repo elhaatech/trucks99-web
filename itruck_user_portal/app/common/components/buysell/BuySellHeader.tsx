@@ -83,14 +83,14 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
     pathname.startsWith(`${userProductRoutes.assistant()}/`);
 
   const refreshCounts = useCallback(() => {
-    if (!user) {
+    if (!isLoggedIn) {
       setFavoriteCount(0);
       return;
     }
     getBuySellFavoriteCount()
       .then(setFavoriteCount)
       .catch(() => setFavoriteCount(0));
-  }, [user]);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     refreshCounts();
