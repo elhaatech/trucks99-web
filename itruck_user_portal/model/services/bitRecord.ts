@@ -11,14 +11,12 @@ function resolveProductMarketplaceIdentity(explicit?: {
   userId?: string;
   guestKey?: string;
 }): { userId?: string; guestKey?: string } {
-  if (explicit?.userId) return { userId: explicit.userId };
-  if (hasMarketplaceBearerToken()) {
-    const userId = getMarketplaceUserId();
-    if (userId) return { userId };
+  if (explicit?.userId && hasMarketplaceBearerToken()) {
+    return { userId: explicit.userId };
   }
-  if (explicit?.guestKey) return { guestKey: explicit.guestKey };
   const userId = getMarketplaceUserId();
   if (userId) return { userId };
+  if (explicit?.guestKey) return { guestKey: explicit.guestKey };
   return { guestKey: getOrCreateGuestKey() };
 }
 

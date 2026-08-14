@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
@@ -54,6 +54,13 @@ const NAV_LINKS = [
   { label: "Favorites", href: userProductRoutes.favorites() },
 ];
 
+const AUTH_ONLY_NAV_LABELS = new Set(["My Listings"]);
+
+export function getBuySellNavLinks(isLoggedIn: boolean) {
+  if (isLoggedIn) return NAV_LINKS;
+  return NAV_LINKS.filter((link) => !AUTH_ONLY_NAV_LABELS.has(link.label));
+}
+
 const MOBILE_EXTRA_LINKS = [
   { label: "AI Chatbot", href: userProductRoutes.assistant() },
 ];
@@ -65,7 +72,8 @@ type BuySellHeaderProps = {
 export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, logout: marketplaceLogout } = useMarketplaceAuth();
+  const { user, isLoggedIn, logout: marketplaceLogout } = useMarketplaceAuth();
+  const navLinks = useMemo(() => getBuySellNavLinks(isLoggedIn), [isLoggedIn]);
   const [favoriteCount, setFavoriteCount] = useState(0);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [headerSearch, setHeaderSearch] = useState("");
@@ -213,7 +221,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
         </Box>
 
         <Box sx={{ display: { xs: "none", lg: "flex" }, gap: 0.5, ml: 1.5 }}>
-          {NAV_LINKS.map((link) => {
+          {navLinks.map((link) => {
             const active = isLinkActive(link);
             const showFavoriteBadge =
               (link.label === "Favorites" || link.label === "My Favorite List") &&
@@ -508,4 +516,4 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
   );
 }
 
-export { NAV_LINKS as BUYSELL_NAV_LINKS, MOBILE_EXTRA_LINKS };
+export { NAV_LINKS as BUYSELL_NAV_LINKS, MOBILE_EXTRA_LINKS, getBuySellNavLinks };

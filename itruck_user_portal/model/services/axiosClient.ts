@@ -1,11 +1,12 @@
 import axios from "axios";
 import { resolveApiBase } from "@/lib/apiBase";
-
-const TOKEN_KEY = "itruck_token";
+import { STORAGE_KEYS } from "@/constants/storageKeys";
+import { clearMarketplaceAuthStorage } from "@/lib/marketplaceUser";
+import { notifyMarketplaceAuthChanged } from "@/lib/marketplaceAuth";
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_KEY);
+  return localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
 }
 
 export const axiosClient = axios.create({
@@ -48,3 +49,14 @@ axiosClient.interceptors.request.use((config) => {
   config.headers = headers;
   return config;
 });
+
+axiosClient.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    if (error?.response?.status === 401) {
+      clearMarketplaceAuthStorage();
+      notifyMarketplaceAuthChanged();
+    }
+    return Promise.reject(error);
+  },
+);

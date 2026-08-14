@@ -218,15 +218,22 @@ export function invalidateCurrentUserCache(): void {
 }
 
 export async function logout(): Promise<void> {
-  await fetch(`${resolveApiBase()}/api/logout`, {
-    method: "DELETE",
-    credentials: "include",
-    headers: getAuthHeaders(),
-  });
+  const headers = getAuthHeaders();
+  // Drop local auth first so the navbar cannot keep a stale session if the
+  // API call is slow or fails.
   clearToken();
   clearMarketplaceUserId();
   invalidateCurrentUserCache();
   notifyMarketplaceAuthChanged();
+  try {
+    await fetch(`${resolveApiBase()}/api/logout`, {
+      method: "DELETE",
+      credentials: "include",
+      headers,
+    });
+  } catch {
+    // Server session may already be gone; client auth is already cleared.
+  }
 }
 
 // ─── Current user ─────────────────────────────────────────────────────────────

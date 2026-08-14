@@ -85,7 +85,7 @@ export default function UserProductViewPage() {
   const hasValidId = useInvalidIdRedirect(id, userProductRoutes.list());
   const goBack = useSmartBack(userProductRoutes.list());
   const { notify } = useNotification();
-  const { user: currentUser, userId: marketplaceUserId, authReady } = useMarketplaceAuth();
+  const { user: currentUser, userId: marketplaceUserId, authReady, isLoggedIn } = useMarketplaceAuth();
 
   const [item, setItem] = useState<BuySellProduct | null>(null);
   const [loading, setLoading] = useState(true);
@@ -140,7 +140,7 @@ export default function UserProductViewPage() {
     (async () => {
       const allowed = await ensureLoggedInToViewProduct(id, {
         notify,
-        isLoggedIn: Boolean(currentUser || marketplaceUserId),
+        isLoggedIn,
         authReady,
         onNeedLogin: (loginPath) => router.replace(loginPath),
       });
@@ -154,7 +154,7 @@ export default function UserProductViewPage() {
     return () => {
       cancelled = true;
     };
-  }, [id, loadProduct, notify, router, authReady, currentUser, marketplaceUserId]);
+  }, [id, loadProduct, notify, router, authReady, isLoggedIn]);
 
   useEffect(() => {
     if (!item || !featuredActivated) return;
@@ -479,7 +479,7 @@ export default function UserProductViewPage() {
                    : getSellerDisplayName(item)
                }
                excludeProductId={id}
-               isLoggedIn={authReady && Boolean(currentUserId)}
+               isLoggedIn={isLoggedIn}
                isOwnerView={isOwner}
                onAddVehicle={() => router.push(userProductRoutes.sellVehicle("create"))}
                onNotify={notify}
