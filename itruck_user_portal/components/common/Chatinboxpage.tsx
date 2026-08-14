@@ -9,6 +9,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import { PageHeader } from "@/components/ui";
 import { ChatDrawer } from "@/components/common/ChatDrawer";
+import { BuySellImage } from "@/components/common/BuySellImage";
 import { getChatList, type ChatRoom } from "@/model/services/chatapi";
 import { useMarketplaceAuthOptional } from "@/components/marketplace/MarketplaceAuthProvider";
 
@@ -119,22 +120,21 @@ export default function ChatInboxPage({ onSelectRoom }: Props) {
               >
                 {/* Product image thumbnail */}
                 <Box
-                  component="img"
-                  src={room.product?.image || "/assets/default-vehicle.png"}
-                  alt={room.product?.title || "Product"}
                   sx={{
                     width: 56,
                     height: 56,
-                    objectFit: "cover",
                     borderRadius: 1,
+                    overflow: "hidden",
                     border: "1px solid",
                     borderColor: "grey.200",
                     flexShrink: 0,
                   }}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.visibility = "hidden";
-                  }}
-                />
+                >
+                  <BuySellImage
+                    src={room.product?.image}
+                    alt={room.product?.title || "Product"}
+                  />
+                </Box>
 
                 {/* Other user avatar with unread badge */}
                 <Badge badgeContent={room.unreadCount} color="primary">

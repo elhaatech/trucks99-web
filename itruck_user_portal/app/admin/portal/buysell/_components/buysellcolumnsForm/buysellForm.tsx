@@ -29,7 +29,7 @@ import {
 } from "@/model/api";
 import { routes } from "@/lib/routes";
 import { PRODUCT_THEME as T } from "@/lib/theme";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getBuySellImageUrl, handleBuySellImageError } from "@/lib/buysellUtils";
 import {
   BackButton,
   FormFooter,
@@ -1252,13 +1252,7 @@ export function BuySellForm({
                     <img
                       src={src}
                       alt={`Image ${idx + 1}`}
-                      onError={(e) => {
-                        const img = e.currentTarget;
-                        img.style.display = "none";
-                        const fallback =
-                          img.nextElementSibling as HTMLElement | null;
-                        if (fallback) fallback.style.display = "flex";
-                      }}
+                      onError={handleBuySellImageError}
                       style={{
                         width: "100%",
                         height: "100%",

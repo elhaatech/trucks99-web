@@ -3,12 +3,10 @@
 import { useMemo } from "react";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
-import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
-import BrokenImageIcon from "@mui/icons-material/BrokenImage";
 import type { DataTableColumn } from "@/components/common";
 import { createdAtColumn } from "@/components/common";
 import { BuySellProduct, getBuySellRowId } from "@/model/services/buysellapi";
@@ -16,7 +14,8 @@ import { ProductStatusChip } from "../ProductStatusChip";
 import { renderClickableName } from "@/components/common/table/tableColumnHelpers";
 import { routes } from "@/lib/routes";
 import { renderNumberColumn } from "@/components/common/table/renderNumberColumn";
-import { getBuySellImageUrl, getFirstBuySellImageUrl } from "@/lib/buysellUtils";
+import { getFirstBuySellImageUrl } from "@/lib/buysellUtils";
+import { BuySellImage } from "@/components/common/BuySellImage";
 
 interface UseBuySellColumnsOptions {
   favoriteIds: Set<string>;
@@ -27,27 +26,6 @@ interface UseBuySellColumnsOptions {
 // ─── Image thumbnail ──────────────────────────────────────────────────────────
 
 function ImageThumb({ src }: { src?: string }) {
-  if (!src) {
-    return (
-      <Box
-        sx={{
-          width: 48,
-          height: 48,
-          borderRadius: 1,
-          bgcolor: "grey.100",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          border: "1px solid",
-          borderColor: "divider",
-          flexShrink: 0,
-        }}
-      >
-        <BrokenImageIcon sx={{ fontSize: 20, color: "text.disabled" }} />
-      </Box>
-    );
-  }
-
   return (
     <Box
       sx={{
@@ -61,32 +39,7 @@ function ImageThumb({ src }: { src?: string }) {
         flexShrink: 0,
       }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt="product"
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          display: "block",
-        }}
-        onError={(e) => {
-          const target = e.currentTarget as HTMLImageElement;
-          target.style.display = "none";
-          const parent = target.parentElement;
-          if (parent) {
-            parent.style.display = "flex";
-            parent.style.alignItems = "center";
-            parent.style.justifyContent = "center";
-            const icon = document.createElement("span");
-            icon.textContent = "—";
-            icon.style.fontSize = "18px";
-            icon.style.color = "#bbb";
-            parent.appendChild(icon);
-          }
-        }}
-      />
+      <BuySellImage src={src} alt="product" />
     </Box>
   );
 }

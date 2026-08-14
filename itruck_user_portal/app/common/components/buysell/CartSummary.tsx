@@ -10,11 +10,12 @@ import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import { alpha, useTheme } from "@mui/material/styles";
-import { getBuySellImageUrl, getFirstBuySellImageUrl } from "@/lib/buysellUtils";
+import { getFirstBuySellImageUrl } from "@/lib/buysellUtils";
 import { getBuySellRowId, type BuySellCartItem } from "@/model/services/buysellapi";
 import { formatProductPrice, getProductTitle } from "./utils";
 import { ProductStatusChip } from "@/app/admin/portal/buysell/_components/ProductStatusChip";
 import { PRODUCT_THEME as T } from "@/lib/theme";
+import { BuySellImage } from "@/components/common/BuySellImage";
 
 type CartItemProps = {
   item: BuySellCartItem;
@@ -56,12 +57,11 @@ export function CartItemRow({
           width: { xs: "100%", sm: 160 },
           height: { xs: 160, sm: 140 },
           bgcolor: alpha(theme.palette.text.primary, 0.04),
-          backgroundImage: imageUrl ? `url(${imageUrl})` : undefined,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
           flexShrink: 0,
+          overflow: "hidden",
         }}
       >
+        <BuySellImage src={imageUrl} alt={getProductTitle(product)} fill />
         {onFavoriteToggle ? (
           <IconButton
             size="small"

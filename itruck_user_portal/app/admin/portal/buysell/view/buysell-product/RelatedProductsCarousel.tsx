@@ -7,6 +7,7 @@ import IconButton from "@mui/material/IconButton";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { PRODUCT_THEME as T } from "./theme";
+import { BuySellImage } from "@/components/common/BuySellImage";
 
 export interface RelatedProduct {
   id: string;
@@ -75,14 +76,10 @@ export function RelatedProductsCarousel({ products }: { products: RelatedProduct
               "&:hover": { boxShadow: T.shadow.cardHover, transform: "translateY(-2px)" },
             }}
           >
-            <Box
-              component="img"
+            <BuySellImage
               src={p.image}
               alt={p.title}
-              sx={{ width: "100%", height: 140, objectFit: "cover", display: "block", bgcolor: T.color.surfaceMuted }}
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
+              style={{ width: "100%", height: 140, objectFit: "cover", display: "block" }}
             />
             <Box sx={{ p: 1.25 }}>
               <Typography

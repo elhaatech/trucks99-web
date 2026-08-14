@@ -11,13 +11,14 @@ import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
-import { getBuySellImageUrl, getFirstBuySellImageUrl } from "@/lib/buysellUtils";
+import { getFirstBuySellImageUrl } from "@/lib/buysellUtils";
 import { createBitRecord } from "@/model/services/bitRecord";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { toMarketplaceApiUser } from "@/lib/marketplaceAuth";
 import type { BuySellProduct } from "@/model/services/buysellapi";
 import { formatProductPrice, getProductTitle } from "./utils";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
+import { BuySellImage } from "@/components/common/BuySellImage";
 
 type MakeOfferModalProps = {
   open: boolean;
@@ -110,17 +111,18 @@ export function MakeOfferModal({
           >
             <Box
               sx={{
+                position: "relative",
                 width: "100%",
                 maxWidth: 280,
                 aspectRatio: "4 / 3",
                 borderRadius: T.radius.md,
                 bgcolor: T.color.border,
-                backgroundImage: imageUrl ? `url(${imageUrl})` : undefined,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
                 mb: 2,
+                overflow: "hidden",
               }}
-            />
+            >
+              <BuySellImage src={imageUrl} alt={getProductTitle(product)} fill />
+            </Box>
             <Typography fontWeight={700} fontSize={18}>
               {getProductTitle(product)}
             </Typography>

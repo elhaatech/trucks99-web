@@ -1,7 +1,6 @@
 "use client";
 
 import { memo } from "react";
-import Image from "next/image";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
@@ -13,7 +12,8 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { alpha } from "@mui/material/styles";
 import { PRODUCT_THEME as T, INFO, SUCCESS } from "@/lib/theme";
-import { getBuySellImageUrl, getFirstBuySellImageUrl } from "@/lib/buysellUtils";
+import { getFirstBuySellImageUrl } from "@/lib/buysellUtils";
+import { BuySellImage } from "@/components/common/BuySellImage";
 import { getBuySellRowId, type BuySellProduct } from "@/model/services/buysellapi";
 import {
   formatProductPrice,
@@ -25,10 +25,6 @@ import {
   getFeaturedStatus,
   resolveFeaturedListingUi,
 } from "@/lib/featuredVehicleListingStatus";
-
-import defaultVehicleImg from "@/assets/dtruck.png";
-
-
 
 type VehicleCardProps = {
   product: BuySellProduct;
@@ -166,17 +162,10 @@ export const VehicleCard = memo(function VehicleCard({
             aspectRatio: "16/10",
           }}
         >
-          <Image
-            src={imageUrl || defaultVehicleImg}
-            alt={imageUrl ? title : "No vehicle photo available"}
+          <BuySellImage
+            src={imageUrl}
+            alt={title}
             fill
-            sizes={
-              isList
-                ? "(max-width:600px) 100vw, 220px"
-                : "(max-width:600px) 100vw, (max-width:1200px) 50vw, 25vw"
-            }
-            style={{ objectFit: "cover" }}
-            unoptimized
           />
           <Box sx={{ position: "absolute", top: 2, right: 2, zIndex: 1 }}>
              {featuredStatus === "expired" || featuredMeta?.status === "Expired" ? (
