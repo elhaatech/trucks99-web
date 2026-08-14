@@ -19,8 +19,16 @@ export function WelcomePanel({
   siteUrl = "truck.elhaa.com",
 }: WelcomePanelProps) {
   return (
-    <>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 4 }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        minHeight: { xs: "auto", md: 520 },
+      }}
+    >
+      {/* ---- Top: logo, always pinned at the very top ---- */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
         <BrandLogo height={52} priority />
         <Typography
           sx={{
@@ -35,49 +43,60 @@ export function WelcomePanel({
         </Typography>
       </Box>
 
-      <Typography
-        variant="h3"
+      {/* ---- Middle: heading, subtitle, stats — vertically centered in remaining space ---- */}
+      <Box
         sx={{
-          color: "#fff",
-          fontWeight: 800,
-          mb: 2,
-          letterSpacing: "-0.03em",
-          lineHeight: 1.12,
-          fontSize: { md: "2.35rem", lg: "2.75rem" },
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          flex: 1,
         }}
       >
-        {title}
-      </Typography>
-      <Typography
-        sx={{
-          color: alpha("#fff", 0.88),
-          fontSize: "1.05rem",
-          mb: 3,
-          lineHeight: 1.65,
-          maxWidth: 420,
-        }}
-      >
-        {subtitle}
-      </Typography>
+        <Typography
+          variant="h3"
+          sx={{
+            color: "#fff",
+            fontWeight: 800,
+            mb: 2,
+            letterSpacing: "-0.03em",
+            lineHeight: 1.12,
+            fontSize: { xs: "1.9rem", sm: "2.15rem", md: "2.35rem", lg: "2.75rem" },
+          }}
+        >
+          {title}
+        </Typography>
+        <Typography
+          sx={{
+            color: alpha("#fff", 0.88),
+            fontSize: { xs: "0.95rem", md: "1.05rem" },
+            mb: 3,
+            lineHeight: 1.65,
+            maxWidth: { xs: "100%", sm: 380, md: 420 },
+          }}
+        >
+          {subtitle}
+        </Typography>
 
-      <Box sx={{ display: "flex", gap: 4, mb: 3, flexWrap: "wrap" }}>
-        {[
-          { value: "Verified", label: "Seller listings" },
-          { value: "Secure", label: "OTP sign-in" },
-          { value: "Fast", label: "Offers & deals" },
-        ].map((stat) => (
-          <Box key={stat.label}>
-            <Typography sx={{ color: "#fff", fontWeight: 800, fontSize: 22 }}>
-              {stat.value}
-            </Typography>
-            <Typography sx={{ color: alpha("#fff", 0.68), fontSize: 13, fontWeight: 500 }}>
-              {stat.label}
-            </Typography>
-          </Box>
-        ))}
+        <Box sx={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+          {[
+            { value: "Verified", label: "Seller listings" },
+            { value: "Secure", label: "OTP sign-in" },
+            { value: "Fast", label: "Offers & deals" },
+          ].map((stat) => (
+            <Box key={stat.label}>
+              <Typography sx={{ color: "#fff", fontWeight: 800, fontSize: 22 }}>
+                {stat.value}
+              </Typography>
+              <Typography sx={{ color: alpha("#fff", 0.68), fontSize: 13, fontWeight: 500 }}>
+                {stat.label}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
       </Box>
 
-      <Box sx={{ mt: 3 }}>
+      {/* ---- Bottom: footer, always pinned at the very bottom ---- */}
+      <Box>
         <Link
           href="/"
           style={{
@@ -90,6 +109,6 @@ export function WelcomePanel({
           {siteUrl}
         </Link>
       </Box>
-    </>
+    </Box>
   );
 }
