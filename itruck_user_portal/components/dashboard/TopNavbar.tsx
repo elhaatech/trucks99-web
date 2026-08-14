@@ -17,6 +17,7 @@ import { alpha, type Theme } from "@mui/material/styles";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "@/model/api";
+import { getBuySellImageUrl } from "@/lib/buysellUtils";
 import { logout } from "@/model/api";
 import { routes } from "@/lib/routes";
 import { clearNavigationState } from "@/lib/navigation";
@@ -233,6 +234,7 @@ export function TopNavbar({ user, notificationCount = 0, onMenuClick }: TopNavba
             component={Link}
             href={routes.profile()}
             prefetch={false}
+            src={user?.profileImage ? getBuySellImageUrl(user.profileImage) : undefined}
             sx={{
               width: 34,
               height: 34,
