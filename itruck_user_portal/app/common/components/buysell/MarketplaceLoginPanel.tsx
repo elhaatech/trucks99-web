@@ -6,15 +6,19 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
-import { sendOtp, verifyOtp } from "@/model/services/user";
+import {
+  OtpError,
+  resendOtp,
+  sendOtp,
+  verifyOtp,
+} from "@/model/services/user";
 import { AuthTextField } from "@/components/ui/AuthTextField";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { PRODUCT_THEME as T } from "@/lib/theme";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 
-/** Local/dev default when API returns otpForDev (matches server TEMP_OTP). */
-const DEFAULT_DEV_OTP =
-  process.env.NEXT_PUBLIC_DEFAULT_OTP?.trim() || "123456";
+const OTP_LENGTH = 4;
+const RESEND_COOLDOWN_SEC = 60;
 
 type MarketplaceLoginPanelProps = {
   title?: string;
@@ -24,6 +28,8 @@ type MarketplaceLoginPanelProps = {
   registerHref?: string;
   initialMobile?: string;
   successMessage?: string;
+  /** After signup, OTP is already sent — show OTP entry immediately */
+  startOnOtpStep?: boolean;
 };
 
 export function MarketplaceLoginPanel({
@@ -34,13 +40,18 @@ export function MarketplaceLoginPanel({
   registerHref,
   initialMobile = "",
   successMessage,
+  startOnOtpStep = false,
 }: MarketplaceLoginPanelProps) {
   const [mobile, setMobile] = useState(initialMobile);
   const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"mobile" | "otp">("mobile");
+  const [step, setStep] = useState<"mobile" | "otp">(
+    startOnOtpStep && initialMobile.trim() ? "otp" : "mobile",
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [otpForDev, setOtpForDev] = useState<string | null>(null);
+  const [info, setInfo] = useState("");
+  const [otpSentViaSms, setOtpSentViaSms] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => {
     if (initialMobile.trim()) {
@@ -48,9 +59,44 @@ export function MarketplaceLoginPanel({
     }
   }, [initialMobile]);
 
+  useEffect(() => {
+    if (!startOnOtpStep || !initialMobile.trim()) return;
+    setStep("otp");
+    setOtpSentViaSms(true);
+    setInfo("Enter the OTP sent to your mobile number.");
+    startResendCooldown(RESEND_COOLDOWN_SEC);
+  }, [startOnOtpStep, initialMobile]);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = window.setInterval(() => {
+      setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [resendCooldown]);
+
+  function startResendCooldown(seconds = RESEND_COOLDOWN_SEC) {
+    setResendCooldown(Math.max(0, seconds));
+  }
+
+  function applySendResponse(res: {
+    message?: string;
+    otpSentViaSms?: boolean;
+    retryAfterSeconds?: number;
+  }) {
+    setOtpSentViaSms(Boolean(res.otpSentViaSms));
+    setInfo(
+      res.otpSentViaSms
+        ? "OTP sent to your mobile number."
+        : res.message || "OTP request accepted.",
+    );
+    startResendCooldown(res.retryAfterSeconds ?? RESEND_COOLDOWN_SEC);
+  }
+
   async function handleSendOtp(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setInfo("");
     if (!mobile.trim()) {
       setError("Enter your mobile number.");
       return;
@@ -59,15 +105,45 @@ export function MarketplaceLoginPanel({
       setLoading(true);
       const res = await sendOtp(mobile.trim());
       setStep("otp");
-      if (res.otpForDev) {
-        setOtpForDev(res.otpForDev);
-        setOtp(res.otpForDev);
-      } else if (process.env.NODE_ENV !== "production") {
-        setOtpForDev(DEFAULT_DEV_OTP);
-        setOtp(DEFAULT_DEV_OTP);
-      }
+      setOtp("");
+      applySendResponse(res);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send OTP.");
+      if (err instanceof OtpError) {
+        if (err.retryAfterSeconds) {
+          startResendCooldown(err.retryAfterSeconds);
+        }
+        const alreadySent = err.message.toLowerCase().includes("already sent");
+        if (alreadySent) {
+          setStep("otp");
+          setOtp("");
+          setOtpSentViaSms(true);
+          setError("");
+          setInfo("OTP was already sent. Enter the code from your SMS.");
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError(err instanceof Error ? err.message : "Failed to send OTP.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleResendOtp() {
+    if (resendCooldown > 0 || loading) return;
+    setError("");
+    setInfo("");
+    try {
+      setLoading(true);
+      const res = await resendOtp(mobile.trim());
+      setOtp("");
+      applySendResponse(res);
+    } catch (err) {
+      if (err instanceof OtpError && err.retryAfterSeconds) {
+        startResendCooldown(err.retryAfterSeconds);
+      }
+      setError(err instanceof Error ? err.message : "Failed to resend OTP.");
     } finally {
       setLoading(false);
     }
@@ -76,6 +152,7 @@ export function MarketplaceLoginPanel({
   async function handleVerifyOtp(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setInfo("");
     if (!otp.trim()) {
       setError("Enter the OTP.");
       return;
@@ -85,7 +162,20 @@ export function MarketplaceLoginPanel({
       await verifyOtp(mobile.trim(), otp.trim());
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid OTP. Try again.");
+      if (err instanceof OtpError) {
+        setError(err.message);
+        if (
+          err.message.toLowerCase().includes("expired") ||
+          err.message.toLowerCase().includes("no otp found") ||
+          err.message.toLowerCase().includes("maximum verification")
+        ) {
+          setInfo("Request a new OTP using Resend OTP below.");
+        } else if (err.remainingAttempts != null && err.remainingAttempts > 0) {
+          setInfo(`${err.remainingAttempts} attempt(s) remaining.`);
+        }
+      } else {
+        setError(err instanceof Error ? err.message : "Invalid OTP. Try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -142,24 +232,35 @@ export function MarketplaceLoginPanel({
         </form>
       ) : (
         <form onSubmit={handleVerifyOtp}>
-          {otpForDev ? (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Development mode: OTP is pre-filled. Tap Verify &amp; continue.
-            </Alert>
-          ) : (
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              OTP sent to <strong>{mobile}</strong>
-            </Typography>
-          )}
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {otpSentViaSms ? (
+              <>
+                OTP sent to <strong>{mobile}</strong>. Enter the code from your
+                SMS.
+              </>
+            ) : (
+              <>
+                Enter the OTP for <strong>{mobile}</strong>.
+              </>
+            )}
+          </Typography>
           <AuthTextField
             label="Enter OTP"
             type="text"
-            placeholder="123456"
+            placeholder={`${OTP_LENGTH}-digit OTP`}
             value={otp}
-            onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            inputProps={{ inputMode: "numeric", maxLength: 6 }}
+            onChange={(e) =>
+              setOtp(e.target.value.replace(/\D/g, "").slice(0, OTP_LENGTH))
+            }
+            inputProps={{ inputMode: "numeric", maxLength: OTP_LENGTH }}
             disabled={loading}
+            autoComplete="one-time-code"
           />
+          {info ? (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              {info}
+            </Alert>
+          ) : null}
           {error ? (
             <Alert severity="error" sx={{ mt: 2 }}>
               {error}
@@ -170,29 +271,43 @@ export function MarketplaceLoginPanel({
               {loading ? "Verifying…" : "Verify & continue"}
             </GradientButton>
           </Box>
-          <Typography
-            component="button"
-            type="button"
-            onClick={() => {
-              setStep("mobile");
-              setOtp("");
-              setOtpForDev(null);
-              setError("");
-            }}
-            sx={{
-              display: "block",
-              mt: 2,
-              mx: "auto",
-              border: "none",
-              background: "none",
-              cursor: "pointer",
-              color: "text.secondary",
-              fontSize: "0.875rem",
-              "&:hover": { color: "text.primary" },
-            }}
-          >
-            Use a different number
-          </Typography>
+          <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 1 }}>
+            <Button
+              type="button"
+              variant="outlined"
+              disabled={loading || resendCooldown > 0}
+              onClick={handleResendOtp}
+              sx={{ textTransform: "none" }}
+            >
+              {resendCooldown > 0
+                ? `Resend OTP in ${resendCooldown}s`
+                : "Resend OTP"}
+            </Button>
+            <Typography
+              component="button"
+              type="button"
+              onClick={() => {
+                setStep("mobile");
+                setOtp("");
+                setError("");
+                setInfo("");
+                setResendCooldown(0);
+                setOtpSentViaSms(false);
+              }}
+              sx={{
+                display: "block",
+                mx: "auto",
+                border: "none",
+                background: "none",
+                cursor: "pointer",
+                color: "text.secondary",
+                fontSize: "0.875rem",
+                "&:hover": { color: "text.primary" },
+              }}
+            >
+              Use a different number
+            </Typography>
+          </Box>
         </form>
       )}
 
@@ -217,7 +332,11 @@ export function MarketplaceLoginPanel({
         </Link>
       </Typography>
 
-      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 3, textAlign: "center" }}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ display: "block", mt: 3, textAlign: "center" }}
+      >
         By continuing, you agree to use TRUCKS99 marketplace services securely.
       </Typography>
     </Box>

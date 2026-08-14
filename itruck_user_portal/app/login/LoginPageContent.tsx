@@ -30,10 +30,13 @@ export default function MarketplaceLoginPage() {
   );
 
   const initialMobile = searchParams.get("mobile")?.trim() ?? "";
-  const registeredSuccess =
-    searchParams.get("registered") === "1"
-      ? "Account created. We sent an OTP to your mobile — tap Send OTP if you need a new code."
-      : undefined;
+  const isPostRegistration = searchParams.get("registered") === "1";
+  const smsFailedOnRegister = searchParams.get("smsFailed") === "1";
+  const registeredSuccess = isPostRegistration
+    ? smsFailedOnRegister
+      ? "Account created but SMS could not be sent. Use Resend OTP below or try again shortly."
+      : "Account created. Enter the OTP sent to your mobile to sign in."
+    : undefined;
 
   const isViewProductReturn = Boolean(returnTo?.startsWith("/viewproduct/"));
 
@@ -75,15 +78,18 @@ export default function MarketplaceLoginPage() {
             isViewProductReturn ? "Sign in to view this vehicle" : "Sign in to TRUCKS99"
           }
           subtitle={
-            isViewProductReturn
-              ? "Please log in to view vehicle details, photos, and make an offer."
-              : "Enter your mobile number to receive a one-time password."
+            isPostRegistration
+              ? "Verify your mobile number with the OTP we sent you."
+              : isViewProductReturn
+                ? "Please log in to view vehicle details, photos, and make an offer."
+                : "Enter your mobile number to receive a one-time password."
           }
           onSuccess={redirectAfterAuth}
           onCancel={handleCancel}
           registerHref={registerHref}
           initialMobile={initialMobile}
           successMessage={registeredSuccess}
+          startOnOtpStep={isPostRegistration && Boolean(initialMobile)}
         />
       }
     />

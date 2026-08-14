@@ -63,25 +63,29 @@ SignupRouter.post('/', async (req, res) => {
     }
 
     let otpSentToMobile = false;
+    let otpSendError;
     let otpForDev;
     try {
       const otpResult = await createAndSendOtp(mobileNormalized);
       otpSentToMobile = !!otpResult.sent;
       if (otpResult.otpForDev) otpForDev = otpResult.otpForDev;
+      if (!otpResult.ok) otpSendError = otpResult.error;
     } catch (e) {
+      otpSendError = e.message || 'OTP send failed';
       console.error('Signup OTP send error:', e);
     }
 
     const payload = {
       message: otpSentToMobile
         ? 'Signup successful. Verify OTP via SMS: POST /api/auth/verify-otp with { mobile, otp }.'
-        : 'Signup successful. Configure Twilio SMS or use dev OTP below to log in.',
+        : 'Signup successful. Configure Draft4SMS or use dev OTP below to log in.',
       loginType: 'otp_only',
       otpSentToMobile,
       otpSentViaSms: otpSentToMobile,
       userObj,
     };
     if (otpForDev) payload.otpForDev = otpForDev;
+    if (otpSendError && !otpSentToMobile) payload.otpSendError = otpSendError;
     res.status(200).json(payload);
   } catch (err) {
     console.error('Signup error:', err);

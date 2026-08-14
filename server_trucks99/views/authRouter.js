@@ -118,7 +118,13 @@ authRouter.post('/verify-otp', async (req, res) => {
 
     const verification = await verifyOtpCode(normalizedMobile, otp);
     if (!verification.ok) {
-      return res.status(401).json({ message: verification.error });
+      return res.status(401).json({
+        message: verification.error,
+        ...(verification.remainingAttempts !== null &&
+        verification.remainingAttempts !== undefined
+          ? { remainingAttempts: verification.remainingAttempts }
+          : {}),
+      });
     }
 
     return loginUser(req, res, user);

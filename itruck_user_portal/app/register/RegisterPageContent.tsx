@@ -249,7 +249,7 @@ export default function MarketplaceRegisterPage() {
         }
       }
 
-      await registerMarketplaceUser({
+      const result = await registerMarketplaceUser({
         name: form.name.trim(),
         mobile: form.mobile.trim(),
         company_name: form.company_name.trim() || undefined,
@@ -263,6 +263,9 @@ export default function MarketplaceRegisterPage() {
       const params = new URLSearchParams();
       params.set("registered", "1");
       params.set("mobile", form.mobile.trim());
+      if (!result.otpSentToMobile && !result.otpSentViaSms) {
+        params.set("smsFailed", "1");
+      }
       if (returnTo) params.set("returnTo", returnTo);
       router.replace(`${userProductRoutes.login()}?${params.toString()}`);
     } catch (err) {

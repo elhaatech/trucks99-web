@@ -19,7 +19,7 @@ function normalizeMobile(m) {
 
 /**
  * Create OTP for a user (encrypted, stored in DB). Returns plain OTP string for sending.
- * If TEMP_OTP is set in .env (e.g. 123456), uses that fixed value instead of random (dev only).
+ * Set USE_TEMP_OTP=true to use TEMP_OTP for manual testing only.
  * @param {string|ObjectId} userId - User _id
  * @param {string} channel - 'sms' | 'email'
  * @returns {Promise<string>} 6-digit OTP
@@ -28,8 +28,12 @@ async function createOtpForUser(userId, channel = 'sms') {
   const existing = await Otp.findOne({ userId });
   if (existing) await Otp.findByIdAndDelete(existing._id);
 
+  const useFixedOtp = String(process.env.USE_TEMP_OTP || '').toLowerCase() === 'true';
   const tempOtp = (process.env.TEMP_OTP || '').trim();
-  const otpNum = tempOtp ? String(tempOtp).replace(/\D/g, '').slice(-6).padStart(6, '0') || '123456' : randomInt(100000, 999999).toString();
+  const otpLength = Number(process.env.OTP_LENGTH || 6);
+  const otpNum = useFixedOtp && tempOtp
+    ? String(tempOtp).replace(/\D/g, '').slice(-otpLength).padStart(otpLength, '0')
+    : randomInt(10 ** (otpLength - 1), 10 ** otpLength - 1).toString();
   const encryptedOtp = cryptojs.AES.encrypt(otpNum, OTP_SECRET).toString();
   const expiryDate = new Date(Date.now() + OTP_EXPIRATION_MINUTES * 60 * 1000);
 
