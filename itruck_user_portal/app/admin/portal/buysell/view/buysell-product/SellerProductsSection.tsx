@@ -271,7 +271,7 @@ export function SellerProductsSection({
               product={product}
               onClick={handleNavigate}
               showViewAction
-              viewLabel="View Details"
+              viewLabel="View Listing"
             />
           </Grid>
         ))}

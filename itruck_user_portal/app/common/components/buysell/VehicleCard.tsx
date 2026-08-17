@@ -58,7 +58,7 @@ export const VehicleCard = memo(function VehicleCard({
   onClick,
   layout = "grid",
   showViewAction = true,
-  viewLabel = "View Product",
+  viewLabel = "View Listing",
   onEdit,
   onDelete,
   deleteLoading = false,

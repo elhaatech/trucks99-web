@@ -46,6 +46,7 @@ import {
   MARKETPLACE_FAVORITES_CHANGED_EVENT,
 } from "@/lib/marketplaceAuth";
 import { getBuySellFavoriteCount } from "@/model/services/favoriteapi";
+import { NotificationDropdown } from "@/components/common/NotificationDropdown";
 
 const NAV_LINKS = [
   { label: "Buy Vehicle", href: userProductRoutes.list() },
@@ -316,6 +317,8 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
               </Box>
             </Button>
           </Tooltip>
+
+          <NotificationDropdown />
 
           <IconButton
             onClick={() => router.push(userProductRoutes.favorites())}

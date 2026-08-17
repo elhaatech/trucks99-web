@@ -32,7 +32,7 @@ export function useInfiniteScroll<T>(
   loadPage: (page: number, signal: AbortSignal) => Promise<InfiniteScrollResult<T>>,
   options?: UseInfiniteScrollOptions,
 ): UseInfiniteScrollReturn<T> {
-  const { enabled = true, rootMargin = "300px" } = options ?? {};
+  const { enabled = true, rootMargin = "400px" } = options ?? {};
 
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);

@@ -41,11 +41,6 @@ function isFixedOtpEnabled() {
   return String(process.env.USE_TEMP_OTP || "").toLowerCase() === "true";
 }
 
-function matchesDefaultOtp(otp) {
-  if (otp !== getFixedTestOtp()) return false;
-  return isFixedOtpEnabled() || isDevOtpFallbackEnabled();
-}
-
 function hashOtp(plainOtp, mobile) {
   return crypto
     .createHash("sha256")
@@ -229,9 +224,9 @@ async function createAndSendOtp(mobileRaw, { isResend = false } = {}) {
         : "SMS not sent. Use dev OTP below if enabled.",
   };
 
-  // Local/dev: always expose the default OTP (1234) so admin and portal can prefill it.
-  if (isDevOtpFallbackEnabled()) {
-    payload.otpForDev = usingDefaultOtp ? plainOtp : getFixedTestOtp();
+  // Dev only: expose the random OTP when SMS failed (never a fixed TEMP_OTP unless USE_TEMP_OTP=true)
+  if (isDevOtpFallbackEnabled() && !sms.sent) {
+    payload.otpForDev = plainOtp;
   }
 
   return payload;

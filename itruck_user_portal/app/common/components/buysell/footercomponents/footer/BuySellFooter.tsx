@@ -6,17 +6,16 @@ import { alpha } from "@mui/material/styles";
 import { PRODUCT_THEME as T, PRIMARY, LAYOUT } from "@/lib/theme";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { FooterLinkColumn, FooterPaymentBadge, FooterContactItem } from "./FooterPrimitives";
-import { FacebookIcon, InstagramIcon, YoutubeIcon, LinkedinIcon, WhatsappIcon } from "./footerIcons";
+import { FacebookIcon, InstagramIcon, WhatsappIcon } from "./footerIcons";
 import { MapPin, Phone, Mail, Clock } from "lucide-react";
 import Link from "next/link";
 import { BOTTOM_LINKS, FOOTER_LINK_GROUPS, PAYMENT_METHODS } from "../../lib/footerConfig";
 
 const SOCIALS = [
-  { icon: FacebookIcon, label: "Facebook", href: "#" },
-  { icon: InstagramIcon, label: "Instagram", href: "#" },
-  { icon: LinkedinIcon, label: "LinkedIn", href: "#" },
-  { icon: YoutubeIcon, label: "YouTube", href: "#" },
-  { icon: WhatsappIcon, label: "WhatsApp", href: "#" },
+  // TODO: replace placeholder URLs with official social media links
+  { icon: FacebookIcon, label: "Facebook", href: "https://www.facebook.com/trucks99" },
+  { icon: InstagramIcon, label: "Instagram", href: "https://www.instagram.com/trucks99" },
+  { icon: WhatsappIcon, label: "WhatsApp", href: "https://wa.me/91XXXXXXXXXX" },
 ];
 
 type BuySellFooterProps = {
@@ -123,6 +122,8 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
                   key={label}
                   component="a"
                   href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label={label}
                   sx={{
                     width: 36,

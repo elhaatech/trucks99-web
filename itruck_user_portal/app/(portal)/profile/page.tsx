@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -22,6 +22,12 @@ import {
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { useNotification } from "@/hooks/useNotification";
+import { SearchableSelect, type SelectOption } from "@/components/common/SearchableSelect";
+import {
+  getLocationCountriesAll,
+  getLocationStatesByCountry,
+  getLocationCitiesByState,
+} from "@/model/services/location";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -39,6 +45,8 @@ export default function ProfilePage() {
   const [email, setEmail] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [city, setCity] = useState("");
+  const [cities, setCities] = useState<{ id: string; name: string }[]>([]);
+  const [loadingCities, setLoadingCities] = useState(false);
   const [state, setState] = useState("");
   const [country, setCountry] = useState("India");
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -81,6 +89,66 @@ export default function ProfilePage() {
       cancelled = true;
     };
   }, [authReady, isLoggedIn, router]);
+
+  // Resolve the saved state (name or id) to its location id, then load that
+  // state's cities so the City field can show the city NAME while keeping the
+  // stored city ID for saving.
+  useEffect(() => {
+    let cancelled = false;
+    async function resolveAndLoadCities() {
+      if (!state) {
+        setCities([]);
+        return;
+      }
+      setLoadingCities(true);
+      try {
+        let resolvedStateId = state;
+        try {
+          const countries = await getLocationCountriesAll();
+          const india = (countries || []).find(
+            (c) => (c.name || "").trim().toLowerCase() === "india",
+          );
+          if (india) {
+            const statesRes = await getLocationStatesByCountry(
+              india.id || india.uuid || "",
+              { limit: 2000, page: 1 },
+            );
+            const stateItems = statesRes?.items || [];
+            const match = stateItems.find(
+              (s) =>
+                (s.id || s.uuid || "") === state ||
+                (s.name || "").trim().toLowerCase() === state.trim().toLowerCase(),
+            );
+            if (match) resolvedStateId = match.id || match.uuid || state;
+          }
+        } catch {
+          // Fall back to using the raw state value as the id.
+        }
+
+        const res = await getLocationCitiesByState(resolvedStateId, {
+          limit: 2000,
+          page: 1,
+        });
+        if (cancelled) return;
+        const items = res?.items || [];
+        setCities(
+          items
+            .map((c) => ({ id: c.id || c.uuid || "", name: c.name || "" }))
+            .filter((c) => c.id && c.name),
+        );
+      } catch (err) {
+        console.error("Failed to load cities", err);
+        if (!cancelled) setCities([]);
+      } finally {
+        if (!cancelled) setLoadingCities(false);
+      }
+    }
+
+    resolveAndLoadCities();
+    return () => {
+      cancelled = true;
+    };
+  }, [state]);
 
   const handleImagePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -137,6 +205,7 @@ export default function ProfilePage() {
       invalidateCurrentUserCache();
       await refresh({ force: true });
       notify({ type: "success", message: "Profile updated successfully." });
+      router.push("/");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to update profile";
       setError(msg);
@@ -145,6 +214,11 @@ export default function ProfilePage() {
       setSaving(false);
     }
   };
+
+  const cityOptions: SelectOption[] = useMemo(
+    () => cities.map((c) => ({ value: c.id, label: c.name })),
+    [cities],
+  );
 
   if (!authReady || loading) {
     return (
@@ -281,14 +355,16 @@ export default function ProfilePage() {
           disabled={saving}
         />
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.25 }}>
-          <TextField
+          <SearchableSelect
             label="City"
-            fullWidth
-            size="small"
-            sx={textFieldSx}
             value={city}
-            onChange={(e) => setCity(e.target.value)}
-            disabled={saving}
+            onChange={(id) => setCity(id)}
+            options={cityOptions}
+            disabled={saving || loadingCities}
+            loading={loadingCities}
+            placeholder="Select city"
+            noOptionsText={state ? "No cities found" : "Select state first"}
+            slotProps={{ textfield: { sx: textFieldSx } }}
           />
           <TextField
             label="State"
