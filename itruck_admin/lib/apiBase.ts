@@ -1,6 +1,6 @@
 /**
  * Backend always runs on port 3003.
- * itruck_admin UI may run on 3000/3001 — never send OTP/API calls to the UI port.
+ * itruck_admin UI may run on 3004 — never send OTP/API calls to the UI port.
  */
 const BACKEND_PORT = "3003";
 const FRONTEND_PORTS = new Set(["3000", "3001", "3002", "3004", "3005", ""]);

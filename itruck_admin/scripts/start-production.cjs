@@ -28,7 +28,7 @@ function getRequestedPort(args) {
   const longEq = args.find((arg) => arg.startsWith("--port="));
   if (longEq) return Number(longEq.slice("--port=".length));
   if (process.env.PORT) return Number(process.env.PORT);
-  return 3000;
+  return 3004;
 }
 
 function portInUseOnHost(port, host) {
@@ -91,7 +91,13 @@ async function main() {
     process.exit(1);
   }
 
-  process.argv = [process.execPath, nextBin, "start", ...extraArgs];
+  const argsHasPort =
+    extraArgs.includes("-p") ||
+    extraArgs.includes("--port") ||
+    extraArgs.some((arg) => arg.startsWith("--port="));
+  const startArgs = argsHasPort ? extraArgs : ["-p", String(port), ...extraArgs];
+  process.env.PORT = String(port);
+  process.argv = [process.execPath, nextBin, "start", ...startArgs];
   require(nextBin);
 }
 
