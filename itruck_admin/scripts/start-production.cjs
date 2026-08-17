@@ -31,17 +31,36 @@ function getRequestedPort(args) {
   return 3000;
 }
 
-function portInUse(port) {
+function portInUseOnHost(port, host) {
   return new Promise((resolve) => {
     const server = net.createServer();
+    const finish = (used) => {
+      try {
+        server.close();
+      } catch {
+        // ignore
+      }
+      resolve(used);
+    };
     server.once("error", (err) => {
-      resolve(err && err.code === "EADDRINUSE");
+      finish(Boolean(err && err.code === "EADDRINUSE"));
     });
     server.once("listening", () => {
       server.close(() => resolve(false));
     });
-    server.listen(port, "0.0.0.0");
+    try {
+      server.listen({ port, host, exclusive: true });
+    } catch {
+      finish(false);
+    }
   });
+}
+
+async function portInUse(port) {
+  for (const host of ["127.0.0.1", "0.0.0.0", "::"]) {
+    if (await portInUseOnHost(port, host)) return true;
+  }
+  return false;
 }
 
 async function main() {
