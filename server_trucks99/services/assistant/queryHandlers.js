@@ -3,6 +3,7 @@
 const BuySellProduct = require('../../schema/buysellProduct');
 const BuySellFeaturedVehicle = require('../../schema/buySellFeaturedVehicle');
 const Category = require('../../schema/categorymodel');
+const { liveFeaturedPlacementQuery } = require('../buySellFeaturedVehicleService');
 
 function formatInr(n) {
   const num = Number(n);
@@ -120,7 +121,7 @@ async function handleBusinessQuery(user, rawText) {
   if (/featured/i.test(q)) {
     const featured = await BuySellFeaturedVehicle.find({
       userId,
-      status: 'active',
+      ...liveFeaturedPlacementQuery(new Date()),
     })
       .populate({
         path: 'productId',

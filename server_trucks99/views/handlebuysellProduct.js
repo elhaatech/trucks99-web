@@ -40,6 +40,13 @@ const BuySellFeaturedVehicle = require("../schema/buySellFeaturedVehicle");
 const {
   activateFeaturedVehicleFromPayment,
   expireStaleFeaturedRecords,
+  requestFreePlanFeaturedVehicle,
+  updateFeaturedPlacementAdminStatus,
+  removeFeaturedPlacementAdmin,
+  buildFeaturedPublicMeta,
+  isLiveFeaturedPlacement,
+  liveFeaturedPlacementQuery,
+  pickPreferredFeaturedPlacement,
 } = require("../services/buySellFeaturedVehicleService");
 
 const buySellRouter = express.Router();
@@ -666,7 +673,7 @@ function enrichProductListItem(
     highest_bid,
     accepted_bid,
     featured: item.featured || null,
-    isFeatured: item.featured ? item.featured.expiryStatus === "Active" : false,
+    isFeatured: isLiveFeaturedPlacement(item.featured),
   };
 }
 
@@ -865,35 +872,10 @@ async function buildEnrichedResponse(data) {
     __v: data.__v,
     ...(featuredDoc
       ? (() => {
-          const nowMs = Date.now();
-          const expiresMs = featuredDoc.expiresAt
-            ? new Date(featuredDoc.expiresAt).getTime()
-            : 0;
-          const remainingDays =
-            expiresMs > nowMs
-              ? Math.ceil((expiresMs - nowMs) / (1000 * 60 * 60 * 24))
-              : 0;
-          let expiryStatus = "Expired";
-          if (expiresMs > nowMs) {
-            expiryStatus = remainingDays <= 3 ? "Expiring Soon" : "Active";
-          }
+          const featured = buildFeaturedPublicMeta(featuredDoc);
           return {
-            featured: {
-              featuredPlacementId: featuredDoc._id,
-              packageId: featuredDoc.packageId,
-              packageName: featuredDoc.packageName,
-              packageType: featuredDoc.packageType,
-              price: featuredDoc.price,
-              durationDays: featuredDoc.durationDays,
-              paymentId: featuredDoc.paymentId,
-              orderId: featuredDoc.orderId,
-              featuredStatus: featuredDoc.status,
-              featuredAt: featuredDoc.createdAt,
-              expiresAt: featuredDoc.expiresAt,
-              remainingDays,
-              expiryStatus,
-            },
-            isFeatured: expiryStatus === "Active",
+            featured,
+            isFeatured: isLiveFeaturedPlacement(featured),
           };
         })()
       : { featured: null, isFeatured: false }),
@@ -1141,36 +1123,19 @@ async function enrichBuySellListItems(items, actor, options = {}) {
 
   const featuredMetaByProductId = new Map();
   if (featuredResult && featuredResult.length > 0) {
+    const byProduct = new Map();
     for (const placement of featuredResult) {
-      if (!featuredMetaByProductId.has(String(placement.productId))) {
-        const nowMs = Date.now();
-        const expiresMs = placement.expiresAt
-          ? new Date(placement.expiresAt).getTime()
-          : 0;
-        const remainingDays =
-          expiresMs > nowMs
-            ? Math.ceil((expiresMs - nowMs) / (1000 * 60 * 60 * 24))
-            : 0;
-        let expiryStatus = "Expired";
-        if (expiresMs > nowMs) {
-          expiryStatus = remainingDays <= 3 ? "Expiring Soon" : "Active";
-        }
-
-        featuredMetaByProductId.set(String(placement.productId), {
-          featuredPlacementId: placement._id,
-          packageId: placement.packageId,
-          packageName: placement.packageName,
-          packageType: placement.packageType,
-          price: placement.price,
-          durationDays: placement.durationDays,
-          paymentId: placement.paymentId,
-          orderId: placement.orderId,
-          featuredStatus: placement.status,
-          featuredAt: placement.createdAt,
-          expiresAt: placement.expiresAt,
-          remainingDays,
-          expiryStatus,
-        });
+      const key = String(placement.productId);
+      if (!byProduct.has(key)) byProduct.set(key, []);
+      byProduct.get(key).push(placement);
+    }
+    for (const [productId, placements] of byProduct.entries()) {
+      const preferred = pickPreferredFeaturedPlacement(placements);
+      if (preferred) {
+        featuredMetaByProductId.set(
+          productId,
+          buildFeaturedPublicMeta(preferred),
+        );
       }
     }
   }
@@ -1937,6 +1902,10 @@ buySellRouter.post("/recent-vehicles", async (req, res) => {
 const featuredListCache = new Map();
 const FEATURED_LIST_TTL_MS = 1000;
 
+function clearFeaturedListCache() {
+  featuredListCache.clear();
+}
+
 function getFeaturedListCacheKey(body) {
   return JSON.stringify({
     page: body.page ?? 1,
@@ -1979,14 +1948,22 @@ buySellRouter.post("/featured-vehicles/list", async (req, res) => {
       .toLowerCase();
 
     const now = new Date();
-    const placements = await BuySellFeaturedVehicle.find({
-      status: "active",
-      expiresAt: { $gt: now },
-    })
+    const placements = await BuySellFeaturedVehicle.find(
+      liveFeaturedPlacementQuery(now),
+    )
       .sort({ createdAt: -1 })
       .lean();
 
-    const productIds = placements.map((p) => p.productId).filter(Boolean);
+    const seenProductIds = new Set();
+    const uniquePlacements = [];
+    for (const placement of placements) {
+      const key = String(placement.productId);
+      if (!key || seenProductIds.has(key)) continue;
+      seenProductIds.add(key);
+      uniquePlacements.push(placement);
+    }
+
+    const productIds = uniquePlacements.map((p) => p.productId).filter(Boolean);
     if (productIds.length === 0) {
       const emptyPayload = {
         success: true,
@@ -2016,38 +1993,14 @@ buySellRouter.post("/featured-vehicles/list", async (req, res) => {
     const featuredMetaByProductId = new Map();
     let orderedProducts = [];
 
-    for (const placement of placements) {
+    for (const placement of uniquePlacements) {
       const product = productById.get(String(placement.productId));
       if (!product) continue;
       orderedProducts.push(product);
-      const nowMs = Date.now();
-      const expiresMs = placement.expiresAt
-        ? new Date(placement.expiresAt).getTime()
-        : 0;
-      const remainingDays =
-        expiresMs > nowMs
-          ? Math.ceil((expiresMs - nowMs) / (1000 * 60 * 60 * 24))
-          : 0;
-      let expiryStatus = "Expired";
-      if (expiresMs > nowMs) {
-        expiryStatus = remainingDays <= 3 ? "Expiring Soon" : "Active";
-      }
-
-      featuredMetaByProductId.set(String(product._id), {
-        featuredPlacementId: placement._id,
-        packageId: placement.packageId,
-        packageName: placement.packageName,
-        packageType: placement.packageType,
-        price: placement.price,
-        durationDays: placement.durationDays,
-        paymentId: placement.paymentId,
-        orderId: placement.orderId,
-        featuredStatus: placement.status,
-        featuredAt: placement.createdAt,
-        expiresAt: placement.expiresAt,
-        remainingDays,
-        expiryStatus,
-      });
+      featuredMetaByProductId.set(
+        String(product._id),
+        buildFeaturedPublicMeta(placement),
+      );
     }
 
     if (searchQ) {
@@ -2128,7 +2081,12 @@ buySellRouter.post("/featured-vehicles/list", async (req, res) => {
       const meta =
         featuredMetaByProductId.get(String(key)) ||
         featuredMetaByProductId.get(String(item._id));
-      return meta ? { ...item, featured: meta } : item;
+      if (!meta) return { ...item, isFeatured: false };
+      return {
+        ...item,
+        featured: meta,
+        isFeatured: isLiveFeaturedPlacement(meta),
+      };
     });
 
     const payload = {
@@ -2200,8 +2158,230 @@ buySellRouter.post("/featured-vehicles", async (req, res) => {
       duplicate: result.duplicate,
       data: result.record,
     });
+    if (result.created) clearFeaturedListCache();
   } catch (error) {
     sendRouteError(res, error, "Error activating featured vehicle");
+  }
+});
+
+function assertAdminActor(actor) {
+  if (!actor?.id) {
+    const err = new Error("Authentication required");
+    err.statusCode = 401;
+    throw err;
+  }
+  if (!isAdminActor(actor)) {
+    const err = new Error("Admin access required");
+    err.statusCode = 403;
+    throw err;
+  }
+}
+
+function serializeAdminPlacement(placement) {
+  const meta = buildFeaturedPublicMeta(placement) || {};
+  const sellerId = placement.userId?._id || placement.userId;
+  return {
+    ...meta,
+    _id: placement._id,
+    placementId: placement._id,
+    productId: placement.productId,
+    userId: sellerId,
+    sellerId,
+    status: placement.status,
+    approvalStatus:
+      placement.status === "active" ? "approved" : placement.status,
+    source: placement.source || meta.source,
+    createdAt: placement.createdAt,
+    updatedAt: placement.updatedAt,
+  };
+}
+
+// POST /api/buy-sell/featured-vehicles/free-plan — seller requests Free Plan (pending until admin approval)
+buySellRouter.post("/featured-vehicles/free-plan", async (req, res) => {
+  try {
+    const actor = getActor(req);
+    const { productId, subscriptionItemId, packageName } = req.body || {};
+    const result = await requestFreePlanFeaturedVehicle({
+      actor,
+      productId,
+      subscriptionItemId,
+      clientPackageName: packageName,
+    });
+    res.status(result.created ? 201 : 200).json({
+      success: true,
+      pendingApproval: true,
+      featuredActivated: false,
+      duplicate: result.duplicate,
+      message: result.duplicate
+        ? "Your Free Plan request is already pending admin approval."
+        : "Free Plan request submitted. An admin will review it before your vehicle is featured.",
+      data: result.record,
+    });
+  } catch (error) {
+    sendRouteError(res, error, "Error submitting Free Plan request");
+  }
+});
+
+// GET /api/buy-sell/featured-vehicles/admin — admin placements including pending Free Plan requests
+buySellRouter.get("/featured-vehicles/admin", async (req, res) => {
+  try {
+    const actor = getActor(req);
+    assertAdminActor(actor);
+
+    void expireStaleFeaturedRecords().catch(() => {});
+
+    const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10) || 1);
+    const limit = Math.min(
+      50,
+      Math.max(1, parseInt(String(req.query.limit ?? "20"), 10) || 20),
+    );
+    const statusFilter = String(req.query.status || "all").toLowerCase();
+    const searchQ = String(req.query.search || "")
+      .trim()
+      .toLowerCase();
+    const sortKey = String(req.query.sort || "newest").toLowerCase();
+
+    const filter = {};
+    if (statusFilter && statusFilter !== "all") {
+      filter.status = statusFilter;
+    }
+
+    const placements = await BuySellFeaturedVehicle.find(filter)
+      .populate("userId", "name email mobile")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    placements.sort((a, b) => {
+      const pendingRank = (row) => (row.status === "pending" ? 0 : 1);
+      const rankDiff = pendingRank(a) - pendingRank(b);
+      if (rankDiff !== 0) return rankDiff;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+
+    const productIds = placements.map((p) => p.productId).filter(Boolean);
+    const products = productIds.length
+      ? await BuySellProduct.find({ _id: { $in: productIds } })
+          .select(LIST_PRODUCT_SELECT_LITE)
+          .populate("category_id", "category_name")
+          .populate("subcategory_id", "sub_category_name")
+          .lean()
+      : [];
+    const productById = new Map(products.map((p) => [String(p._id), p]));
+
+    let rows = [];
+    for (const placement of placements) {
+      const product = productById.get(String(placement.productId));
+      if (!product) continue;
+      const serializedPlacement = serializeAdminPlacement(placement);
+      rows.push({
+        ...product,
+        placement: serializedPlacement,
+        featured: serializedPlacement,
+        isFeatured: isLiveFeaturedPlacement(serializedPlacement),
+        sellerName:
+          serializedPlacement.requester?.name || product.sellerName || product.created_by,
+      });
+    }
+
+    if (searchQ) {
+      rows = rows.filter((item) => {
+        const hay = [
+          item.description,
+          item.address,
+          item.bsNumber,
+          item.sellerName,
+          item.placement?.requester?.name,
+          item.placement?.requester?.email,
+          item.placement?.requester?.mobile,
+          item.placement?.packageName,
+          item.placement?.source,
+          item.placement?.status,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(searchQ);
+      });
+    }
+
+    if (sortKey === "oldest") {
+      rows.sort(
+        (a, b) =>
+          new Date(a.placement?.createdAt || 0) -
+          new Date(b.placement?.createdAt || 0),
+      );
+    }
+
+    const total = rows.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const safePage = Math.min(page, totalPages);
+    const slice = rows.slice((safePage - 1) * limit, safePage * limit);
+    const enrichedList = await enrichBuySellListItems(slice, actor, { lite: true });
+    const data = toResponseList(enrichedList).map((item, index) => ({
+      ...item,
+      placement: slice[index]?.placement || item.placement,
+      featured: slice[index]?.featured || item.featured,
+    }));
+
+    res.json({
+      success: true,
+      data,
+      total,
+      limit,
+      sort: sortKey,
+      pagination: { page: safePage, limit, total, totalPages },
+    });
+  } catch (error) {
+    sendRouteError(res, error, "Error fetching admin featured vehicles");
+  }
+});
+
+// PATCH /api/buy-sell/featured-vehicles/admin/:placementId — approve / reject / toggle
+buySellRouter.patch("/featured-vehicles/admin/:placementId", async (req, res) => {
+  try {
+    const actor = getActor(req);
+    assertAdminActor(actor);
+    const { status, reason } = req.body || {};
+    const result = await updateFeaturedPlacementAdminStatus({
+      actor,
+      placementId: req.params.placementId,
+      status,
+      reason,
+    });
+    clearFeaturedListCache();
+    const nextStatus = result.record?.status;
+    const message =
+      nextStatus === "active"
+        ? "Free Plan approved. Vehicle is now featured."
+        : nextStatus === "rejected"
+          ? "Free Plan request rejected."
+          : nextStatus === "cancelled"
+            ? "Featured vehicle disabled."
+            : "Featured vehicle updated.";
+    res.json({
+      success: true,
+      message: result.alreadyApproved
+        ? "This Free Plan request is already approved."
+        : result.alreadyRejected
+          ? "This Free Plan request is already rejected."
+          : message,
+      data: result.record,
+    });
+  } catch (error) {
+    sendRouteError(res, error, "Error updating featured vehicle");
+  }
+});
+
+// DELETE /api/buy-sell/featured-vehicles/admin/:placementId
+buySellRouter.delete("/featured-vehicles/admin/:placementId", async (req, res) => {
+  try {
+    const actor = getActor(req);
+    assertAdminActor(actor);
+    await removeFeaturedPlacementAdmin(req.params.placementId);
+    clearFeaturedListCache();
+    res.json({ success: true, message: "Featured vehicle removed" });
+  } catch (error) {
+    sendRouteError(res, error, "Error removing featured vehicle");
   }
 });
 

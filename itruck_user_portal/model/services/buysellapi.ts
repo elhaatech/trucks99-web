@@ -111,10 +111,20 @@ export type FeaturedVehicleMeta = {
   featuredStartDate?: string;
   expiresAt?: string;
   featuredEndDate?: string;
+  source?: "paid" | "free_plan" | string;
+  approvedBy?: string | null;
+  approvedAt?: string | null;
+  requester?: {
+    _id?: string;
+    name?: string;
+    email?: string;
+    mobile?: string;
+  } | null;
 };
 
 export type FeaturedVehiclePlacementRecord = {
   _id?: string;
+  placementId?: string;
   productId?: string;
   sellerId?: string;
   packageId?: string;
@@ -131,6 +141,15 @@ export type FeaturedVehiclePlacementRecord = {
   remainingDays?: number | null;
   createdAt?: string;
   updatedAt?: string;
+  source?: "paid" | "free_plan" | string;
+  approvedBy?: string | null;
+  approvedAt?: string | null;
+  requester?: {
+    _id?: string;
+    name?: string;
+    email?: string;
+    mobile?: string;
+  } | null;
 };
 
 export type FeaturedVehiclesListParams = {
@@ -138,7 +157,7 @@ export type FeaturedVehiclesListParams = {
   limit?: number;
   search?: string;
   sort?: "newest" | "oldest" | "price_asc" | "price_desc" | "expiry_soon";
-  status?: "all" | "active" | "expired" | "cancelled";
+  status?: "all" | "pending" | "active" | "expired" | "cancelled" | "rejected";
 };
 
 export type FeaturedVehiclesListResponse = {
@@ -665,12 +684,13 @@ export async function fetchFeaturedVehiclesAdmin(
 
 export async function updateFeaturedVehicleAdminStatus(
   placementId: string,
-  status: "active" | "cancelled",
+  status: "active" | "cancelled" | "approved" | "rejected",
+  reason?: string,
 ): Promise<{ message: string }> {
   try {
     return await api(`/api/buy-sell/featured-vehicles/admin/${encodeURIComponent(placementId)}`, {
       method: "PATCH",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, reason }),
     });
   } catch (error) {
     normalizeError(error);
@@ -729,6 +749,31 @@ export async function activateBuySellFeaturedVehicle(
 ): Promise<{ message: string; duplicate?: boolean; data?: unknown }> {
   try {
     return await api("/api/buy-sell/featured-vehicles", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    normalizeError(error);
+  }
+}
+
+export type RequestFreePlanFeaturedVehicleResponse = {
+  success: boolean;
+  pendingApproval: boolean;
+  featuredActivated: boolean;
+  duplicate?: boolean;
+  message: string;
+  data?: unknown;
+};
+
+/** POST /api/buy-sell/featured-vehicles/free-plan — seller Free Plan request (pending admin approval). */
+export async function requestFreePlanFeaturedVehicle(body: {
+  productId: string;
+  subscriptionItemId: string;
+  packageName?: string;
+}): Promise<RequestFreePlanFeaturedVehicleResponse> {
+  try {
+    return await api("/api/buy-sell/featured-vehicles/free-plan", {
       method: "POST",
       body: JSON.stringify(body),
     });

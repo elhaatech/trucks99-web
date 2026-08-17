@@ -12,6 +12,12 @@ export type Notification = {
   productId?: string;
   read?: boolean;
   createdAt?: string;
+  metadata?: {
+    route?: string;
+    placementId?: string;
+    requestStatus?: string;
+    source?: string;
+  };
 };
 
 export async function getNotifications(): Promise<Notification[]> {

@@ -31,6 +31,29 @@ export function FeaturedVehicleListingPanel({
     [product, optimisticPlan],
   );
 
+  if (ui.state === "pending") {
+    return (
+      <Box
+        sx={{
+          p: compact ? 1.75 : 2.5,
+          borderRadius: T.radius.lg,
+          border: `1px solid rgba(245,158,11,0.4)`,
+          bgcolor: "#fffbeb",
+        }}
+      >
+        <Alert severity="warning" sx={{ borderRadius: T.radius.md }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 14, mb: 0.5 }}>
+            Pending Approval
+          </Typography>
+          <Typography sx={{ fontSize: 13, lineHeight: 1.55 }}>
+            Your Free Plan request for this vehicle is waiting for admin approval.
+            It will appear in Featured Vehicles only after an admin approves it.
+          </Typography>
+        </Alert>
+      </Box>
+    );
+  }
+
   if (ui.state === "active") {
     return (
       <Box

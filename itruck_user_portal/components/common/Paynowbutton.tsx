@@ -34,7 +34,10 @@ import {
 import {
   isFeaturedVehiclePlan,
 } from "@/model/services/subscription";
-import { activateBuySellFeaturedVehicle } from "@/model/services/buysellapi";
+import {
+  activateBuySellFeaturedVehicle,
+  requestFreePlanFeaturedVehicle,
+} from "@/model/services/buysellapi";
 import { getLoadAll, getTruckAll } from "@/model/api";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -44,7 +47,12 @@ type PayNowButtonProps = {
   currentUser?: User | null;
   /** Buy & Sell product id when purchasing "Feature Your Vehicle" for a listing. */
   buySellProductId?: string | null;
-  onSuccess?: (detail?: { featuredActivated?: boolean; message?: string }) => void;
+  requestPending?: boolean;
+  onSuccess?: (detail?: {
+    featuredActivated?: boolean;
+    pendingApproval?: boolean;
+    message?: string;
+  }) => void;
   variant?: "contained" | "outlined" | "text";
   size?: "small" | "medium" | "large";
   fullWidth?: boolean;
@@ -56,6 +64,7 @@ export default function PayNowButton({
   item,
   currentUser,
   buySellProductId,
+  requestPending = false,
   onSuccess,
   variant = "contained",
   size = "medium",
@@ -69,6 +78,8 @@ export default function PayNowButton({
   );
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [autoPay, setAutoPay] = useState(false);
+  const isFreeFeaturedPlan =
+    Number(item.price) === 0 && isFeaturedVehiclePlan(item);
 
   // Calculate expiry date for display
   const getExpiryDate = () => {
@@ -82,8 +93,37 @@ export default function PayNowButton({
   };
 
   const handlePayClick = () => {
-    // Show confirmation popup before proceeding with payment
     setConfirmOpen(true);
+  };
+
+  const handleFreePlanRequest = async () => {
+    setConfirmOpen(false);
+    setError(null);
+    setLoading(true);
+    try {
+      if (!buySellProductId) {
+        throw new Error("Open your listing to request the Free Plan.");
+      }
+      const result = await requestFreePlanFeaturedVehicle({
+        productId: buySellProductId,
+        subscriptionItemId: item.id,
+        packageName: item.packageName,
+      });
+      const message =
+        result.message ||
+        "Free Plan request submitted. An admin will review it before your vehicle is featured.";
+      setSuccessDetailMessage(message);
+      setSuccessOpen(true);
+      onSuccess?.({
+        featuredActivated: false,
+        pendingApproval: true,
+        message,
+      });
+    } catch (err: any) {
+      setError(err?.message || "Could not submit the Free Plan request.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleConfirmPay = async () => {
@@ -212,7 +252,30 @@ export default function PayNowButton({
         </Alert>
       )}
 
-      {item.price === 0 ? (
+      {isFreeFeaturedPlan ? (
+        <Button
+          variant={variant}
+          fullWidth={fullWidth}
+          size={size}
+          startIcon={
+            loading ? <CircularProgress size={16} color="inherit" /> : undefined
+          }
+          onClick={handlePayClick}
+          disabled={
+            loading ||
+            item.status === "inactive" ||
+            requestPending ||
+            !buySellProductId
+          }
+          sx={{ textTransform: "none", fontWeight: 600 }}
+        >
+          {loading
+            ? "Submitting…"
+            : requestPending
+              ? "Pending Approval"
+              : "Free Plan"}
+        </Button>
+      ) : item.price === 0 ? (
         <Button
           variant="outlined"
           fullWidth={fullWidth}
@@ -268,7 +331,9 @@ export default function PayNowButton({
           <Box display="flex" alignItems="center" gap={1.5}>
             <AutorenewIcon sx={{ fontSize: 28 }} />
             <Typography variant="h6" fontWeight={700}>
-              Confirm Subscription Payment
+              {isFreeFeaturedPlan
+                ? "Confirm Free Plan Request"
+                : "Confirm Subscription Payment"}
             </Typography>
           </Box>
         </Box>
@@ -305,7 +370,11 @@ export default function PayNowButton({
               />
               <Chip
                 icon={<CalendarTodayIcon />}
-                label={`${item.durationDays} days`}
+                label={
+                  isFreeFeaturedPlan
+                    ? "After admin approval"
+                    : `${item.durationDays} days`
+                }
                 size="small"
                 variant="outlined"
               />
@@ -327,6 +396,41 @@ export default function PayNowButton({
             </Box>
           </Box>
 
+          {isFreeFeaturedPlan ? (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 1.5,
+                p: 2,
+                bgcolor: "warning.50",
+                border: "1px solid",
+                borderColor: "warning.200",
+                borderRadius: 2,
+                mb: 1,
+              }}
+            >
+              <WarningAmberIcon
+                sx={{ color: "warning.main", mt: 0.25, fontSize: 22 }}
+              />
+              <Box>
+                <Typography
+                  variant="body2"
+                  fontWeight={600}
+                  color="warning.dark"
+                  mb={0.5}
+                >
+                  Admin approval required
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Submitting Free Plan sends a request to admin. Your vehicle
+                  will not appear in Featured Vehicles until the request is
+                  approved.
+                </Typography>
+              </Box>
+            </Box>
+          ) : (
+            <>
           <Box
             sx={{
               display: "flex",
@@ -397,6 +501,8 @@ export default function PayNowButton({
               sx={{ m: 0 }}
             />
           </Box>
+            </>
+          )}
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
@@ -409,9 +515,9 @@ export default function PayNowButton({
             Cancel
           </Button>
           <Button
-            onClick={handleConfirmPay}
+            onClick={isFreeFeaturedPlan ? handleFreePlanRequest : handleConfirmPay}
             variant="contained"
-            startIcon={<PaymentIcon />}
+            startIcon={isFreeFeaturedPlan ? undefined : <PaymentIcon />}
             sx={{
               textTransform: "none",
               fontWeight: 600,
@@ -419,7 +525,9 @@ export default function PayNowButton({
               px: 3,
             }}
           >
-            Confirm & Pay ₹{item.price.toLocaleString("en-IN")}
+            {isFreeFeaturedPlan
+              ? "Submit Free Plan request"
+              : `Confirm & Pay ₹${item.price.toLocaleString("en-IN")}`}
           </Button>
         </DialogActions>
       </Dialog>
@@ -443,7 +551,10 @@ export default function PayNowButton({
           <Box display="flex" alignItems="center" gap={1.5}>
             <CheckCircleIcon sx={{ fontSize: 28 }} />
             <Typography variant="h6" fontWeight={700}>
-              Payment Successful
+              {successDetailMessage?.toLowerCase().includes("pending") ||
+              successDetailMessage?.toLowerCase().includes("admin")
+                ? "Request Submitted"
+                : "Payment Successful"}
             </Typography>
           </Box>
         </Box>
@@ -460,7 +571,11 @@ export default function PayNowButton({
                 <strong>{item.durationDays} days</strong>.
               </Typography>
             )}
-            {!successDetailMessage?.includes("featured") ? (
+            {isFreeFeaturedPlan ? (
+              <Typography variant="body2" color="text.secondary" mt={1}>
+                Status: <strong>Pending Approval</strong>
+              </Typography>
+            ) : !successDetailMessage?.includes("featured") ? (
               <>
                 <Typography variant="body2" color="text.secondary" mt={1}>
                   Plan expires on: <strong>{getExpiryDate()}</strong>
@@ -474,6 +589,7 @@ export default function PayNowButton({
                 Featured until: <strong>{getExpiryDate()}</strong>
               </Typography>
             )}
+            {!isFreeFeaturedPlan ? (
             <Box
               sx={{
                 mt: 2,
@@ -499,6 +615,7 @@ export default function PayNowButton({
                 )}
               </Typography>
             </Box>
+            ) : null}
           </DialogContentText>
         </DialogContent>
 

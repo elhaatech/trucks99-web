@@ -599,14 +599,19 @@ export default function UserProductViewPage() {
         currentUser={currentUser}
         productTitle={title}
         buySellProductId={id}
+        requestPending={resolveFeaturedListingUi(item).state === "pending"}
         onPaymentSuccess={(plan, detail) => {
-          setFeaturedActivated(plan);
+          if (!detail?.pendingApproval) {
+            setFeaturedActivated(plan);
+          }
           void loadProduct();
           notify({
             type: "success",
             message:
               detail?.message ||
-              "Payment successful. Your vehicle is now featured.",
+              (detail?.pendingApproval
+                ? "Free Plan request submitted. Waiting for admin approval."
+                : "Payment successful. Your vehicle is now featured."),
           });
         }}
       />

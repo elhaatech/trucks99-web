@@ -24,7 +24,12 @@ type FeaturePlanCardProps = {
   currentUser: User | null;
   highlighted?: boolean;
   buySellProductId?: string | null;
-  onPaymentSuccess?: (detail?: { message?: string }) => void;
+  requestPending?: boolean;
+  onPaymentSuccess?: (detail?: {
+    message?: string;
+    pendingApproval?: boolean;
+    featuredActivated?: boolean;
+  }) => void;
 };
 
 export function FeaturePlanCard({
@@ -32,10 +37,12 @@ export function FeaturePlanCard({
   currentUser,
   highlighted = false,
   buySellProductId,
+  requestPending = false,
   onPaymentSuccess,
 }: FeaturePlanCardProps) {
   const features =
     plan.features && plan.features.length > 0 ? plan.features : DEFAULT_FEATURES;
+  const isFreePlan = Number(plan.price) === 0;
 
   return (
     <Box
@@ -67,7 +74,9 @@ export function FeaturePlanCard({
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 2, color: T.color.textSecondary }}>
         <CalendarTodayOutlinedIcon sx={{ fontSize: 16 }} />
         <Typography sx={{ fontSize: 14 }}>
-          {plan.durationDays} day{plan.durationDays !== 1 ? "s" : ""} featured visibility
+          {isFreePlan
+            ? "Featured after admin approval"
+            : `${plan.durationDays} day${plan.durationDays !== 1 ? "s" : ""} featured visibility`}
         </Typography>
       </Box>
 
@@ -93,6 +102,7 @@ export function FeaturePlanCard({
           item={plan}
           currentUser={currentUser}
           buySellProductId={buySellProductId}
+          requestPending={requestPending}
           fullWidth
           variant={highlighted ? "contained" : "outlined"}
           onSuccess={(detail) => onPaymentSuccess?.(detail)}

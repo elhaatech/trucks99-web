@@ -24,7 +24,11 @@ type FeaturedVehiclePlansDialogProps = {
   productTitle?: string;
   /** Buy & Sell listing id (Mongo _id or uuid) to link after payment. */
   buySellProductId?: string | null;
-  onPaymentSuccess?: (plan: SubscriptionItem, detail?: { message?: string }) => void;
+  requestPending?: boolean;
+  onPaymentSuccess?: (
+    plan: SubscriptionItem,
+    detail?: { message?: string; pendingApproval?: boolean; featuredActivated?: boolean },
+  ) => void;
 };
 
 export function FeaturedVehiclePlansDialog({
@@ -33,6 +37,7 @@ export function FeaturedVehiclePlansDialog({
   currentUser,
   productTitle,
   buySellProductId,
+  requestPending = false,
   onPaymentSuccess,
 }: FeaturedVehiclePlansDialogProps) {
   const [plans, setPlans] = useState<SubscriptionItem[]>([]);
@@ -88,6 +93,13 @@ export function FeaturedVehiclePlansDialog({
           </Alert>
         ) : null}
 
+        {requestPending ? (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Your Free Plan request is already pending admin approval. Duplicate
+            requests are not allowed until this one is reviewed.
+          </Alert>
+        ) : null}
+
         {loading ? (
           <VehicleGridSkeleton count={2} />
         ) : error ? (
@@ -105,6 +117,7 @@ export function FeaturedVehiclePlansDialog({
                   currentUser={currentUser}
                   highlighted={plan.id === bestValueId}
                   buySellProductId={buySellProductId}
+                  requestPending={requestPending}
                   onPaymentSuccess={(detail) => {
                     onPaymentSuccess?.(plan, detail);
                     onClose();

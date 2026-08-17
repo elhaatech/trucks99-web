@@ -84,7 +84,7 @@ export function flattenSubscriptionItems(docs: Subscription[]): SubscriptionItem
   return items;
 }
 
-/** Active paid "Feature Your Vehicle" plans from subscription catalog (agent packages). */
+/** Active free "Feature Your Vehicle" plans (price 0). Paid / other packages stay hidden. */
 export async function getFeaturedVehiclePlans(): Promise<SubscriptionItem[]> {
   const docs = await getSubscriptionAll("agent");
   const seen = new Map<string, SubscriptionItem>();
@@ -92,7 +92,7 @@ export async function getFeaturedVehiclePlans(): Promise<SubscriptionItem[]> {
   for (const item of flattenSubscriptionItems(docs)) {
     if (!isFeaturedVehiclePlan(item)) continue;
     if (item.status !== "active") continue;
-    if (Number(item.price) <= 0) continue;
+    if (Number(item.price) !== 0) continue;
     if (!item.id || seen.has(item.id)) continue;
     seen.set(item.id, item);
   }

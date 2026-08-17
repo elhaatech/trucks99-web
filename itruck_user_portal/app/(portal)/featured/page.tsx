@@ -37,6 +37,7 @@ export default function FeaturedVehiclePage() {
   const [error, setError] = useState("");
   const [activePlan, setActivePlan] = useState<SubscriptionItem | null>(null);
   const [activatedPlan, setActivatedPlan] = useState<SubscriptionItem | null>(null);
+  const [pendingRequest, setPendingRequest] = useState(false);
 
   const loadPlans = useCallback(async () => {
     setLoading(true);
@@ -99,8 +100,14 @@ export default function FeaturedVehiclePage() {
 
   const handlePaymentSuccess = (
     plan: SubscriptionItem,
-    detail?: { message?: string },
+    detail?: { message?: string; pendingApproval?: boolean },
   ) => {
+    if (detail?.pendingApproval) {
+      setPendingRequest(true);
+      setStep("promo");
+      void loadPlans();
+      return;
+    }
     setActivatedPlan(plan);
     setStep("activated");
     void loadPlans();
@@ -117,6 +124,13 @@ export default function FeaturedVehiclePage() {
         </Alert>
       ) : null}
 
+      {pendingRequest && step !== "activated" ? (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          Your Free Plan request is <strong>pending admin approval</strong>. The vehicle
+          will appear in Featured Vehicles after an admin approves it.
+        </Alert>
+      ) : null}
+
       {activePlan && step !== "activated" ? (
         <Alert severity="success" sx={{ mb: 3 }}>
           You have an active <strong>{activePlan.packageName}</strong> plan (
@@ -127,7 +141,7 @@ export default function FeaturedVehiclePage() {
       {step === "promo" && (
         <Box sx={{ width: "100%", maxWidth: 560, mx: "auto", py: 2 }}>
           <FeaturedVehiclePromoCard
-            showPayNow={canPayForOwnListing}
+            showPayNow={canPayForOwnListing && !pendingRequest}
             onPayNow={() => setStep("plans")}
           />
           {!currentUser ? (
@@ -189,6 +203,7 @@ export default function FeaturedVehiclePage() {
                     currentUser={currentUser}
                     highlighted={plan.id === bestValueId}
                     buySellProductId={buySellProductId || undefined}
+                    requestPending={pendingRequest}
                     onPaymentSuccess={(detail) => handlePaymentSuccess(plan, detail)}
                   />
                 </Grid>

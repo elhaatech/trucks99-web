@@ -20,9 +20,6 @@ export function resolveApiBase(): string {
       /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(hostname);
 
     if (isLoopback || isPrivateLan) {
-      if (isLoopback && fromEnv && /localhost|127\.0\.0\.1/i.test(fromEnv)) {
-        return fromEnv;
-      }
       return `${protocol}//${hostname}:3003`;
     }
 

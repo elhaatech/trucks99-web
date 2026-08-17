@@ -24,6 +24,9 @@ const NOTIFICATION_EVENTS = {
   EMI_PAYMENT_SUCCESS: 'emi_payment_success',
   VEHICLE_REMINDER: 'vehicle_reminder',
   FEATURED_LISTING_REMINDER: 'featured_listing_reminder',
+  FEATURED_FREE_PLAN_REQUEST: 'featured_free_plan_request',
+  FEATURED_FREE_PLAN_APPROVED: 'featured_free_plan_approved',
+  FEATURED_FREE_PLAN_REJECTED: 'featured_free_plan_rejected',
   BID_PLACED: 'bid_placed',
   BID_ACCEPTED: 'bid_accepted',
   BID_REJECTED: 'bid_rejected',
@@ -323,6 +326,54 @@ const DEFAULT_TEMPLATES = [
       },
       whatsapp: {
         body: 'Boost {{productName}} with a featured listing on TRUCKS99 to get more enquiries.',
+      },
+    },
+  },
+  {
+    event: NOTIFICATION_EVENTS.FEATURED_FREE_PLAN_REQUEST,
+    label: 'Free Plan Featured Request',
+    description: 'Sent to admins when a seller requests the Free Plan to feature a vehicle.',
+    placeholders: ['userName', 'sellerName', 'sellerMobile', 'productName', 'requestStatus'],
+    templates: {
+      in_app: {
+        title: 'Free Plan featured request',
+        body: '{{sellerName}} requested a Free Plan to feature {{productName}}. Status: {{requestStatus}}.',
+      },
+      push: {
+        title: 'Free Plan request',
+        body: '{{sellerName}} requested featuring {{productName}}',
+      },
+    },
+  },
+  {
+    event: NOTIFICATION_EVENTS.FEATURED_FREE_PLAN_APPROVED,
+    label: 'Free Plan Featured Approved',
+    description: 'Sent to the seller when an admin approves their Free Plan featured request.',
+    placeholders: ['userName', 'productName', 'expiryDate'],
+    templates: {
+      in_app: {
+        title: 'Free Plan approved',
+        body: '{{productName}} is now featured on TRUCKS99 until {{expiryDate}}.',
+      },
+      push: {
+        title: 'Listing featured',
+        body: '{{productName}} is now featured until {{expiryDate}}',
+      },
+    },
+  },
+  {
+    event: NOTIFICATION_EVENTS.FEATURED_FREE_PLAN_REJECTED,
+    label: 'Free Plan Featured Rejected',
+    description: 'Sent to the seller when an admin rejects their Free Plan featured request.',
+    placeholders: ['userName', 'productName', 'rejectionReason'],
+    templates: {
+      in_app: {
+        title: 'Free Plan request declined',
+        body: 'Your Free Plan request for {{productName}} was not approved. {{rejectionReason}}',
+      },
+      push: {
+        title: 'Free Plan declined',
+        body: 'Your Free Plan request for {{productName}} was not approved.',
       },
     },
   },
@@ -777,6 +828,9 @@ async function seedDefaultTemplates() {
       NOTIFICATION_EVENTS.PRODUCT_PURCHASED,
       NOTIFICATION_EVENTS.PRODUCT_SOLD,
       NOTIFICATION_EVENTS.PAYMENT_SUCCESS,
+      NOTIFICATION_EVENTS.FEATURED_FREE_PLAN_REQUEST,
+      NOTIFICATION_EVENTS.FEATURED_FREE_PLAN_APPROVED,
+      NOTIFICATION_EVENTS.FEATURED_FREE_PLAN_REJECTED,
     ].includes(def.event);
 
     // eslint-disable-next-line no-await-in-loop

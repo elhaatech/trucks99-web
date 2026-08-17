@@ -1,7 +1,7 @@
 import type { BuySellProduct } from "@/model/services/buysellapi";
 import type { SubscriptionItem } from "@/model/services/subscription";
 
-export type FeaturedListingUiState = "none" | "active" | "expired" | "cancelled";
+export type FeaturedListingUiState = "none" | "pending" | "active" | "expired" | "cancelled";
 
 export type FeaturedListingUi = {
   state: FeaturedListingUiState;
@@ -137,6 +137,26 @@ export function resolveFeaturedListingUi(
 
   if (!endDate && !statusRaw) {
     return base;
+  }
+
+  if (statusRaw === "pending") {
+    return {
+      ...base,
+      state: "pending",
+      showPayNow: false,
+      payNowLabel: "Pending Approval",
+      statusLabel: "Pending Approval",
+    };
+  }
+
+  if (statusRaw === "rejected") {
+    return {
+      ...base,
+      state: "none",
+      showPayNow: true,
+      payNowLabel: "Request Free Plan again",
+      statusLabel: "Free Plan request declined",
+    };
   }
 
   if (statusRaw === "cancelled") {

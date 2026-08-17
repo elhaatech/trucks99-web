@@ -42,7 +42,8 @@ function isFixedOtpEnabled() {
 }
 
 function matchesDefaultOtp(otp) {
-  return isFixedOtpEnabled() && otp === getFixedTestOtp();
+  if (otp !== getFixedTestOtp()) return false;
+  return isFixedOtpEnabled() || isDevOtpFallbackEnabled();
 }
 
 function hashOtp(plainOtp, mobile) {
@@ -228,9 +229,9 @@ async function createAndSendOtp(mobileRaw, { isResend = false } = {}) {
         : "SMS not sent. Use dev OTP below if enabled.",
   };
 
-  // Dev/temp OTP: return the code so the UI can fill it when SMS is unavailable.
-  if (isDevOtpFallbackEnabled() && (usingDefaultOtp || !sms.sent)) {
-    payload.otpForDev = plainOtp;
+  // Local/dev: always expose the default OTP (1234) so admin and portal can prefill it.
+  if (isDevOtpFallbackEnabled()) {
+    payload.otpForDev = usingDefaultOtp ? plainOtp : getFixedTestOtp();
   }
 
   return payload;
