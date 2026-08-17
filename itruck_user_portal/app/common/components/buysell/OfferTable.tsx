@@ -286,7 +286,7 @@ export function OfferTable({
                       onClick={() => onViewProduct(productId)}
                       sx={{ textTransform: "none", fontWeight: 600 }}
                     >
-                      View Product
+                      View Listing
                     </Button>
                   ) : null}
                 </TableCell>

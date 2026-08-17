@@ -2,7 +2,6 @@
 
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import CircularProgress from "@mui/material/CircularProgress";
 import { EmptyState } from "@/components/ui/EmptyState";
 import SearchOffOutlinedIcon from "@mui/icons-material/SearchOffOutlined";
 import { getBuySellRowId, type BuySellProduct } from "@/model/services/buysellapi";
@@ -27,7 +26,6 @@ type VehicleGridProps = {
   emptyDescription?: string;
   showOwnerFeaturedControls?: boolean;
   onFeaturePayNow?: (productId: string) => void;
-  isLoadingMore?: boolean;
   hasMore?: boolean;
   sentinelRef?: (node: HTMLDivElement | null) => void;
   endMessage?: string;
@@ -50,7 +48,6 @@ export function VehicleGrid({
   emptyDescription = "Try adjusting your filters or search query.",
   showOwnerFeaturedControls = false,
   onFeaturePayNow,
-  isLoadingMore = false,
   hasMore,
   sentinelRef,
   endMessage = "You've reached the end",
@@ -106,9 +103,7 @@ export function VehicleGrid({
 
       {hasMore !== undefined ? (
         <Box sx={{ textAlign: "center", py: 3 }}>
-          {isLoadingMore ? (
-            <CircularProgress size={32} />
-          ) : hasMore ? (
+          {hasMore ? (
             <Box ref={sentinelRef} sx={{ height: 1 }} />
           ) : (
             <Typography sx={{ color: T.color.textMuted, fontSize: 13 }}>

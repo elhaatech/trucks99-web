@@ -138,7 +138,7 @@ function SellerProductsGrid({
               product={product}
               onClick={onNavigate}
               showViewAction
-              viewLabel="View Details"
+              viewLabel="View Listing"
             />
           </Grid>
         ))}
