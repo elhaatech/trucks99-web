@@ -96,9 +96,17 @@ export function useFirebasePush() {
           const data = payload.data || {};
 
           if (title || body) {
+            const fcmType = String(data.type || "");
             notifyRef.current({
-              type: "info",
-              message: `${title || ""}: ${body || ""}`,
+              type:
+                fcmType === "featured_free_plan_approved" ||
+                fcmType === "FEATURED_FREE_PLAN_APPROVED"
+                  ? "success"
+                  : fcmType === "featured_free_plan_rejected" ||
+                      fcmType === "FEATURED_FREE_PLAN_REJECTED"
+                    ? "error"
+                    : "info",
+              message: `${title || ""}: ${body || ""}`.replace(/^:\s*/, ""),
             });
           }
 

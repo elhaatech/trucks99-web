@@ -15,6 +15,7 @@ export type Notification = {
   metadata?: {
     route?: string;
     placementId?: string;
+    productId?: string;
     requestStatus?: string;
     source?: string;
   };

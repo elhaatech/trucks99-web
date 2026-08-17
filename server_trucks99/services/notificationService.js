@@ -418,6 +418,12 @@ function resolveFcmEventType(event, metadata = {}) {
       return 'PRODUCT_SOLD';
     case NOTIFICATION_EVENTS.PAYMENT_SUCCESS:
       return 'PAYMENT_SUCCESS';
+    case NOTIFICATION_EVENTS.FEATURED_FREE_PLAN_REQUEST:
+      return 'FEATURED_FREE_PLAN_REQUEST';
+    case NOTIFICATION_EVENTS.FEATURED_FREE_PLAN_APPROVED:
+      return 'FEATURED_FREE_PLAN_APPROVED';
+    case NOTIFICATION_EVENTS.FEATURED_FREE_PLAN_REJECTED:
+      return 'FEATURED_FREE_PLAN_REJECTED';
     default:
       return String(event || 'GENERAL');
   }

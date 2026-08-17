@@ -39,7 +39,7 @@ try {
 
     const title = payload.notification?.title || payload.data?.title || "Trucks99";
     const body = payload.notification?.body || payload.data?.body || "";
-    const route = payload.data?.route || "/admin/portal/notifications";
+    const route = payload.data?.route || "/dashboard";
 
     return self.registration.showNotification(title, {
       body,
@@ -56,7 +56,7 @@ try {
 self.addEventListener("notificationclick", (event) => {
   console.log("[FCM][SW] notification click:", event.notification?.data);
   event.notification.close();
-  const route = event?.notification?.data?.route || "/admin/portal";
+  const route = event?.notification?.data?.route || "/dashboard";
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
       for (const client of clients) {

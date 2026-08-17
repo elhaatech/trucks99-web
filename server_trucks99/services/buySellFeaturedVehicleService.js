@@ -12,6 +12,7 @@ const {
   notifyMultiple,
   NOTIFICATION_EVENTS,
 } = require("./notificationService");
+const { sendPushToUser } = require("./fcmPushService");
 
 const FEATURED_VEHICLE_PACKAGE_NAME = "Feature Your Vehicle";
 const DEFAULT_FREE_PLAN_DURATION_DAYS = 7;
@@ -329,17 +330,44 @@ async function notifySellerFreePlanDecision({
   approved,
   rejectionReason,
 }) {
-  if (!sellerId) return;
+  const fallbackSellerId = sellerId || product?.userid;
+  if (!fallbackSellerId) {
+    console.warn("[Featured] SKIP seller notify — missing sellerId");
+    return;
+  }
+
+  const seller =
+    (await User.findById(fallbackSellerId).select("name").lean().catch(() => null)) ||
+    (await User.findOne({ id: String(fallbackSellerId) }).select("_id name").lean());
+  const resolvedSellerId = seller?._id || fallbackSellerId;
   const productName = productLabel(product);
   const expiryDate = placement.expiresAt
     ? new Date(placement.expiresAt).toLocaleDateString("en-IN")
     : "—";
-  await notify({
-    userId: sellerId,
-    event: approved
-      ? NOTIFICATION_EVENTS.FEATURED_FREE_PLAN_APPROVED
-      : NOTIFICATION_EVENTS.FEATURED_FREE_PLAN_REJECTED,
+  const event = approved
+    ? NOTIFICATION_EVENTS.FEATURED_FREE_PLAN_APPROVED
+    : NOTIFICATION_EVENTS.FEATURED_FREE_PLAN_REJECTED;
+  const route = `/viewproduct/${product._id}`;
+  const title = approved ? "Free Plan approved" : "Free Plan request declined";
+  const body = approved
+    ? `${productName} is now featured on TRUCKS99 until ${expiryDate}.`
+    : `Your Free Plan request for ${productName} was not approved.${
+        rejectionReason ? ` ${rejectionReason}` : ""
+      }`;
+
+  console.log("[FCM][Featured] seller decision →", {
+    event,
+    sellerId: String(resolvedSellerId),
+    productId: String(product._id),
+    placementId: String(placement._id),
+    approved,
+  });
+
+  const result = await notify({
+    userId: resolvedSellerId,
+    event,
     data: {
+      userName: seller?.name || "User",
       productName,
       expiryDate,
       rejectionReason: rejectionReason || "",
@@ -347,14 +375,57 @@ async function notifySellerFreePlanDecision({
     metadata: {
       productId: String(product._id),
       placementId: String(placement._id),
+      requestId: String(placement._id),
       requestStatus: approved ? "approved" : "rejected",
+      status: approved ? "approved" : "rejected",
       source: "free_plan",
-      route: `/portal/viewproduct/${product._id}`,
+      route,
       postType: "PRODUCT",
+      entityType: "PRODUCT",
+      entityId: String(product._id),
+      fcmType: event,
+      ownerId: String(resolvedSellerId),
     },
     channelsOverride: ["in_app", "push"],
   }).catch((err) => {
     console.error("[Featured] seller free-plan notification failed:", err.message);
+    return null;
+  });
+
+  const push = result?.results?.channels?.push;
+  console.log("[FCM][Featured] seller notify result →", {
+    event,
+    sellerId: String(resolvedSellerId),
+    ok: result?.ok,
+    skipped: result?.skipped,
+    skipReason: result?.reason,
+    pushSent: push?.sent ?? null,
+    pushError: push?.error || null,
+    deviceCount: push?.deviceCount ?? null,
+  });
+
+  if (push?.sent) return;
+
+  const fallback = await sendPushToUser(resolvedSellerId, title, body, {
+    type: event,
+    productId: String(product._id),
+    postId: String(product._id),
+    requestId: String(placement._id),
+    postType: "PRODUCT",
+    entityType: "PRODUCT",
+    status: approved ? "approved" : "rejected",
+    route,
+    ownerId: String(resolvedSellerId),
+  }).catch((err) => {
+    console.error("[FCM][Featured] seller Firebase fallback failed:", err.message);
+    return null;
+  });
+
+  console.log("[FCM][Featured] seller Firebase fallback →", {
+    event,
+    sellerId: String(resolvedSellerId),
+    sent: fallback?.sent ?? false,
+    error: fallback?.error || null,
   });
 }
 
