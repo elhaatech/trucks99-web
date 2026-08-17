@@ -133,7 +133,7 @@ export default function UserProductFavoritesPage() {
         </Box>
 
         {!loading && products.length > 0 ? (
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, alignItems: "center" }}>
+          <Box sx={{ display: "flex", gap: 1.5, alignItems: "center" }}>
             <SortDropdown
               value={sortBy}
               onChange={(v) => {

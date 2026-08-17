@@ -80,7 +80,7 @@ export function FeaturedVehiclesGrid({
           product={product}
           onClick={onViewDetails}
           showViewAction
-          viewLabel="View Details"
+          viewLabel="View Listing"
           badge={{ label: "Featured", color: "#f97316" }}
         />
       ))}

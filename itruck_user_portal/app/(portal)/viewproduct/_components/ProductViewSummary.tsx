@@ -120,6 +120,32 @@ export function ProductViewSummary({
     }
   }, [shareText, url, handleShareClose, handleCopyLink]);
 
+  const handleInstagram = useCallback(async () => {
+    handleShareClose();
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(url);
+        notify({ type: "success", message: "Link copied! You can paste it once Instagram opens" });
+      } catch {
+        /* clipboard unavailable */
+      }
+    }
+    if (typeof window === "undefined") return;
+    try {
+      const iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.src = "instagram://app";
+      document.body.appendChild(iframe);
+      setTimeout(() => {
+        if (document.body.contains(iframe)) document.body.removeChild(iframe);
+      }, 1500);
+    } catch {
+      /* deep link failed silently; ignore and fall through to website */
+    }
+    const w = window.open("https://www.instagram.com", "_blank", "noopener,noreferrer");
+    if (w) w.opener = null;
+  }, [url, notify, handleShareClose]);
+
   const showShare = Boolean(shareUrl || (typeof window !== "undefined" && window.location.href));
 
   return (
@@ -215,7 +241,7 @@ export function ProductViewSummary({
                 <FacebookIcon sx={{ fontSize: 22, color: "#1877F2" }} />
                 <Typography sx={{ fontSize: 14, fontWeight: 500 }}>Facebook</Typography>
               </MenuItem>
-              <MenuItem onClick={handleCopyLink} sx={{ gap: 1.5, py: 1 }}>
+              <MenuItem onClick={handleInstagram} sx={{ gap: 1.5, py: 1 }}>
                 <InstagramIcon sx={{ fontSize: 22, color: "#E4405F" }} />
                 <Typography sx={{ fontSize: 14, fontWeight: 500 }}>Instagram</Typography>
               </MenuItem>

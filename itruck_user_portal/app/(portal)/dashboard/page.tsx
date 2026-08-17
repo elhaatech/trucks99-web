@@ -411,7 +411,6 @@ export default function UserProductDashboardPage() {
         <VehicleGrid
           products={exploreList.items}
           loading={exploreList.loading}
-          isLoadingMore={exploreList.loadingMore}
           hasMore={exploreList.hasMore}
           sentinelRef={exploreList.sentinelRef}
           onProductClick={(id) => void handleViewProduct(id)}

@@ -309,7 +309,6 @@ export default function UserProductListContent() {
           <VehicleGrid
             products={list.items}
             loading={list.loading}
-            isLoadingMore={list.loadingMore}
             hasMore={list.hasMore}
             sentinelRef={list.sentinelRef}
             layout={layout}

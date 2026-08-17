@@ -27,6 +27,7 @@ export function ProductViewBreadcrumbs({ title, onNavigate }: ProductViewBreadcr
         flexWrap: "wrap",
         alignItems: "center",
         gap: 0.5,
+        mt: { xs: 1.25, md: 2.5 },
         mb: 2,
         fontSize: 13,
       }}

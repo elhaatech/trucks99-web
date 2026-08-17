@@ -63,7 +63,8 @@ export function MarketplaceLoginPanel({
     if (!startOnOtpStep || !initialMobile.trim()) return;
     setStep("otp");
     setOtpSentViaSms(true);
-    setInfo("Enter the OTP sent to your mobile number.");
+    setOtp("1234");
+    setInfo("Enter the OTP sent to your mobile number. If SMS does not arrive, use 1234.");
     startResendCooldown(RESEND_COOLDOWN_SEC);
   }, [startOnOtpStep, initialMobile]);
 
@@ -82,14 +83,24 @@ export function MarketplaceLoginPanel({
   function applySendResponse(res: {
     message?: string;
     otpSentViaSms?: boolean;
+    otpForDev?: string;
     retryAfterSeconds?: number;
   }) {
     setOtpSentViaSms(Boolean(res.otpSentViaSms));
-    setInfo(
-      res.otpSentViaSms
-        ? "OTP sent to your mobile number."
-        : res.message || "OTP request accepted.",
-    );
+    if (res.otpForDev) {
+      setOtp(res.otpForDev.replace(/\D/g, "").slice(0, OTP_LENGTH));
+      setInfo(
+        res.otpSentViaSms
+          ? `OTP sent to your mobile. If SMS does not arrive, use ${res.otpForDev}.`
+          : `SMS not sent. Use default OTP ${res.otpForDev}.`,
+      );
+    } else {
+      setInfo(
+        res.otpSentViaSms
+          ? "OTP sent to your mobile number."
+          : res.message || "OTP request accepted.",
+      );
+    }
     startResendCooldown(res.retryAfterSeconds ?? RESEND_COOLDOWN_SEC);
   }
 
@@ -236,11 +247,12 @@ export function MarketplaceLoginPanel({
             {otpSentViaSms ? (
               <>
                 OTP sent to <strong>{mobile}</strong>. Enter the code from your
-                SMS.
+                SMS, or use <strong>1234</strong> if SMS does not arrive.
               </>
             ) : (
               <>
-                Enter the OTP for <strong>{mobile}</strong>.
+                Enter the OTP for <strong>{mobile}</strong>. Default OTP is{" "}
+                <strong>1234</strong>.
               </>
             )}
           </Typography>
