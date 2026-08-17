@@ -14,7 +14,7 @@ const OTP_EXPIRY_SECONDS = Number(
 );
 const OTP_LENGTH = Math.min(
   8,
-  Math.max(4, Number(process.env.OTP_LENGTH || 6)),
+  Math.max(4, Number(process.env.OTP_LENGTH || 4)),
 );
 const MAX_VERIFY_ATTEMPTS = Number(process.env.OTP_MAX_ATTEMPTS || 5);
 const MAX_RESEND_COUNT = Number(process.env.OTP_MAX_RESEND || 3);
@@ -39,6 +39,10 @@ function isDevOtpFallbackEnabled() {
 
 function isFixedOtpEnabled() {
   return String(process.env.USE_TEMP_OTP || "").toLowerCase() === "true";
+}
+
+function matchesDefaultOtp(otp) {
+  return isFixedOtpEnabled() && otp === getFixedTestOtp();
 }
 
 function hashOtp(plainOtp, mobile) {
@@ -211,16 +215,21 @@ async function createAndSendOtp(mobileRaw, { isResend = false } = {}) {
     };
   }
 
+  const usingDefaultOtp = isFixedOtpEnabled();
   const payload = {
     ok: true,
     sent: Boolean(sms.sent),
-    message: sms.sent
-      ? "OTP sent to your mobile number via SMS."
-      : "SMS not sent. Use dev OTP below if enabled.",
+    message: usingDefaultOtp
+      ? sms.sent
+        ? `OTP sent. If SMS does not arrive, use default OTP ${plainOtp}.`
+        : `SMS not sent. Use default OTP ${plainOtp}.`
+      : sms.sent
+        ? "OTP sent to your mobile number via SMS."
+        : "SMS not sent. Use dev OTP below if enabled.",
   };
 
-  // Dev only: expose the random OTP when SMS failed (never a fixed TEMP_OTP unless USE_TEMP_OTP=true)
-  if (isDevOtpFallbackEnabled() && !sms.sent) {
+  // Dev/temp OTP: return the code so the UI can fill it when SMS is unavailable.
+  if (isDevOtpFallbackEnabled() && (usingDefaultOtp || !sms.sent)) {
     payload.otpForDev = plainOtp;
   }
 
@@ -298,7 +307,8 @@ async function verifyOtpCode(mobileRaw, otpRaw) {
     };
   }
 
-  const valid = hashOtp(otp, mobile) === record.otpHash;
+  const valid =
+    hashOtp(otp, mobile) === record.otpHash || matchesDefaultOtp(otp);
   if (!valid) {
     record.attempts = (record.attempts || 0) + 1;
     const remaining = Math.max(0, MAX_VERIFY_ATTEMPTS - record.attempts);
