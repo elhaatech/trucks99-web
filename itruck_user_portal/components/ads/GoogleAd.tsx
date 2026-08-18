@@ -52,9 +52,10 @@ function resolveSlot(props: GoogleAdProps): string {
   return DEFAULT_ADSENSE_SLOT;
 }
 
-function ensureAdsenseScript(client: string): void {
+function ensureAdsenseScript(): void {
   if (typeof document === "undefined") return;
-  const src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`;
+  const src =
+    "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2600927533607135";
   if (document.querySelector(`script[src*="adsbygoogle.js"]`)) return;
   const script = document.createElement("script");
   script.async = true;
@@ -63,6 +64,14 @@ function ensureAdsenseScript(client: string): void {
   document.head.appendChild(script);
 }
 
+/**
+ * HTML equivalent of the AdSense AMP unit:
+ *   <amp-ad width="100vw" height="320" type="adsense"
+ *     data-ad-client="ca-pub-2600927533607135"
+ *     data-ad-slot="6835182258"
+ *     data-auto-format="rspv" data-full-width="">
+ * AMP tags cannot run in this Next.js app. Same client/slot/size is used here.
+ */
 export function GoogleAd({
   slot: slotProp,
   placement,
@@ -81,11 +90,12 @@ export function GoogleAd({
     ? parseAdUnit(adUnitId).client || GOOGLE_ADS_CLIENT
     : GOOGLE_ADS_CLIENT;
   const isPopup = variant === "popup";
+  const adHeight = isPopup ? 250 : 320;
 
   useEffect(() => {
     if (!enabled || !slot) return;
 
-    ensureAdsenseScript(client);
+    ensureAdsenseScript();
 
     const element = insRef.current;
     if (!element) return;
@@ -119,9 +129,9 @@ export function GoogleAd({
       component="div"
       className={className ? `google-ad-container ${className}` : "google-ad-container"}
       sx={{
-        width: "100%",
-        minHeight: isPopup ? 250 : 90,
         display: "block",
+        width: "100%",
+        height: adHeight,
         overflow: "visible",
         position: "relative",
       }}
@@ -155,7 +165,11 @@ export function GoogleAd({
       <ins
         ref={insRef}
         className="adsbygoogle"
-        style={{ display: "block" }}
+        style={{
+          display: "block",
+          width: "100%",
+          height: adHeight,
+        }}
         data-ad-client={client}
         data-ad-slot={slot}
         data-ad-format={isPopup ? "rectangle" : format}

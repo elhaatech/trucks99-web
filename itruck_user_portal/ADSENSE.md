@@ -27,9 +27,16 @@ The layout also sets:
 
 ## Ad unit snippet
 
+AdSense shows two snippets for the same unit. This app is Next.js, **not AMP**, so we use the HTML snippet. The AMP snippet (`amp-ad` + `cdn.ampproject.org`) will not run here.
+
+HTML (used in this app):
+
 ```html
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2600927533607135"
+     crossorigin="anonymous"></script>
+
 <ins class="adsbygoogle"
-     style="display:block"
+     style="display:block;width:100%;height:320px"
      data-ad-client="ca-pub-2600927533607135"
      data-ad-slot="6835182258"
      data-ad-format="auto"
@@ -38,6 +45,22 @@ The layout also sets:
   (adsbygoogle = window.adsbygoogle || []).push({});
 </script>
 ```
+
+AMP (do not use in this Next.js app):
+
+```html
+<script async custom-element="amp-ad" src="https://cdn.ampproject.org/v0/amp-ad-0.1.js"></script>
+<amp-ad width="100vw" height="320"
+     type="adsense"
+     data-ad-client="ca-pub-2600927533607135"
+     data-ad-slot="6835182258"
+     data-auto-format="rspv"
+     data-full-width="">
+  <div overflow=""></div>
+</amp-ad>
+```
+
+Same client, slot, and 320px responsive size. The HTML version is what `GoogleAd` renders.
 
 In the app this is the reusable component:
 
