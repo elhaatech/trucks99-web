@@ -75,8 +75,6 @@ export function GoogleAd({
 }: GoogleAdProps) {
   const pathname = usePathname();
   const insRef = useRef<HTMLModElement | null>(null);
-  const pushedRef = useRef(false);
-  const [mounted, setMounted] = useState(false);
   const [showLocalNote, setShowLocalNote] = useState(false);
   const slot = resolveSlot({ slot: slotProp, placement, adUnitId });
   const client = adUnitId
@@ -85,63 +83,34 @@ export function GoogleAd({
   const isPopup = variant === "popup";
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    pushedRef.current = false;
-    setShowLocalNote(false);
-  }, [pathname, slot]);
-
-  useEffect(() => {
-    if (!enabled || !slot || !mounted) return;
+    if (!enabled || !slot) return;
 
     ensureAdsenseScript(client);
 
-    let attempts = 0;
-    let timer = 0;
+    const element = insRef.current;
+    if (!element) return;
+    if (element.getAttribute("data-adsbygoogle-status")) return;
 
-    const tryPush = () => {
-      const element = insRef.current;
-      if (!element || pushedRef.current) return;
-      if (element.getAttribute("data-adsbygoogle-status")) {
-        pushedRef.current = true;
-        return;
-      }
-
-      const width = element.getBoundingClientRect().width;
-      if (width < 1 && attempts < 25) {
-        attempts += 1;
-        timer = window.setTimeout(tryPush, 100);
-        return;
-      }
-
-      try {
-        pushedRef.current = true;
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-      } catch {
-        pushedRef.current = false;
-      }
-    };
-
-    timer = window.setTimeout(tryPush, 400);
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch {
+      // Already initialized (React Strict Mode).
+    }
 
     const localNoteTimer = window.setTimeout(() => {
-      const element = insRef.current;
       const filled =
-        element?.getAttribute("data-adsbygoogle-status") === "done" ||
-        element?.getAttribute("data-adsbygoogle-status") === "filled" ||
-        Boolean(element?.querySelector("iframe"));
+        element.getAttribute("data-adsbygoogle-status") === "done" ||
+        element.getAttribute("data-adsbygoogle-status") === "filled" ||
+        Boolean(element.querySelector("iframe"));
       if (!filled && isLocalDevelopmentHost()) {
         setShowLocalNote(true);
       }
     }, 2500);
 
     return () => {
-      window.clearTimeout(timer);
       window.clearTimeout(localNoteTimer);
     };
-  }, [enabled, slot, client, pathname, mounted]);
+  }, [enabled, slot, client, pathname]);
 
   if (!enabled || !slot) return null;
 
@@ -151,14 +120,10 @@ export function GoogleAd({
       className={className ? `google-ad-container ${className}` : "google-ad-container"}
       sx={{
         width: "100%",
-        minWidth: 250,
-        minHeight: isPopup ? 250 : 280,
+        minHeight: isPopup ? 250 : 90,
         display: "block",
         overflow: "visible",
         position: "relative",
-        bgcolor: "#f8fafc",
-        border: "1px solid #e2e8f0",
-        borderRadius: 1,
       }}
     >
       {showLocalNote ? (
@@ -173,6 +138,9 @@ export function GoogleAd({
             textAlign: "center",
             pointerEvents: "none",
             zIndex: 1,
+            bgcolor: "#f8fafc",
+            border: "1px solid #e2e8f0",
+            borderRadius: 1,
           }}
         >
           <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 520, lineHeight: 1.6 }}>
@@ -184,26 +152,15 @@ export function GoogleAd({
           </Typography>
         </Box>
       ) : null}
-      {mounted ? (
-        <ins
-          ref={insRef}
-          className="adsbygoogle"
-          style={{
-            display: "block",
-            width: "100%",
-            minWidth: 250,
-            minHeight: isPopup ? 250 : 280,
-          }}
-          data-ad-client={client}
-          data-ad-slot={slot}
-          data-ad-format={isPopup ? "rectangle" : format}
-          {...(isPopup || !responsive
-            ? {}
-            : { "data-full-width-responsive": "true" })}
-        />
-      ) : (
-        <Box sx={{ width: "100%", minHeight: isPopup ? 250 : 280 }} />
-      )}
+      <ins
+        ref={insRef}
+        className="adsbygoogle"
+        style={{ display: "block" }}
+        data-ad-client={client}
+        data-ad-slot={slot}
+        data-ad-format={isPopup ? "rectangle" : format}
+        {...(isPopup || !responsive ? {} : { "data-full-width-responsive": "true" })}
+      />
     </Box>
   );
 }

@@ -30,6 +30,7 @@ export function GoogleAdBanner({
         my: { xs: 3, md: 4 },
         width: "100%",
         maxWidth: "100%",
+        overflow: "visible",
       }}
     >
       <Typography

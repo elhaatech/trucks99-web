@@ -43,7 +43,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
       </head>
-      <body className={`${inter.variable} ${sora.variable} antialiased`} suppressHydrationWarning style={{ overflowX: "hidden" }}>
+      <body className={`${inter.variable} ${sora.variable} antialiased`} suppressHydrationWarning>
         <ThemeRegistry>{children}</ThemeRegistry>
       </body>
     </html>
