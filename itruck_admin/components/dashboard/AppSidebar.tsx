@@ -120,65 +120,6 @@ function LoadIcon() {
   );
 }
 
-function MaterialIcon() {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M21 8l-9-5-9 5v8l9 5 9-5V8z" />
-      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-      <line x1="12" y1="22.08" x2="12" y2="12" />
-    </svg>
-  );
-}
-
-function VehicleTypeIcon() {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M5 17H3a1 1 0 0 1-1-1v-4l2-5h12l2 5v4a1 1 0 0 1-1 1h-2" />
-      <circle cx="7.5" cy="17.5" r="2.5" />
-      <circle cx="16.5" cy="17.5" r="2.5" />
-      <polyline points="3 11 5 7 16 7 18 11" />
-    </svg>
-  );
-}
-
-function VehicleBodyTypeIcon() {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="1" y="6" width="14" height="10" rx="1" />
-      <path d="M15 9h3l3 4v3h-6V9z" />
-      <circle cx="5.5" cy="18.5" r="1.5" />
-      <circle cx="18.5" cy="18.5" r="1.5" />
-    </svg>
-  );
-}
-
 function TruckIcon() {
   return (
     <svg
@@ -443,11 +384,6 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   roles: <RolesIcon />,
   permission: <RolesIcon />,
   user: <PersonIcon />,
-  load: <LoadIcon />,
-  material: <MaterialIcon />,
-  vehicleType: <VehicleTypeIcon />,
-  vehicleBodyType: <VehicleBodyTypeIcon />,
-  truck: <TruckIcon />,
   incomeExpenseCategory: <IncomeCategoryIcon />,
   advertisement: <AdvertisementIcon />,
   incomeExpense: <IncomeExpenseIcon />,
@@ -680,7 +616,22 @@ export function AppSidebar({
           gap: 0.25,
         }}
       >
+        {/* Hidden temporarily - not needed for now, keep code for future use */}
         {visibleMainNav.map((item) => {
+          // Hidden temporarily - not needed for now, keep code for future use
+          // incomeExpenseCategory → Transaction Categories
+          // incomeExpense         → Transaction
+          // reports              → Report
+          // cms                  → CMS
+          if (
+            item.key === "incomeExpenseCategory" ||
+            item.key === "incomeExpense" ||
+            item.key === "reports" ||
+            item.key === "cms"
+          ) {
+            return false;
+          }
+
           const hasChildren = !!item.children && item.children.length > 0;
           const isSubOpen = !!openSubMenus[item.key];
           const dashboardHref = routes.dashboard();

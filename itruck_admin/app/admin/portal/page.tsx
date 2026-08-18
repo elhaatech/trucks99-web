@@ -206,7 +206,7 @@ function DashboardContent() {
         </Alert>
       )}
 
-      <AdvertisementSlot />
+      s
 
       {d.loading && !o ? (
         <StatCardSkeleton count={4} />
