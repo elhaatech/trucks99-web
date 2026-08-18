@@ -18,7 +18,13 @@ import {
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 import { VehicleCard } from "@/app/common/components/buysell/VehicleCard";
-import { CityFilterDropdown } from "@/app/common/components/buysell/CityFilterDropdown";
+import { StateFilterDropdown } from "@/app/common/components/buysell/StateFilterDropdown";
+import {
+  getLocationStatesByCountry,
+  cacheLocationStates,
+  resolveStateIdByName,
+  INDIA_COUNTRY_ID,
+} from "@/model/services/location";
 
 type UserRelatedProductsSectionProps = {
   sellerId: string;
@@ -64,7 +70,7 @@ export function UserRelatedProductsSection({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [subcategoryFilter, setSubcategoryFilter] = useState<SubcategoryFilterValue>(null);
-  const [cityFilter, setCityFilter] = useState("");
+  const [stateFilter, setStateFilter] = useState("");
 
   const filteredProducts = subcategoryFilter?.id
     ? products.filter((product) => {
@@ -83,24 +89,53 @@ export function UserRelatedProductsSection({
     }
     setLoading(true);
     setError("");
-    postBuySellProductsByOwner({
-      ownerId: sellerId,
-      excludeProductId,
-      page: 1,
-      limit: 12,
-      cityId: cityFilter || undefined,
-      countryId: "69c60d5a50d03d49adb72bc3",
-      stateId: "69c60e80e9c7314beecc1fbb",
-    })
-      .then((data) => {
-        const items = data.products ?? [];
-        setProducts(items);
-      })
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "Could not load related listings"),
-      )
-      .finally(() => setLoading(false));
-  }, [sellerId, excludeProductId, isLoggedIn, cityFilter]);
+
+    let cancelled = false;
+    const controller = new AbortController();
+
+    (async () => {
+      try {
+        // Resolve the selected state NAME to its location id, reusing the
+        // cached states list (populated by the State filter dropdown) when
+        // available, otherwise fetch and cache it first.
+        let stateId = stateFilter
+          ? resolveStateIdByName(INDIA_COUNTRY_ID, stateFilter)
+          : "";
+
+        if (stateFilter && !stateId) {
+          const statesRes = await getLocationStatesByCountry(INDIA_COUNTRY_ID, {
+            limit: 2000,
+          });
+          if (cancelled || controller.signal.aborted) return;
+          const states = Array.isArray(statesRes?.items) ? statesRes.items : [];
+          cacheLocationStates(INDIA_COUNTRY_ID, states);
+          stateId = resolveStateIdByName(INDIA_COUNTRY_ID, stateFilter) || "";
+        }
+
+        const data = await postBuySellProductsByOwner({
+          ownerId: sellerId,
+          excludeProductId,
+          page: 1,
+          limit: 12,
+          countryId: "",
+          stateId: stateId || undefined,
+        });
+        if (cancelled) return;
+        setProducts(data.products ?? []);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Could not load related listings");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [sellerId, excludeProductId, isLoggedIn, stateFilter]);
 
   if (!sellerId) return null;
 
@@ -139,11 +174,11 @@ export function UserRelatedProductsSection({
       </Box>
 
       <Box sx={{ mb: 2 }}>
-        <CityFilterDropdown
-          label="City"
-          value={cityFilter}
-          onChange={setCityFilter}
-          placeholder="All cities"
+        <StateFilterDropdown
+          label="State"
+          value={stateFilter}
+          onChange={setStateFilter}
+          placeholder="All states"
           sx={{ maxWidth: 240 }}
         />
       </Box>

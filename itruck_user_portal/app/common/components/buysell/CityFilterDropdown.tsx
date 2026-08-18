@@ -2,12 +2,32 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { SearchableSelect, type SelectOption } from "@/components/common/SearchableSelect";
-import { getLocationStatesByCountry, getLocationCitiesByState } from "@/model/services/location";
+import {
+  getLocationStatesByCountry,
+  getLocationCitiesByState,
+  cacheLocationStates,
+  resolveStateIdByName,
+  INDIA_COUNTRY_ID,
+} from "@/model/services/location";
 
-const DEFAULT_COUNTRY_ID = "69c60d5a50d03d49adb72bc3";
 const TARGET_STATE_NAME = "Tamil Nadu";
 
-export function useTamilNaduCities() {
+export function CityFilterDropdown({
+  value,
+  onChange,
+  label = "City",
+  placeholder = "All cities",
+  /** When set, only cities belonging to this state (by name) are shown. */
+  selectedStateName,
+  sx,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  label?: string;
+  placeholder?: string;
+  selectedStateName?: string;
+  sx?: Record<string, unknown>;
+}) {
   const [cityOptions, setCityOptions] = useState<SelectOption[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -18,14 +38,30 @@ export function useTamilNaduCities() {
     (async () => {
       setLoading(true);
       try {
-        const statesRes = await getLocationStatesByCountry(DEFAULT_COUNTRY_ID, {
-          limit: 2000,
-        });
-        if (cancelled || controller.signal.aborted) return;
+        // Resolve the selected state's id, reusing the cached states list when
+        // available (the State filter dropdown populates it on mount).
+        let stateId = selectedStateName
+          ? resolveStateIdByName(INDIA_COUNTRY_ID, selectedStateName)
+          : "";
 
-        const states = Array.isArray(statesRes?.items) ? statesRes.items : [];
-        const tamilNadu = states.find((s) => s.name === TARGET_STATE_NAME);
-        const stateId = tamilNadu?._id || tamilNadu?.id || tamilNadu?.uuid || "";
+        if (!stateId) {
+          const statesRes = await getLocationStatesByCountry(INDIA_COUNTRY_ID, {
+            limit: 2000,
+          });
+          if (cancelled || controller.signal.aborted) return;
+
+          const states = Array.isArray(statesRes?.items) ? statesRes.items : [];
+          cacheLocationStates(INDIA_COUNTRY_ID, states);
+
+          const target = selectedStateName
+            ? states.find(
+                (s) =>
+                  (s.name || "").trim().toLowerCase() ===
+                  selectedStateName.trim().toLowerCase(),
+              )
+            : states.find((s) => s.name === TARGET_STATE_NAME);
+          stateId = target?._id || target?.id || target?.uuid || "";
+        }
 
         if (!stateId) {
           setCityOptions([]);
@@ -62,25 +98,7 @@ export function useTamilNaduCities() {
       cancelled = true;
       controller.abort();
     };
-  }, []);
-
-  return { cityOptions, cityLoading: loading };
-}
-
-export function CityFilterDropdown({
-  value,
-  onChange,
-  label = "City",
-  placeholder = "All cities",
-  sx,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  label?: string;
-  placeholder?: string;
-  sx?: Record<string, unknown>;
-}) {
-  const { cityOptions, cityLoading } = useTamilNaduCities();
+  }, [selectedStateName]);
 
   const handleChange = useCallback(
     (newValue: string) => {
@@ -95,8 +113,8 @@ export function CityFilterDropdown({
       value={value}
       onChange={handleChange}
       options={cityOptions}
-      placeholder={placeholder}
-      loading={cityLoading}
+      placeholder={selectedStateName ? "All cities" : placeholder}
+      loading={loading}
       sx={sx}
     />
   );

@@ -35,6 +35,7 @@ export type FilterState = {
   make_year_min: string;
   make_year_max: string;
   city_id: string;
+  state_id: string;
 };
 
 export const EMPTY_FORM: FormState = {
@@ -69,4 +70,5 @@ export const EMPTY_FILTERS: FilterState = {
   make_year_min: "",
   make_year_max: "",
   city_id: "",
+  state_id: "",
 };
