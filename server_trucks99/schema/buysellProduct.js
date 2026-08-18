@@ -20,7 +20,10 @@ const buySellSpecificationSchema = new mongoose.Schema(
 const buySellSchema = new mongoose.Schema(
   {
     id: { type: String, default: randomUUID, unique: true, index: true },
+    // Human listing number, e.g. "18-08-2026 - BS256". Server-generated only.
     bsNumber: { type: String, unique: true, sparse: true, index: true },
+    // Vehicle ID: YYMM + 6-digit monthly sequence (e.g. 2608000127). Server-generated only.
+    vehicleId: { type: String, unique: true, sparse: true, index: true },
     category_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",

@@ -40,8 +40,9 @@ export function filterBuySellBySearch(
     const desc = (row.description ?? "").toLowerCase();
     const addr = (row.address ?? "").toLowerCase();
     const bs = (row.bsNumber ?? "").toLowerCase();
+    const vehicleId = (row.vehicleId ?? "").toLowerCase();
     const matchesSearch =
-      !q || desc.includes(q) || addr.includes(q) || bs.includes(q);
+      !q || desc.includes(q) || addr.includes(q) || bs.includes(q) || vehicleId.includes(q);
     const matchesUser = !userid || row.userid === userid;
     return matchesSearch && matchesUser;
   });

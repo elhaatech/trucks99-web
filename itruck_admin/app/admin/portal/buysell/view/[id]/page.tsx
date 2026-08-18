@@ -471,7 +471,8 @@ export default function BuySellViewPage() {
                     label="Posted"
                     value={item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "—"}
                   />
-                  {item.bsNumber && <DetailRow label="Listing ID" value={item.bsNumber} />}
+                  {item.bsNumber && <DetailRow label="BS No" value={item.bsNumber} />}
+                  {item.vehicleId && <DetailRow label="Vehicle ID" value={item.vehicleId} />}
                 </Box>
 
                 <Typography sx={{ fontFamily: T.font.body, fontSize: 12, letterSpacing: "0.05em", textTransform: "uppercase", color: T.color.textMuted, mb: 0.75 }}>

@@ -23,9 +23,12 @@ import { getBuySellImageUrl } from "@/lib/buysellUtils";
 import { getBuySellRowId, type BuySellProduct } from "@/model/services/buysellapi";
 import {
   formatProductPrice,
+  formatVehicleIdDisplay,
+  getProductBsNumber,
   getProductLocation,
   getProductSubtitle,
   getProductTitle,
+  getProductVehicleId,
 } from "./utils";
 
 
@@ -146,6 +149,8 @@ export function VehicleCard({
   const title = getProductTitle(product);
   const subtitle = getProductSubtitle(product);
   const location = getProductLocation(product);
+  const bsNumberLabel = getProductBsNumber(product);
+  const vehicleIdLabel = getProductVehicleId(product);
   const isList = layout === "list";
 
   const handleClick = () => onClick?.(productId);
@@ -287,6 +292,32 @@ export function VehicleCard({
           {subtitle ? (
             <Typography sx={{ fontSize: 13, color: T.color.textSecondary, mt: 0.35 }}>
               {subtitle}
+            </Typography>
+          ) : null}
+          {bsNumberLabel ? (
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: T.color.textMuted,
+                mt: 0.35,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {bsNumberLabel}
+            </Typography>
+          ) : null}
+          {vehicleIdLabel ? (
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: T.color.textMuted,
+                mt: 0.35,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {formatVehicleIdDisplay(vehicleIdLabel)}
             </Typography>
           ) : null}
           <VehicleSpecifications product={product} />

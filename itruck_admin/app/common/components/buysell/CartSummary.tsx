@@ -12,7 +12,7 @@ import FavoriteIcon from "@mui/icons-material/Favorite";
 import { alpha, useTheme } from "@mui/material/styles";
 import { getBuySellImageUrl } from "@/lib/buysellUtils";
 import { getBuySellRowId, type BuySellCartItem } from "@/model/services/buysellapi";
-import { formatProductPrice, getProductTitle } from "./utils";
+import { formatProductPrice, formatVehicleIdDisplay, getProductBsNumber, getProductTitle, getProductVehicleId } from "./utils";
 import { ProductStatusChip } from "@/app/admin/portal/buysell/_components/ProductStatusChip";
 import { PRODUCT_THEME as T } from "@/lib/theme";
 
@@ -88,9 +88,16 @@ export function CartItemRow({
         <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1 }}>
           <Box>
             <Typography fontWeight={700}>{getProductTitle(product)}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {product.bsNumber}
-            </Typography>
+            {getProductBsNumber(product) ? (
+              <Typography variant="body2" color="text.secondary">
+                {getProductBsNumber(product)}
+              </Typography>
+            ) : null}
+            {getProductVehicleId(product) ? (
+              <Typography variant="body2" color="text.secondary">
+                {formatVehicleIdDisplay(getProductVehicleId(product))}
+              </Typography>
+            ) : null}
           </Box>
           <IconButton
             color="error"

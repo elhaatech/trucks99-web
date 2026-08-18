@@ -79,7 +79,7 @@ async function computeUnreadCount(room, viewerId, viewerIsAdmin = false) {
 async function buildRoomResponse(room, viewerId, viewerIsAdmin = false) {
   const [product, seller, buyer, unreadCount] = await Promise.all([
     BuySellProduct.findById(room.productId)
-      .select("bsNumber description price images status")
+      .select("bsNumber vehicleId description price images status")
       .lean(),
     User.findById(room.sellerId).select("name email mobile").lean(),
     User.findById(room.buyerId).select("name email mobile").lean(),
@@ -95,6 +95,7 @@ async function buildRoomResponse(room, viewerId, viewerIsAdmin = false) {
       ? {
           _id: product._id,
           bsNumber: product.bsNumber || null,
+          vehicleId: product.vehicleId || null,
           title: product.description || "",
           price: product.price,
           image: product.images && product.images.length ? product.images[0] : null,
