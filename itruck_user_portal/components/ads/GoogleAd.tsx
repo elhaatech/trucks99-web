@@ -1,16 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
+import { useEffect, useRef } from "react";
 import {
   DEFAULT_ADSENSE_SLOT,
   GOOGLE_ADS_CLIENT,
   GOOGLE_ADS_INLINE_UNIT,
   GOOGLE_ADS_POPUP_UNIT,
   getAdSenseSlot,
-  isLocalDevelopmentHost,
   type AdSensePlacement,
 } from "./adsConfig";
 
@@ -37,6 +33,8 @@ export interface GoogleAdProps {
   variant?: GoogleAdVariant;
 }
 
+const initializedIns = new WeakSet<HTMLElement>();
+
 function parseAdUnit(adUnitId: string): { client: string; slot: string } {
   const [client, slot] = adUnitId.split("/");
   return {
@@ -52,26 +50,32 @@ function resolveSlot(props: GoogleAdProps): string {
   return DEFAULT_ADSENSE_SLOT;
 }
 
-function ensureAdsenseScript(): void {
-  if (typeof document === "undefined") return;
-  const src =
-    "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2600927533607135";
-  if (document.querySelector(`script[src*="adsbygoogle.js"]`)) return;
-  const script = document.createElement("script");
-  script.async = true;
-  script.src = src;
-  script.crossOrigin = "anonymous";
-  document.head.appendChild(script);
+function waitForAdsbygoogle(timeoutMs = 8000): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") {
+      resolve(false);
+      return;
+    }
+    if (typeof window.adsbygoogle !== "undefined") {
+      resolve(true);
+      return;
+    }
+
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      if (typeof window.adsbygoogle !== "undefined") {
+        window.clearInterval(timer);
+        resolve(true);
+        return;
+      }
+      if (Date.now() - started >= timeoutMs) {
+        window.clearInterval(timer);
+        resolve(false);
+      }
+    }, 50);
+  });
 }
 
-/**
- * HTML equivalent of the AdSense AMP unit:
- *   <amp-ad width="100vw" height="320" type="adsense"
- *     data-ad-client="ca-pub-2600927533607135"
- *     data-ad-slot="6835182258"
- *     data-auto-format="rspv" data-full-width="">
- * AMP tags cannot run in this Next.js app. Same client/slot/size is used here.
- */
 export function GoogleAd({
   slot: slotProp,
   placement,
@@ -82,100 +86,101 @@ export function GoogleAd({
   enabled = true,
   variant = "inline",
 }: GoogleAdProps) {
-  const pathname = usePathname();
   const insRef = useRef<HTMLModElement | null>(null);
-  const [showLocalNote, setShowLocalNote] = useState(false);
   const slot = resolveSlot({ slot: slotProp, placement, adUnitId });
   const client = adUnitId
     ? parseAdUnit(adUnitId).client || GOOGLE_ADS_CLIENT
     : GOOGLE_ADS_CLIENT;
   const isPopup = variant === "popup";
-  const adHeight = isPopup ? 250 : 320;
 
   useEffect(() => {
-    if (!enabled || !slot) return;
-
-    ensureAdsenseScript();
-
-    const element = insRef.current;
-    if (!element) return;
-    if (element.getAttribute("data-adsbygoogle-status")) return;
-
-    try {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch {
-      // Already initialized (React Strict Mode).
+    if (!enabled || !slot) {
+      console.warn("[AdSense] skip init: enabled or slot missing", { enabled, slot, placement });
+      return;
     }
 
-    const localNoteTimer = window.setTimeout(() => {
-      const filled =
-        element.getAttribute("data-adsbygoogle-status") === "done" ||
-        element.getAttribute("data-adsbygoogle-status") === "filled" ||
-        Boolean(element.querySelector("iframe"));
-      if (!filled && isLocalDevelopmentHost()) {
-        setShowLocalNote(true);
+    const element = insRef.current;
+    if (!element) {
+      console.error("[AdSense] <ins class=\"adsbygoogle\"> element is missing after mount");
+      return;
+    }
+
+    if (initializedIns.has(element) || element.getAttribute("data-adsbygoogle-status")) {
+      console.info("[AdSense] skip duplicate initialization", {
+        status: element.getAttribute("data-adsbygoogle-status"),
+        slot,
+      });
+      return;
+    }
+
+    let cancelled = false;
+
+    const run = async () => {
+      const scriptTag = document.querySelector<HTMLScriptElement>(
+        'script[src*="adsbygoogle.js"]',
+      );
+      console.info("[AdSense] script tag", scriptTag ? "found" : "MISSING", scriptTag?.src);
+
+      const ready = await waitForAdsbygoogle();
+      if (cancelled) return;
+
+      if (!ready && typeof window.adsbygoogle === "undefined") {
+        console.error(
+          "[AdSense] window.adsbygoogle does not exist after waiting. Script may be blocked (CSP, extension, or network).",
+        );
+      } else {
+        console.info("[AdSense] window.adsbygoogle exists", {
+          type: typeof window.adsbygoogle,
+        });
       }
-    }, 2500);
+
+      if (initializedIns.has(element) || element.getAttribute("data-adsbygoogle-status")) {
+        console.info("[AdSense] skip duplicate initialization after wait", { slot });
+        return;
+      }
+
+      const width = element.getBoundingClientRect().width;
+      console.info("[AdSense] ins element ready", {
+        slot,
+        client,
+        width,
+        height: element.getBoundingClientRect().height,
+      });
+
+      if (width < 1) {
+        console.error("[AdSense] ins width is 0; Google will not fill this unit");
+      }
+
+      try {
+        initializedIns.add(element);
+        window.adsbygoogle = window.adsbygoogle || [];
+        window.adsbygoogle.push({});
+        console.info("[AdSense] push({}) executed", { slot, client });
+      } catch (error) {
+        initializedIns.delete(element);
+        console.error("[AdSense] push({}) failed", error);
+      }
+    };
+
+    void run();
 
     return () => {
-      window.clearTimeout(localNoteTimer);
+      cancelled = true;
     };
-  }, [enabled, slot, client, pathname]);
+  }, [enabled, slot, client, placement]);
 
   if (!enabled || !slot) return null;
 
   return (
-    <Box
-      component="div"
-      className={className ? `google-ad-container ${className}` : "google-ad-container"}
-      sx={{
-        display: "block",
-        width: "100%",
-        height: adHeight,
-        overflow: "visible",
-        position: "relative",
-      }}
-    >
-      {showLocalNote ? (
-        <Box
-          sx={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            px: 3,
-            textAlign: "center",
-            pointerEvents: "none",
-            zIndex: 1,
-            bgcolor: "#f8fafc",
-            border: "1px solid #e2e8f0",
-            borderRadius: 1,
-          }}
-        >
-          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 520, lineHeight: 1.6 }}>
-            Google does not serve live ads on localhost. Slot{" "}
-            <Box component="span" sx={{ fontFamily: "monospace" }}>
-              {slot}
-            </Box>{" "}
-            is configured. Real ads appear on your published domain after AdSense approval.
-          </Typography>
-        </Box>
-      ) : null}
-      <ins
-        ref={insRef}
-        className="adsbygoogle"
-        style={{
-          display: "block",
-          width: "100%",
-          height: adHeight,
-        }}
-        data-ad-client={client}
-        data-ad-slot={slot}
-        data-ad-format={isPopup ? "rectangle" : format}
-        {...(isPopup || !responsive ? {} : { "data-full-width-responsive": "true" })}
-      />
-    </Box>
+    <ins
+      ref={insRef}
+      className={className ? `adsbygoogle ${className}` : "adsbygoogle"}
+      style={{ display: "block", width: "100%", height: isPopup ? "250px" : "320px" }}
+      data-ad-client={client}
+      data-ad-slot={slot}
+      data-ad-format={isPopup ? "rectangle" : format}
+      data-full-width-responsive={isPopup || !responsive ? undefined : "true"}
+    />
   );
 }
 

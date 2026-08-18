@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Sora } from "next/font/google";
 import ThemeRegistry from "./ThemeRegistry";
+import { AdsenseScript } from "@/components/ads/AdsenseScript";
 import { GOOGLE_ADS_CLIENT } from "@/components/ads/adsConfig";
 
 const inter = Inter({
@@ -36,14 +37,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2600927533607135"
-          crossOrigin="anonymous"
-        />
-      </head>
       <body className={`${inter.variable} ${sora.variable} antialiased`} suppressHydrationWarning>
+        <AdsenseScript />
         <ThemeRegistry>{children}</ThemeRegistry>
       </body>
     </html>

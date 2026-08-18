@@ -99,14 +99,16 @@ or:
 
 Ads are **not** placed in login, register, create/edit forms, chat, profile, EMI, cart, or navigation.
 
-## Slot IDs
+## Environment
 
-Edit `components/ads/adsConfig.ts` or `.env.local`:
+Local (`.env.local` in `itruck_user_portal`):
 
 ```env
 NEXT_PUBLIC_ADSENSE_CLIENT_ID=ca-pub-2600927533607135
 NEXT_PUBLIC_ADSENSE_SLOT=6835182258
 ```
+
+Production must set the same `NEXT_PUBLIC_*` values **at build time**, then rebuild. `.env.local` is not deployed automatically.
 
 Optional per-page overrides:
 
