@@ -195,28 +195,8 @@ export const VehicleCard = memo(function VehicleCard({
                >
                  {featuredMeta?.status === "Expired" ? "Expired" : "Expired"}
                </Box>
-             ) : null}
-             {badge && featuredStatus !== "expired" && featuredMeta?.status !== "Expired" ? (
-               <Box
-                 sx={{
-                   display: "inline-flex",
-                   alignItems: "center",
-                   px: 0.75,
-                   py: 0.25,
-                   borderRadius: 1,
-                   bgcolor: badge.color ? alpha(badge.color, 0.9) : alpha(INFO, 0.9),
-                   color: "#fff",
-                   fontWeight: 600,
-                   fontSize: 10,
-                   letterSpacing: "0.03em",
-                   textTransform: "uppercase",
-                   lineHeight: 1.4,
-                 }}
-               >
-                 {badge.label}
-               </Box>
-             ) : null}
-          </Box>
+              ) : null}
+           </Box>
 
 
           <IconButton
