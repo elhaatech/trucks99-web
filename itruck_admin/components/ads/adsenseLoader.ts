@@ -6,7 +6,7 @@ import {
 
 declare global {
   interface Window {
-    adsbygoogle?: Record<string, unknown>[];
+    adsbygoogle?: { push: (item?: Record<string, unknown>) => number } | Record<string, unknown>[];
     __itruckAdsenseReady?: boolean;
   }
 }
@@ -45,7 +45,7 @@ function isAdsenseReady(): boolean {
     typeof window !== "undefined" &&
     (window.__itruckAdsenseReady === true ||
       findAdsenseScriptTag()?.dataset.loaded === "true" ||
-      Array.isArray(window.adsbygoogle))
+      window.adsbygoogle != null)
   );
 }
 

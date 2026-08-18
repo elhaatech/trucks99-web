@@ -39,7 +39,11 @@ const NAV_ID_TO_PERMISSION_KEY: Record<string, string> = {
   specification: "specifications",                    // title_name: "Specifications"
   category: "categories",                             // title_name: "Categories"
   buySell: "buy_sell",                               // title_name: "Buy/sell"
+  buySellFeatured: "buy_sell",
   reports: "report",                                 // title_name: "Report"
+  reportsTruck: "report",
+  reportsLoad: "report",
+  reportsBuySell: "report",
 
   findLoad: "find_load",
   findTruck: "find_truck",
@@ -207,7 +211,8 @@ export function canViewNavItem(
 
   const permKey = NAV_ID_TO_PERMISSION_KEY[navId];
 
-  if (!permKey) return false;
+  // Unknown nav ids are not gated — hide only when we know the permission is denied.
+  if (!permKey) return true;
 
   return canAccess(role, permKey, "view");
 }
@@ -215,7 +220,8 @@ export function canViewNavItem(
 
 /** Strip query string, hash and trailing slash (except bare `/`). */
 export function normalizePathForMatch(pathname: string): string {
-  const noQuery = (pathname.split("?")[0] ?? pathname).split("#")[0] ?? pathname;
+  const safePath = pathname || "";
+  const noQuery = (safePath.split("?")[0] ?? safePath).split("#")[0] ?? safePath;
   if (noQuery.length > 1 && noQuery.endsWith("/")) return noQuery.replace(/\/+$/, "");
   return noQuery;
 }

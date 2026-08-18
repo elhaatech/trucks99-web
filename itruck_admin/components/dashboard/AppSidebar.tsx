@@ -455,6 +455,7 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   specification: <SpecificationIcon />,
   category: <SpecificationValueIcon />,
   buySell: <BuySellIcon />,
+  buySellFeatured: <BuySellIcon />,
   findLoad: <FindLoadIcon />,
   findTruck: <FindTruckIcon />,
   reports: <ReportsIcon />,
@@ -502,7 +503,7 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const theme = useTheme();
   const primary = theme.palette.primary.main;
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const role = user?.role ?? null;
 
   const [expanded, setExpanded] = React.useState(false);

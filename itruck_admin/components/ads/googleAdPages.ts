@@ -1,7 +1,7 @@
 import { getAppBasePath } from "@/lib/routes";
 
 /** Pages that show inline Google Ads and the session popup. */
-export function isGoogleAdEligiblePage(pathname: string): boolean {
+export function isGoogleAdEligiblePage(pathname?: string | null): boolean {
   const base = getAppBasePath().replace(/\/+$/, "");
   const path = (pathname || "").replace(/\/+$/, "") || base;
 

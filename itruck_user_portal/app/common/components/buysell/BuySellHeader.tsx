@@ -55,11 +55,20 @@ const NAV_LINKS = [
   { label: "Favorites", href: userProductRoutes.favorites() },
 ];
 
-const AUTH_ONLY_NAV_LABELS = new Set(["My Listings"]);
+/** Always show every marketplace nav item, including My Listings for guests. */
+export function getBuySellNavLinks(_isLoggedIn?: boolean) {
+  return NAV_LINKS;
+}
 
-export function getBuySellNavLinks(isLoggedIn: boolean) {
-  if (isLoggedIn) return NAV_LINKS;
-  return NAV_LINKS.filter((link) => !AUTH_ONLY_NAV_LABELS.has(link.label));
+/** Guests who tap My Listings go to login and return to listings after sign-in. */
+export function resolveBuySellNavHref(
+  link: { label: string; href: string },
+  isLoggedIn: boolean,
+): string {
+  if (link.label === "My Listings" && !isLoggedIn) {
+    return userProductRoutes.login(userProductRoutes.sellVehicle());
+  }
+  return link.href;
 }
 
 const MOBILE_EXTRA_LINKS = [
@@ -230,7 +239,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
             return (
               <Button
                 key={link.href}
-                onClick={() => router.push(link.href)}
+                onClick={() => router.push(resolveBuySellNavHref(link, isLoggedIn))}
                 sx={{
                   textTransform: "none",
                   fontWeight: active ? 700 : 500,

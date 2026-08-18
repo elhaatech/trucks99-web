@@ -27,7 +27,12 @@ import {
   Z_INDEX,
   TRANSITION,
 } from "@/lib/theme";
-import { BuySellHeader, getBuySellNavLinks, MOBILE_EXTRA_LINKS } from "./BuySellHeader";
+import {
+  BuySellHeader,
+  getBuySellNavLinks,
+  resolveBuySellNavHref,
+  MOBILE_EXTRA_LINKS,
+} from "./BuySellHeader";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 
 import { BuySellPageBack } from "./BuySellPageBack";
@@ -145,7 +150,7 @@ export function BuySellShell({ children }: BuySellShellProps) {
                 selected={selected}
                 onClick={() => {
                   setMobileOpen(false);
-                  router.push(link.href);
+                  router.push(resolveBuySellNavHref(link, isLoggedIn));
                 }}
                 sx={{
                   mb: 0.5,

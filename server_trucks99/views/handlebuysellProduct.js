@@ -2219,6 +2219,7 @@ buySellRouter.get("/featured-vehicles/admin", async (req, res) => {
           item.description,
           item.address,
           item.bsNumber,
+          item.vehicleId,
           item.sellerName,
           item.placement?.requester?.name,
           item.placement?.requester?.email,

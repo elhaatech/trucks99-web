@@ -54,7 +54,9 @@ export function VehicleSpecifications({ product }: { product: BuySellProduct }) 
 
     product.specifications?.forEach((spec) => {
       const name = spec.specification_info?.specification_name?.toLowerCase() || "";
-      const value = spec.specification_value_info?.specification_value_name || spec.specification_value;
+      const raw =
+        spec.specification_value_info?.specification_value_name || spec.specification_value;
+      const value = raw == null || raw === "" ? "" : String(raw);
 
       if (name.includes("year") || name.includes("make year")) year = value;
       else if (name.includes("fuel type") || name.includes("fuel")) fuelType = value;

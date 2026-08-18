@@ -4,8 +4,6 @@
  * You can override BASE via NEXT_PUBLIC_APP_BASE (e.g. "/admin/portal").
  */
 
-import { report } from "process";
-
 /** Normalized app base path (no trailing slash). Used by sidebar permission + active-state logic — must match link hrefs. */
 export function getAppBasePath(): string {
   const raw = (typeof process !== "undefined" && process.env.NEXT_PUBLIC_APP_BASE) || "/admin/portal";

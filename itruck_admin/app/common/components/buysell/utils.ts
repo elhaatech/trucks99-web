@@ -53,7 +53,8 @@ export function formatVehicleIdDisplay(vehicleId?: string | null): string {
 export function getProductVehicleId(product: {
   vehicleId?: string | null;
   bsNumber?: string | null;
-}): string {
+} | null | undefined): string {
+  if (!product) return "";
   const id = String(product.vehicleId ?? "").trim();
   if (id) return id;
   const bs = String(product.bsNumber ?? "").trim();
@@ -61,7 +62,8 @@ export function getProductVehicleId(product: {
   return "";
 }
 
-export function getProductBsNumber(product: { bsNumber?: string | null }): string {
+export function getProductBsNumber(product: { bsNumber?: string | null } | null | undefined): string {
+  if (!product) return "";
   const bs = String(product.bsNumber ?? "").trim();
   if (!bs || /^\d{10}$/.test(bs)) return "";
   return bs;
