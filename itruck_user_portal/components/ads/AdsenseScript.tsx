@@ -1,17 +1,10 @@
-import Script from "next/script";
-import { GOOGLE_ADS_CLIENT } from "./adsConfig";
-
-/** Global AdSense script — mount once from the root layout (server). */
+/** Global AdSense script — same snippet Google provides. */
 export function AdsenseScript() {
-  const src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${GOOGLE_ADS_CLIENT}`;
-
   return (
-    <Script
-      id="google-adsense"
+    <script
       async
-      src={src}
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2600927533607135"
       crossOrigin="anonymous"
-      strategy="beforeInteractive"
     />
   );
 }
