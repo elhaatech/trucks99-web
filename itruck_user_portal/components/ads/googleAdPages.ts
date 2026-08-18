@@ -1,6 +1,9 @@
 import { getAppBasePath } from "@/lib/routes";
 
-/** Pages that show inline Google Ads and the session popup. */
+/**
+ * Pages that may show the admin Google Ad popup.
+ * Marketplace inline ads are placed explicitly via GoogleAdBanner.
+ */
 export function isGoogleAdEligiblePage(pathname: string): boolean {
   const base = getAppBasePath().replace(/\/+$/, "");
   const path = (pathname || "").replace(/\/+$/, "") || base;
@@ -15,6 +18,7 @@ export function isGoogleAdEligiblePage(pathname: string): boolean {
     new RegExp(`^${escapeRegex(base)}/truck/view/[^/]+$`),
     new RegExp(`^${escapeRegex(base)}/buysell/list$`),
     new RegExp(`^${escapeRegex(base)}/buysell/view/[^/]+$`),
+    new RegExp(`^${escapeRegex(base)}/buysell/featured-vehicles$`),
   ];
 
   return patterns.some((pattern) => pattern.test(path));

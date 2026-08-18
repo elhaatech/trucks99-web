@@ -53,6 +53,7 @@ import { ProductEmiSidebarCard } from "../_components/ProductEmiSidebarCard";
 import { UserProductBitRecordsSection, type ProductOfferTab } from "../_components/UserProductBitRecordsSection";
 import { resolveFeaturedListingUi } from "@/lib/featuredVehicleListingStatus";
 import type { SubscriptionItem } from "@/model/services/subscription";
+import { GoogleAdBanner } from "@/components/ads/GoogleAdBanner";
 
 const MakeOfferModal = dynamic(
   () =>
@@ -447,6 +448,8 @@ export default function UserProductViewPage() {
               />
             </Box>
           ) : null}
+
+          <GoogleAdBanner placement="details" format="auto" responsive />
 
           {relatedOwnerId ? (
              <UserRelatedProductsSection

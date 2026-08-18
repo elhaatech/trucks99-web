@@ -2,11 +2,13 @@
 
 import { usePathname } from "next/navigation";
 import Box from "@mui/material/Box";
-import { GoogleAd, Google_TEST_BANNER_ID } from "./GoogleAd";
+import { GoogleAd } from "./GoogleAd";
+import { ADSENSE_SLOTS } from "./adsConfig";
 import { isGoogleAdEligiblePage } from "./googleAdPages";
 
 export interface AdvertisementSlotProps {
   adUnitId?: string;
+  slot?: string;
   sx?: object;
 }
 
@@ -15,7 +17,8 @@ export interface AdvertisementSlotProps {
  * correctly after client-side navigation.
  */
 export function AdvertisementSlot({
-  adUnitId = Google_TEST_BANNER_ID,
+  adUnitId,
+  slot = ADSENSE_SLOTS.listing,
   sx,
 }: AdvertisementSlotProps) {
   const pathname = usePathname() ?? "";
@@ -41,8 +44,11 @@ export function AdvertisementSlot({
       data-google-ad-slot="inline"
     >
       <GoogleAd
-        key={`google-ad-${pathname}-${adUnitId}`}
+        key={`google-ad-${pathname}-${slot || adUnitId || "listing"}`}
+        slot={slot}
         adUnitId={adUnitId}
+        format="auto"
+        responsive
         enabled
       />
     </Box>

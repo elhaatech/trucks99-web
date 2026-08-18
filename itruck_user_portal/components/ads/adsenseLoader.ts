@@ -45,7 +45,7 @@ function isAdsenseReady(): boolean {
     typeof window !== "undefined" &&
     (window.__itruckAdsenseReady === true ||
       findAdsenseScriptTag()?.dataset.loaded === "true" ||
-      Array.isArray(window.adsbygoogle))
+      typeof window.adsbygoogle !== "undefined")
   );
 }
 
@@ -70,9 +70,15 @@ function waitForAdsenseScriptTag(timeoutMs = 12000): Promise<HTMLScriptElement |
   });
 }
 
-function waitForScriptLoad(tag: HTMLScriptElement, timeoutMs = 12000): Promise<void> {
+function waitForScriptLoad(tag: HTMLScriptElement, timeoutMs = 4000): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (tag.dataset.loaded === "true" || isAdsenseReady()) {
+    if (
+      tag.dataset.loaded === "true" ||
+      isAdsenseReady() ||
+      ("readyState" in tag &&
+        (tag as HTMLScriptElement & { readyState?: string }).readyState === "complete")
+    ) {
+      tag.dataset.loaded = "true";
       resolve();
       return;
     }
@@ -140,7 +146,7 @@ function injectAdsenseScript(client: string = GOOGLE_ADS_CLIENT): Promise<void> 
 }
 
 /**
- * Wait for the single global AdSense script (loaded via next/script in ThemeRegistry).
+ * Wait for the single global AdSense script (loaded via next/script in the root layout).
  * Only injects a fallback script if none appears after a short wait.
  */
 export function loadAdsenseScript(client: string = GOOGLE_ADS_CLIENT): Promise<void> {
@@ -154,11 +160,15 @@ export function loadAdsenseScript(client: string = GOOGLE_ADS_CLIENT): Promise<v
 
     let tag = findAdsenseScriptTag(client);
     if (!tag) {
-      tag = await waitForAdsenseScriptTag(12000);
+      tag = await waitForAdsenseScriptTag(1500);
     }
 
     if (tag) {
-      await waitForScriptLoad(tag);
+      try {
+        await waitForScriptLoad(tag);
+      } catch {
+        // Script tag exists; adsbygoogle.push() can still queue until it finishes.
+      }
       markAdsenseReady();
       return;
     }

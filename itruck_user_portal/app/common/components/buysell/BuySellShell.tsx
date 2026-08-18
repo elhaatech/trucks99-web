@@ -201,7 +201,7 @@ export function BuySellShell({ children }: BuySellShellProps) {
             px: LAYOUT.pageGutterX,
             animation: "pageFadeIn 280ms ease-out",
             "@keyframes pageFadeIn": {
-              from: { opacity: 0, transform: "translateY(6px)" },
+              from: { opacity: 0.01, transform: "translateY(6px)" },
               to: { opacity: 1, transform: "translateY(0)" },
             },
           }}

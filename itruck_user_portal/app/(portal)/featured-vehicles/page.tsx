@@ -27,6 +27,7 @@ import { ensureLoggedInToViewProduct, getMarketplaceLoginPath } from "@/lib/requ
 import { isAbortError } from "@/lib/apiCache";
 import { toErrorMessage } from "@/lib/errors";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
+import { GoogleAdBanner } from "@/components/ads/GoogleAdBanner";
 
 const PAGE_SIZE = 12;
 
@@ -247,6 +248,8 @@ export default function FeaturedVehiclesMarketplacePage() {
         </Box>
         {/* <SortDropdown value={sortBy as SortOption} onChange={handleSortChange} /> */}
       </Box>
+
+      <GoogleAdBanner placement="featured" format="auto" responsive />
 
       {error && !loading ? (
         <BuySellErrorState

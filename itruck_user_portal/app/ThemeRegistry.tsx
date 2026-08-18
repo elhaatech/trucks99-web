@@ -14,7 +14,7 @@ import { FirebasePushProvider } from "@/providers/FirebasePushProvider";
 /**
  * Root MUI + Emotion + toast providers.
  * Date pickers use `DatePickerProvider` locally (not global).
- * AdSense loads on-demand from ad components (admin), not on every marketplace page.
+ * AdSense script is loaded once from the root layout via AdsenseScript.
  */
 export default function ThemeRegistry({
   children,

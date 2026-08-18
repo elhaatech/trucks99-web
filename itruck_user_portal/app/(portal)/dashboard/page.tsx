@@ -37,6 +37,7 @@ import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProv
 import { MARKETPLACE } from "@/constants/marketplace";
 import { toErrorMessage } from "@/lib/errors";
 import { isAbortError } from "@/lib/apiCache";
+import { GoogleAdBanner } from "@/components/ads/GoogleAdBanner";
 
 const EMPTY_STATS: MarketplaceStats = {
   totalListings: 0,
@@ -238,6 +239,8 @@ export default function UserProductDashboardPage() {
         onSearch={handleSearch}
       />
 
+      <GoogleAdBanner placement="dashboard" format="auto" responsive />
+
       <Box sx={{ mt: 4 }}>
         {statsError && !statsLoading ? (
           <Alert severity="warning" sx={{ mb: 2 }}>
@@ -280,6 +283,7 @@ export default function UserProductDashboardPage() {
           ))}
         </CategoryScroller>
       </Box>
+
       <Box sx={{ mt: 5 }}>
         <Box
           sx={{

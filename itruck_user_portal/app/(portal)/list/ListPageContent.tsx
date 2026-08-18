@@ -34,6 +34,7 @@ import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { isAbortError } from "@/lib/apiCache";
 import { toErrorMessage } from "@/lib/errors";
 import { LAYOUT } from "@/lib/theme";
+import { GoogleAdBanner } from "@/components/ads/GoogleAdBanner";
 
 // Sticky filter column: stays pinned while the page scrolls, but no longer
 // owns its own independent scrollbar. The whole page is one normal scroll now.
@@ -306,6 +307,7 @@ export default function UserProductListContent() {
 
         {/* Products — flows normally, scrolls with the rest of the page */}
         <Box>
+          <GoogleAdBanner placement="listing" format="auto" responsive />
           <VehicleGrid
             products={list.items}
             loading={list.loading}

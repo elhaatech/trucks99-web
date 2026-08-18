@@ -7,7 +7,8 @@ import Dialog from "@mui/material/Dialog";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
 import CloseIcon from "@mui/icons-material/Close";
-import { GoogleAd, Google_TEST_POPUP_BANNER_ID } from "./GoogleAd";
+import { GoogleAd } from "./GoogleAd";
+import { ADSENSE_SLOTS } from "./adsConfig";
 import { isGoogleAdEligiblePage } from "./googleAdPages";
 import {
   markPopupDismissedThisSession,
@@ -19,7 +20,7 @@ const POPUP_DELAY_MS = 600;
 
 export function GoogleAdPopup() {
   const pathname = usePathname();
-  const eligible = isGoogleAdEligiblePage(pathname);
+  const eligible = isGoogleAdEligiblePage(pathname) && Boolean(ADSENSE_SLOTS.popup);
   const [open, setOpen] = useState(false);
   const [adReady, setAdReady] = useState(false);
   const [adKey, setAdKey] = useState(0);
@@ -128,7 +129,7 @@ export function GoogleAdPopup() {
         {adReady ? (
           <GoogleAd
             key={`popup-ad-${pathname}-${adKey}`}
-            adUnitId={Google_TEST_POPUP_BANNER_ID}
+            placement="popup"
             variant="popup"
             enabled
           />

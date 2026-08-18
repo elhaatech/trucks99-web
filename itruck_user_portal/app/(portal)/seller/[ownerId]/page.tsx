@@ -27,6 +27,7 @@ import {
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { VehicleGridSkeleton } from "@/app/common/components/buysell/LoadingSkeleton";
 import { getBuySellImageUrl, handleBuySellImageError } from "@/lib/buysellUtils";
+import { GoogleAdBanner } from "@/components/ads/GoogleAdBanner";
 
 export default function SellerProfilePage() {
   const params = useParams();
@@ -180,6 +181,8 @@ export default function SellerProfilePage() {
           This is your public seller profile.
         </Alert>
       ) : null}
+
+      <GoogleAdBanner placement="seller" format="auto" responsive />
 
       <Box id="seller-listings">
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>

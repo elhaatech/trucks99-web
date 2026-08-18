@@ -56,12 +56,13 @@ export type {
 export {
   AdvertisementSlot,
   GoogleAd,
+  GoogleAdBanner,
   Google_TEST_BANNER_ID,
   Google_TEST_POPUP_BANNER_ID,
   GoogleAdPopup,
   GoogleAdsProvider,
 } from "../ads";
-export type { AdvertisementSlotProps } from "../ads";
+export type { AdvertisementSlotProps, GoogleAdBannerProps } from "../ads";
 
 export {
   ModulePageLayout,

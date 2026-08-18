@@ -5,190 +5,208 @@ import { usePathname } from "next/navigation";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import {
+  DEFAULT_ADSENSE_SLOT,
   GOOGLE_ADS_CLIENT,
   GOOGLE_ADS_INLINE_UNIT,
   GOOGLE_ADS_POPUP_UNIT,
-  shouldShowAdPlaceholder,
-  shouldUseAdTestMode,
+  getAdSenseSlot,
+  isLocalDevelopmentHost,
+  type AdSensePlacement,
 } from "./adsConfig";
-import {
-  initAdsenseUnit,
-  isAdsenseUnitFilled,
-  loadAdsenseScript,
-} from "./adsenseLoader";
+
+declare global {
+  interface Window {
+    adsbygoogle?: Record<string, unknown>[];
+  }
+}
 
 export const Google_TEST_BANNER_ID = GOOGLE_ADS_INLINE_UNIT;
 export const Google_TEST_POPUP_BANNER_ID = GOOGLE_ADS_POPUP_UNIT;
+
+export type GoogleAdVariant = "inline" | "popup";
+export type GoogleAdFormat = "auto" | "rectangle" | "horizontal" | "vertical";
+
+export interface GoogleAdProps {
+  slot?: string;
+  placement?: AdSensePlacement;
+  format?: GoogleAdFormat;
+  responsive?: boolean;
+  className?: string;
+  enabled?: boolean;
+  adUnitId?: string;
+  variant?: GoogleAdVariant;
+}
 
 function parseAdUnit(adUnitId: string): { client: string; slot: string } {
   const [client, slot] = adUnitId.split("/");
   return {
     client: client || GOOGLE_ADS_CLIENT,
-    slot: slot || "9214589741",
+    slot: slot || DEFAULT_ADSENSE_SLOT,
   };
 }
 
-export type GoogleAdVariant = "inline" | "popup";
-
-export interface GoogleAdProps {
-  adUnitId?: string;
-  className?: string;
-  enabled?: boolean;
-  /** Popup uses fixed rectangle size — fills better inside modals. */
-  variant?: GoogleAdVariant;
+function resolveSlot(props: GoogleAdProps): string {
+  if (props.slot?.trim()) return props.slot.trim();
+  if (props.placement) return getAdSenseSlot(props.placement);
+  if (props.adUnitId) return parseAdUnit(props.adUnitId).slot;
+  return DEFAULT_ADSENSE_SLOT;
 }
 
-function AdPlaceholder() {
-  return (
-    <Box
-      sx={{
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        textAlign: "center",
-        px: 2,
-        bgcolor: "grey.100",
-        borderRadius: 1,
-        border: "1px dashed",
-        borderColor: "divider",
-        pointerEvents: "none",
-        zIndex: 1,
-      }}
-    >
-      <Typography variant="body2" color="text.secondary">
-        Google Ad Placeholder (Development Mode)
-      </Typography>
-    </Box>
-  );
+function ensureAdsenseScript(client: string): void {
+  if (typeof document === "undefined") return;
+  const src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`;
+  if (document.querySelector(`script[src*="adsbygoogle.js"]`)) return;
+  const script = document.createElement("script");
+  script.async = true;
+  script.src = src;
+  script.crossOrigin = "anonymous";
+  document.head.appendChild(script);
 }
 
 export function GoogleAd({
-  adUnitId = Google_TEST_BANNER_ID,
+  slot: slotProp,
+  placement,
+  format = "auto",
+  responsive = true,
+  className,
+  adUnitId,
   enabled = true,
   variant = "inline",
 }: GoogleAdProps) {
   const pathname = usePathname();
   const insRef = useRef<HTMLModElement | null>(null);
-  const initGenerationRef = useRef(0);
-  const [showPlaceholder, setShowPlaceholder] = useState(false);
-  const { client, slot } = parseAdUnit(adUnitId);
+  const pushedRef = useRef(false);
+  const [mounted, setMounted] = useState(false);
+  const [showLocalNote, setShowLocalNote] = useState(false);
+  const slot = resolveSlot({ slot: slotProp, placement, adUnitId });
+  const client = adUnitId
+    ? parseAdUnit(adUnitId).client || GOOGLE_ADS_CLIENT
+    : GOOGLE_ADS_CLIENT;
   const isPopup = variant === "popup";
-  const useAdTest = shouldUseAdTestMode();
-  const allowPlaceholder = shouldShowAdPlaceholder();
 
   useEffect(() => {
-    if (!enabled) {
-      setShowPlaceholder(false);
-      return;
-    }
+    setMounted(true);
+  }, []);
 
-    const element = insRef.current;
-    if (!element) return;
+  useEffect(() => {
+    pushedRef.current = false;
+    setShowLocalNote(false);
+  }, [pathname, slot]);
 
-    const generation = ++initGenerationRef.current;
-    let cancelled = false;
+  useEffect(() => {
+    if (!enabled || !slot || !mounted) return;
 
-    element.dataset.adsenseInitialized = "false";
-    element.removeAttribute("data-adsbygoogle-status");
-    setShowPlaceholder(false);
+    ensureAdsenseScript(client);
 
-    const run = async () => {
+    let attempts = 0;
+    let timer = 0;
+
+    const tryPush = () => {
+      const element = insRef.current;
+      if (!element || pushedRef.current) return;
+      if (element.getAttribute("data-adsbygoogle-status")) {
+        pushedRef.current = true;
+        return;
+      }
+
+      const width = element.getBoundingClientRect().width;
+      if (width < 1 && attempts < 25) {
+        attempts += 1;
+        timer = window.setTimeout(tryPush, 100);
+        return;
+      }
+
       try {
-        await loadAdsenseScript(client);
-
-        if (isPopup) {
-          await new Promise<void>((resolve) => {
-            window.setTimeout(resolve, 150);
-          });
-        }
-
-        if (cancelled || generation !== initGenerationRef.current) return;
-
-        await initAdsenseUnit(element, client);
-
-        if (cancelled || generation !== initGenerationRef.current) return;
-
-        if (allowPlaceholder) {
-          window.setTimeout(() => {
-            if (cancelled || generation !== initGenerationRef.current) return;
-            if (!isAdsenseUnitFilled(element)) {
-              setShowPlaceholder(true);
-            }
-          }, 2500);
-        }
+        pushedRef.current = true;
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
       } catch {
-        if (!cancelled && generation === initGenerationRef.current && allowPlaceholder) {
-          setShowPlaceholder(true);
-        }
+        pushedRef.current = false;
       }
     };
 
-    void run();
+    timer = window.setTimeout(tryPush, 400);
+
+    const localNoteTimer = window.setTimeout(() => {
+      const element = insRef.current;
+      const filled =
+        element?.getAttribute("data-adsbygoogle-status") === "done" ||
+        element?.getAttribute("data-adsbygoogle-status") === "filled" ||
+        Boolean(element?.querySelector("iframe"));
+      if (!filled && isLocalDevelopmentHost()) {
+        setShowLocalNote(true);
+      }
+    }, 2500);
 
     return () => {
-      cancelled = true;
+      window.clearTimeout(timer);
+      window.clearTimeout(localNoteTimer);
     };
-  }, [enabled, client, slot, pathname, adUnitId, isPopup, allowPlaceholder, useAdTest]);
+  }, [enabled, slot, client, pathname, mounted]);
 
-  if (!enabled) return null;
+  if (!enabled || !slot) return null;
 
   return (
     <Box
       component="div"
-      className="google-ad-container"
+      className={className ? `google-ad-container ${className}` : "google-ad-container"}
       sx={{
         width: "100%",
-        minWidth: isPopup ? { xs: 280, sm: 400 } : { xs: 280, sm: 320 },
-        minHeight: isPopup ? { xs: 250, sm: 280 } : { xs: 90, sm: 120 },
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "stretch",
-        position: "relative",
+        minWidth: 250,
+        minHeight: isPopup ? 250 : 280,
+        display: "block",
         overflow: "visible",
-        visibility: "visible",
-        opacity: 1,
-        ...(isPopup
-          ? {}
-          : {
-              border: "1px dashed",
-              borderColor: "divider",
-              borderRadius: 1,
-              bgcolor: "grey.50",
-            }),
+        position: "relative",
+        bgcolor: "#f8fafc",
+        border: "1px solid #e2e8f0",
+        borderRadius: 1,
       }}
     >
-      {showPlaceholder ? <AdPlaceholder /> : null}
-      <ins
-        ref={insRef}
-        className="adsbygoogle"
-        style={
-          isPopup
-            ? {
-                display: "block",
-                width: "100%",
-                height: 280,
-                minHeight: 250,
-                visibility: "visible",
-              }
-            : {
-                display: "block",
-                width: "100%",
-                minHeight: 90,
-                visibility: "visible",
-              }
-        }
-        data-ad-client={client}
-        data-ad-slot={slot}
-        {...(useAdTest ? { "data-adtest": "on" } : {})}
-        {...(isPopup
-          ? { "data-ad-format": "rectangle" }
-          : {
-              "data-ad-format": "auto",
-              "data-full-width-responsive": "true",
-            })}
-      />
+      {showLocalNote ? (
+        <Box
+          sx={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            px: 3,
+            textAlign: "center",
+            pointerEvents: "none",
+            zIndex: 1,
+          }}
+        >
+          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 520, lineHeight: 1.6 }}>
+            Google does not serve live ads on localhost. Slot{" "}
+            <Box component="span" sx={{ fontFamily: "monospace" }}>
+              {slot}
+            </Box>{" "}
+            is configured. Real ads appear on your published domain after AdSense approval.
+          </Typography>
+        </Box>
+      ) : null}
+      {mounted ? (
+        <ins
+          ref={insRef}
+          className="adsbygoogle"
+          style={{
+            display: "block",
+            width: "100%",
+            minWidth: 250,
+            minHeight: isPopup ? 250 : 280,
+          }}
+          data-ad-client={client}
+          data-ad-slot={slot}
+          data-ad-format={isPopup ? "rectangle" : format}
+          {...(isPopup || !responsive
+            ? {}
+            : { "data-full-width-responsive": "true" })}
+        />
+      ) : (
+        <Box sx={{ width: "100%", minHeight: isPopup ? 250 : 280 }} />
+      )}
     </Box>
   );
 }
+
+export { ADSENSE_SLOTS } from "./adsConfig";
+export type { AdSensePlacement };

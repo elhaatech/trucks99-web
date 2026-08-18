@@ -52,6 +52,7 @@ import type { BuySellFormSuccessContext } from "@/app/admin/portal/buysell/_comp
 import { toErrorMessage } from "@/lib/errors";
 import { MARKETPLACE } from "@/constants/marketplace";
 import { isAbortError } from "@/lib/apiCache";
+import { GoogleAdBanner } from "@/components/ads/GoogleAdBanner";
 
 const BuySellForm = dynamic(
   () =>
@@ -454,6 +455,8 @@ function SellVehicleContent() {
             </Box>
             <MobileFilterButton onClick={() => setMobileFiltersOpen(true)} />
           </Box>
+
+          <GoogleAdBanner placement="myListing" format="auto" responsive />
 
           <Box>
             {listError && !loading ? (

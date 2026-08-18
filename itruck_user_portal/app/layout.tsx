@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Sora } from "next/font/google";
 import ThemeRegistry from "./ThemeRegistry";
+import { GOOGLE_ADS_CLIENT } from "@/components/ads/adsConfig";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -23,6 +24,9 @@ export const metadata: Metadata = {
     icon: "/images/trucks99-logo.png",
     apple: "/images/trucks99-logo.png",
   },
+  other: {
+    "google-adsense-account": GOOGLE_ADS_CLIENT,
+  },
 };
 
 export default function RootLayout({
@@ -32,6 +36,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          async
+          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${GOOGLE_ADS_CLIENT}`}
+          crossOrigin="anonymous"
+        />
+      </head>
       <body className={`${inter.variable} ${sora.variable} antialiased`} suppressHydrationWarning style={{ overflowX: "hidden" }}>
         <ThemeRegistry>{children}</ThemeRegistry>
       </body>
