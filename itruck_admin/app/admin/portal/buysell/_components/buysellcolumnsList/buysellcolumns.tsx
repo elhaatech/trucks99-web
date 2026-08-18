@@ -111,7 +111,7 @@ export function useBuySellColumns({
       {
         id: "bsNumber",
         label: "BS No",
-        minWidth: 160,
+        minWidth: 180,
         render: (row: BuySellProduct) =>
           renderNumberColumn(
             row,
@@ -119,6 +119,16 @@ export function useBuySellColumns({
             routes.buysell.view(getBuySellRowId(row)),
             renderClickableName,
           ),
+      },
+      {
+        id: "vehicleId",
+        label: "Vehicle ID",
+        minWidth: 140,
+        render: (row: BuySellProduct) => (
+          <Typography variant="body2" sx={{ fontVariantNumeric: "tabular-nums" }}>
+            {row.vehicleId || (/^\d{10}$/.test(String(row.bsNumber ?? "")) ? row.bsNumber : "—")}
+          </Typography>
+        ),
       },
       {
         id: "created_by",

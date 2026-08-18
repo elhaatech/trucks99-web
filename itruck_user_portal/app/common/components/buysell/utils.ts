@@ -115,6 +115,29 @@ export function getProductTitle(product: BuySellProduct): string {
   return product.bsNumber || "Commercial Vehicle";
 }
 
+export function formatVehicleIdDisplay(vehicleId?: string | null): string {
+  const id = String(vehicleId ?? "").trim();
+  if (!id) return "";
+  return `Vehicle ID: ${id}`;
+}
+
+export function getProductVehicleId(product: {
+  vehicleId?: string | null;
+  bsNumber?: string | null;
+}): string {
+  const id = String(product.vehicleId ?? "").trim();
+  if (id) return id;
+  const bs = String(product.bsNumber ?? "").trim();
+  if (/^\d{10}$/.test(bs)) return bs;
+  return "";
+}
+
+export function getProductBsNumber(product: { bsNumber?: string | null }): string {
+  const bs = String(product.bsNumber ?? "").trim();
+  if (!bs || /^\d{10}$/.test(bs)) return "";
+  return bs;
+}
+
 export function getProductLocation(product: BuySellProduct): string {
   const fromInfo = [product.city_info?.name, product.state_info?.name]
     .filter(Boolean)
@@ -163,7 +186,9 @@ function formatKilometers(raw: string | undefined): string | undefined {
 
 /**
  * List-card highlights aligned with Vehicle Details:
- * Make Year, Fuel Type, No. of Owners, Listing ID.
+ * Make Year, Fuel Type, No. of Owners.
+ *
+ * Vehicle ID is shown separately on the card as `Vehicle ID: YYMM######`.
  *
  * When `all` is true, always returns all four spec chips with a fallback
  * label ("N/A") when the underlying value is missing, so the card info

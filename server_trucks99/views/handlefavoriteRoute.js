@@ -128,7 +128,7 @@ favoriteRouter.post('/list', async (req, res) => {
     // get actual data (list projection for buySell)
     const listSelect =
       entity === "buySell"
-        ? "id bsNumber category_id subcategory_id userid price description images specifications country_id state_id city_id address pincode user_type status viewCount created_by createdAt updatedAt"
+        ? "id bsNumber vehicleId category_id subcategory_id userid price description images specifications country_id state_id city_id address pincode user_type status viewCount created_by createdAt updatedAt"
         : undefined;
 
     let query = Model.find({ _id: { $in: ids } });

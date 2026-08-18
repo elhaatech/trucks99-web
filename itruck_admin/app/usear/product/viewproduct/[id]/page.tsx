@@ -27,6 +27,8 @@ import {
   MakeOfferModal,
   EmiCalculator,
   FeaturedVehiclePromoCard,
+  getProductBsNumber,
+  getProductVehicleId,
 } from "@/app/common/components/buysell";
 import {
   BuySellProduct,
@@ -298,7 +300,8 @@ export default function UserProductViewPage() {
 
           <ProductVehicleDetails
             specs={specEntries}
-            listingId={item.bsNumber ?? undefined}
+            bsNumber={getProductBsNumber(item) || undefined}
+            vehicleId={getProductVehicleId(item) || undefined}
             address={locationLabel || item.address || undefined}
             description={item.description?.trim() || undefined}
           />

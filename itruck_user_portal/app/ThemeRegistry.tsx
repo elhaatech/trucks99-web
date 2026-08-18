@@ -14,7 +14,7 @@ import { FirebasePushProvider } from "@/providers/FirebasePushProvider";
 /**
  * Root MUI + Emotion + toast providers.
  * Date pickers use `DatePickerProvider` locally (not global).
- * AdSense script is loaded once from the root layout via AdsenseScript.
+ * AdSense script is loaded once from the root layout via AdsenseScript (next/script).
  */
 export default function ThemeRegistry({
   children,

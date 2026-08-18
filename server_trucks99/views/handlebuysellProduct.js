@@ -30,6 +30,14 @@ const {
 } = require("../services/notificationService");
 const { productLabel } = require("../helpers/productLabel");
 const {
+  generateNextBsNumber,
+  generateNextVehicleId,
+  allocateBsNumbers,
+  allocateVehicleIds,
+  formatBsNumberWithDate,
+  resolveVehicleId,
+} = require("../helpers/buySellVehicleId");
+const {
   findByIdOrUuid,
   resolveToObjectId,
   resolveIdsToObjectIds,
@@ -452,86 +460,6 @@ function sendRouteError(res, error, fallbackMessage) {
   });
 }
 
-/** Generate next human-friendly BS number like "29-06-2026 - BS001" using an atomic counter to avoid duplicates. */
-async function generateNextBsNumber() {
-  // Use a dedicated counters collection for atomic increments
-  const coll = mongoose.connection.collection("counters");
-  const res = await coll.findOneAndUpdate(
-    { _id: "buysell_bs" },
-    { $inc: { seq: 1 } },
-    { upsert: true, returnDocument: "after" },
-  );
-
-  let seq =
-    res && res.value && typeof res.value.seq === "number" ? res.value.seq : 1;
-
-  // Ensure counter is at least above any existing bsNumber numeric suffix to avoid duplicates.
-  // Be tolerant of legacy or malformed bsNumber values while still preserving uniqueness.
-  try {
-    const allBsNumberDocs = await BuySellProduct.find(
-      { bsNumber: { $exists: true, $ne: null } },
-      { bsNumber: 1 },
-    ).lean();
-
-    let maxExisting = 0;
-    for (const doc of allBsNumberDocs) {
-      const match = String(doc.bsNumber).match(/BS(\d+)/);
-      if (!match) continue;
-      const num = Number(match[1]);
-      if (Number.isFinite(num) && num > maxExisting) {
-        maxExisting = num;
-      }
-    }
-
-    if (seq <= maxExisting) {
-      const newSeq = maxExisting + 1;
-      const updated = await coll.findOneAndUpdate(
-        { _id: "buysell_bs" },
-        { $max: { seq: newSeq } },
-        { returnDocument: "after" },
-      );
-      seq =
-        updated && updated.value && typeof updated.value.seq === "number"
-          ? updated.value.seq
-          : newSeq;
-    }
-  } catch (e) {
-    // If aggregation or lookup fails, fall back to current seq — log for debugging
-    console.error(
-      "[generateNextBsNumber] failed to compute max existing bsNumber:",
-      e && e.stack ? e.stack : e,
-    );
-  }
-
-  const today = new Date();
-  const day = String(today.getDate()).padStart(2, "0");
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const year = today.getFullYear();
-  const dateStr = `${day}-${month}-${year}`;
-
-  return `${dateStr} - BS${String(seq).padStart(3, "0")}`;
-}
-
-/** Format bsNumber with creation date for response (converts old format to new format) */
-function formatBsNumberWithDate(bsNumber, createdAt) {
-  if (!bsNumber) return null;
-
-  // Extract numeric part from bsNumber (handles both old "BS001" and new "DD-MM-YYYY - BS001" formats)
-  const match = String(bsNumber).match(/BS(\d+)/);
-  if (!match) return bsNumber;
-
-  const num = match[1];
-
-  // Format createdAt date as DD-MM-YYYY
-  const date = new Date(createdAt);
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  const dateStr = `${day}-${month}-${year}`;
-
-  return `${dateStr} - BS${num}`;
-}
-
 // ─── USER MOBILE LOOKUP HELPERS ────────────────────────────────────────────────
 // Products/bit-records store `userid` which may be either a Mongo ObjectId
 // string or a custom UUID (matches the dual id/_id pattern used elsewhere in
@@ -664,6 +592,7 @@ function enrichProductListItem(
     ...item,
     images: Array.isArray(item.images) ? item.images : [], // ← ADDED
     bsNumber: formatBsNumberWithDate(item.bsNumber, item.createdAt) || null,
+    vehicleId: resolveVehicleId(item),
     seller_mobile: sellerContact.mobile || null,
     sellerName,
     created_by: sellerName,
@@ -680,7 +609,7 @@ function enrichProductListItem(
 /** Full field set — kept in parity with getById so the list response is
  *  self-sufficient and the frontend never needs a follow-up detail call. */
 const LIST_PRODUCT_SELECT =
-  "id bsNumber category_id subcategory_id userid price description images specifications country_id state_id city_id address pincode user_type status viewCount created_by updated_by createdAt updatedAt __v bookedBy bookedAt advanceAmount purchasedBy purchasedAt purchaseAmount soldAt";
+  "id bsNumber vehicleId category_id subcategory_id userid price description images specifications country_id state_id city_id address pincode user_type status viewCount created_by updated_by createdAt updatedAt __v bookedBy bookedAt advanceAmount purchasedBy purchasedAt purchaseAmount soldAt";
 
 /** Same field set for paginated browse — kept identical to LIST_PRODUCT_SELECT
  *  on purpose; see enrichBuySellListItems' `lite` option for the actual
@@ -725,6 +654,7 @@ function applyListSearchFilter(filter, search) {
         { description: regex },
         { address: regex },
         { bsNumber: regex },
+        { vehicleId: regex },
         { pincode: regex },
       ],
     },
@@ -837,6 +767,7 @@ async function buildEnrichedResponse(data) {
   return {
     _id: data._id,
     bsNumber: formatBsNumberWithDate(data.bsNumber, data.createdAt) || null,
+    vehicleId: resolveVehicleId(data),
     category_id: data.category_id || null,
     subcategory_id: data.subcategory_id || null,
     userid: data.userid || null,
@@ -1598,29 +1529,6 @@ buySellRouter.post(
         return res.status(400).json({ message: "Excel file has no data rows" });
       }
 
-      // Pre-compute the starting bsNumber using the TRUE MAX across ALL records
-      // (not just the most recently created one - a record created earlier can
-      // still hold a higher BS number than the latest-created one, e.g. after
-      // deletions or out-of-order imports)
-      const allBsNumbers = await BuySellProduct.find(
-        { bsNumber: { $exists: true, $ne: null } },
-        { bsNumber: 1 },
-      ).lean();
-
-      let nextBsNum = 1;
-      for (const doc of allBsNumbers) {
-        const match = String(doc.bsNumber).match(/BS(\d+)/);
-        if (match) {
-          const num = parseInt(match[1], 10);
-          if (num >= nextBsNum) nextBsNum = num + 1;
-        }
-      }
-
-      const today = new Date();
-      const dateStr = `${String(today.getDate()).padStart(2, "0")}-${String(
-        today.getMonth() + 1,
-      ).padStart(2, "0")}-${today.getFullYear()}`;
-
       const result = {
         total: rows.length,
         inserted: 0,
@@ -1670,13 +1578,9 @@ buySellRouter.post(
               .filter(Boolean);
           }
 
-          const bsNumber = `${dateStr} - BS${String(nextBsNum).padStart(3, "0")}`;
-          nextBsNum++;
-
           docsToInsert.push({
             category_id: categoryId,
             subcategory_id: subcategoryId,
-            bsNumber,
             price: Number(row["Price"]),
             description: String(row["Description"] || "").trim(),
             images,
@@ -1699,6 +1603,12 @@ buySellRouter.post(
 
       let inserted = [];
       if (docsToInsert.length) {
+        const vehicleIds = await allocateVehicleIds(docsToInsert.length);
+        const bsNumbers = await allocateBsNumbers(docsToInsert.length);
+        docsToInsert.forEach((doc, index) => {
+          doc.vehicleId = vehicleIds[index];
+          doc.bsNumber = bsNumbers[index];
+        });
         // ordered:false -> one bad doc doesn't block the rest of the batch
         inserted = await BuySellProduct.insertMany(docsToInsert, {
           ordered: false,
@@ -1719,6 +1629,7 @@ buySellRouter.post(
         created: inserted.map((d) => ({
           _id: d._id,
           bsNumber: formatBsNumberWithDate(d.bsNumber, d.createdAt),
+          vehicleId: resolveVehicleId(d),
           category_id: d.category_id,
           price: d.price,
           status: d.status,
@@ -2841,6 +2752,7 @@ buySellRouter.get("/cart", async (req, res) => {
             bsNumber:
               formatBsNumberWithDate(product.bsNumber, product.createdAt) ||
               null,
+            vehicleId: resolveVehicleId(product),
           },
         };
       })
@@ -3390,6 +3302,10 @@ buySellRouter.post("/add", upload.array("images", 10), async (req, res) => {
     if (!actor.id)
       return res.status(401).json({ message: "Unauthorized user" });
 
+    // bsNumber and vehicleId are always generated on the server. Ignore any client value.
+    delete req.body.bsNumber;
+    delete req.body.vehicleId;
+
     const {
       category_id,
       subcategory_id,
@@ -3478,7 +3394,8 @@ buySellRouter.post("/add", upload.array("images", 10), async (req, res) => {
         item = await BuySellProduct.create({
           category_id: toObjectId(category_id),
           subcategory_id: toObjectId(subcategory_id),
-          bsNumber: await generateNextBsNumber(),
+          bsNumber: await generateNextBsNumber(new Date()),
+          vehicleId: await generateNextVehicleId(new Date()),
           price: numericPrice,
           description: description || "",
           images: allImages,
@@ -3503,7 +3420,8 @@ buySellRouter.post("/add", upload.array("images", 10), async (req, res) => {
           attempt < 2 &&
           err &&
           (err.code === 11000 || String(err.code) === "11000") &&
-          message.includes("bsNumber_1")
+          message.includes("bsNumber_1") ||
+          message.includes("vehicleId_1")
         ) {
           console.warn(
             "[buy-sell add] duplicate bsNumber detected, retrying create",
@@ -3655,6 +3573,7 @@ buySellRouter.put("/edit/:id", upload.array("images", 10), async (req, res) => {
     delete updatePayload.updatedAt;
     delete updatePayload.__v;
     delete updatePayload.bsNumber;
+    delete updatePayload.vehicleId;
 
     if (hasImageUpdate) {
       updatePayload.images = mergedImages;

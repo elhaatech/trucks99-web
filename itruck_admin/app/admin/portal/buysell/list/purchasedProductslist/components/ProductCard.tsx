@@ -148,6 +148,11 @@ export function ProductCard({
           <Typography variant="subtitle2" color="text.secondary" noWrap>
             {product.bsNumber || "—"}
           </Typography>
+          {product.vehicleId ? (
+            <Typography variant="subtitle2" color="text.secondary" noWrap>
+              Vehicle ID: {product.vehicleId}
+            </Typography>
+          ) : null}
           <Chip
             label={product.status}
             color={statusColor}
