@@ -113,6 +113,7 @@ function toStatus(raw: string | undefined | null): BuySellStatus {
     "purchased",
     "sold",
   ];
+  if (lower === "active") return "pending";
   return allowed.includes(lower) ? lower : "pending";
 }
 
@@ -253,6 +254,12 @@ export function BuySellForm({
   const effectiveMode: "create" | "edit" =
     mode ?? (product ? "edit" : "create");
   const isEdit = effectiveMode === "edit";
+  const listingStatus = toStatus(product?.status);
+  const canToggleDraft =
+    !isEdit ||
+    listingStatus === "draft" ||
+    listingStatus === "pending" ||
+    listingStatus === "rejected";
 
   const { notify } = useNotification();
   const router = useRouter();
@@ -267,12 +274,10 @@ export function BuySellForm({
 
   const cancelTarget = cancelHref ?? routes.buysell.list();
   const backButtonLabel = backLabel ?? "Back to list";
-  const [isDraft, setIsDraft] = useState(() => {
-    if (isEdit && product?.status) {
-      return toStatus(product.status) === "draft";
-    }
-    return values.status === "draft";
-  });
+  // Checked = save as draft. On edit, start checked when the listing is already a draft.
+  const [isDraft, setIsDraft] = useState(
+    () => toStatus(product?.status) === "draft",
+  );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // ── Image state ───────────────────────────────────────────────────────────
@@ -870,11 +875,14 @@ export function BuySellForm({
         specifications: values.specifications.filter(
           (s) => s.specification_id && s.specification_value,
         ),
-        status: values.status,
         // Backend accepts `images` (preferred) and `existing_images` (legacy).
         images: finalImages,
         existing_images: finalImages,
       };
+
+      if (canToggleDraft) {
+        payload.status = isDraft ? "draft" : "pending";
+      }
 
       let successContext: BuySellFormSuccessContext | undefined;
 
@@ -1487,7 +1495,7 @@ export function BuySellForm({
               </Typography>
             </Box>
 
-            {(!isEdit || toStatus(product?.status) !== "pending") && (
+            {canToggleDraft ? (
               <Box
                 sx={{
                   display: "inline-flex",
@@ -1496,9 +1504,9 @@ export function BuySellForm({
                   px: 1.5,
                   py: 0.75,
                   border: "1px solid",
-                  borderColor: "divider",
+                  borderColor: isDraft ? "primary.main" : "divider",
                   borderRadius: 2,
-                  bgcolor: "transparent",
+                  bgcolor: isDraft ? "action.selected" : "transparent",
                   cursor: "pointer",
                   transition: "all 0.15s",
                 }}
@@ -1512,9 +1520,26 @@ export function BuySellForm({
                   onClick={(e) => e.stopPropagation()}
                 />
                 <Typography variant="body2" fontWeight={isDraft ? 600 : 400}>
-                  {"Draft"}
+                  Save as Draft
                 </Typography>
               </Box>
+            ) : (
+              <Typography
+                variant="body2"
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  px: 1.5,
+                  py: 0.75,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  color: "text.secondary",
+                  textTransform: "capitalize",
+                }}
+              >
+                {listingStatus}
+              </Typography>
             )}
           </Box>
         </Box>

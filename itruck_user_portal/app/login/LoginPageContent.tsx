@@ -42,6 +42,7 @@ export default function MarketplaceLoginPage() {
     : undefined;
 
   const isViewProductReturn = Boolean(returnTo?.startsWith("/viewproduct/"));
+  const isMyListingsReturn = Boolean(returnTo?.startsWith("/my-listings"));
 
   const redirectAfterAuth = useCallback(() => {
     const stored = consumeReturnUrl();
@@ -78,14 +79,20 @@ export default function MarketplaceLoginPage() {
       rightContent={
         <MarketplaceLoginPanel
           title={
-            isViewProductReturn ? "Sign in to view this vehicle" : "Sign in to TRUCKS99"
+            isViewProductReturn
+              ? "Sign in to view this vehicle"
+              : isMyListingsReturn
+                ? "Sign in to view My Listings"
+                : "Sign in to TRUCKS99"
           }
           subtitle={
             isPostRegistration
               ? "Verify your mobile number with the OTP we sent you."
               : isViewProductReturn
                 ? "Please log in to view vehicle details, photos, and make an offer."
-                : "Enter your mobile number to receive a one-time password."
+                : isMyListingsReturn
+                  ? "Log in to create, edit, and manage your vehicle listings."
+                  : "Enter your mobile number to receive a one-time password."
           }
           onSuccess={redirectAfterAuth}
           onCancel={handleCancel}

@@ -251,7 +251,7 @@ export function DataTable<T>({
         border: "1px solid",
         borderColor: "divider",
         overflow: "hidden",
-        boxShadow: (t) => t.tokens.shadow.card,
+        boxShadow: (t) => t.tokens?.shadow?.card,
       }}
     >
       {/* Selection count banner */}

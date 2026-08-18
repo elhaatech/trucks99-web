@@ -98,15 +98,15 @@ const VALID_STATUSES = [
 
 /** Allowed status transitions for the product purchase lifecycle.
  *  "pending" is the default, publicly-visible state — there is no separate
- *  "active" state. "accepeted" is only ever reached via PUT /bit/accept/:id,
- *  once a buyer's offer is accepted. */
+ *  "active" state. Sellers may move between draft and pending on edit.
+ *  "accepeted" is only ever reached via PUT /bit/accept/:id. */
 const STATUS_TRANSITIONS = {
   draft: ["pending"],
-  pending: ["rejected", "accepeted"],
+  pending: ["draft", "rejected", "accepeted"],
+  rejected: ["draft", "pending"],
   accepeted: ["booking", "purchased", "sold"],
   booking: ["purchased"],
   purchased: ["sold"],
-  rejected: [],
   sold: [],
 };
 
@@ -260,11 +260,17 @@ function getActorMongoId(req) {
 }
 
 /** Normalise any incoming status value to a valid lowercase enum member.
- *  Falls back to `fallback` (default "pending") if unrecognised. */
+ *  Falls back to `fallback` (default "pending") if unrecognised.
+ *  Legacy "active" listings are treated as "pending". */
 function normaliseStatus(raw, fallback = "pending") {
   if (!raw) return fallback;
   const lower = String(raw).toLowerCase().trim();
+  if (lower === "active") return "pending";
   return VALID_STATUSES.includes(lower) ? lower : fallback;
+}
+
+function canonicalStatus(raw) {
+  return normaliseStatus(raw, null) || String(raw || "").toLowerCase().trim();
 }
 
 function isAdminActor(actor) {
@@ -284,19 +290,32 @@ function isAdminActor(actor) {
 }
 
 function isValidTransition(fromStatus, toStatus) {
-  if (!fromStatus || !toStatus || fromStatus === toStatus) return true;
-  const allowed = STATUS_TRANSITIONS[fromStatus];
+  const from = canonicalStatus(fromStatus);
+  const to = canonicalStatus(toStatus);
+  if (!from || !to || from === to) return true;
+  const allowed = STATUS_TRANSITIONS[from];
   if (!allowed) return false;
-  return allowed.includes(toStatus);
+  return allowed.includes(to);
 }
 
 function assertStatusTransition(fromStatus, toStatus) {
-  if (fromStatus === toStatus) return;
-  if (!isValidTransition(fromStatus, toStatus)) {
-    const err = new Error("Invalid status transition.");
+  const from = canonicalStatus(fromStatus);
+  const to = canonicalStatus(toStatus);
+  if (from === to) return;
+  if (!isValidTransition(from, to)) {
+    const err = new Error(
+      `Cannot change status from "${fromStatus}" to "${toStatus}".`,
+    );
     err.statusCode = 400;
     throw err;
   }
+}
+
+function isOwnerDraftPendingSwitch(fromStatus, toStatus) {
+  const from = canonicalStatus(fromStatus);
+  const to = canonicalStatus(toStatus);
+  const editable = ["draft", "pending", "rejected"];
+  return editable.includes(from) && (to === "draft" || to === "pending");
 }
 
 // ─── CREATE-STATUS RESOLUTION ─────────────────────────────────────────────────
@@ -2200,6 +2219,7 @@ buySellRouter.get("/featured-vehicles/admin", async (req, res) => {
           item.description,
           item.address,
           item.bsNumber,
+          item.vehicleId,
           item.sellerName,
           item.placement?.requester?.name,
           item.placement?.requester?.email,
@@ -2383,11 +2403,15 @@ buySellRouter.put("/status/:id", async (req, res) => {
       });
     }
 
-    // Non-admin owners may only move draft → pending on their own listings.
-    if (!isAdmin && !(product.status === "draft" && nextStatus === "pending")) {
+    // Non-admin owners may move their listing between draft and pending.
+    if (
+      !isAdmin &&
+      product.status !== nextStatus &&
+      !isOwnerDraftPendingSwitch(product.status, nextStatus)
+    ) {
       return res.status(403).json({
         success: false,
-        message: "Only an admin can perform this status update.",
+        message: "You can only save this listing as draft or pending.",
       });
     }
 
@@ -3640,14 +3664,15 @@ buySellRouter.put("/edit/:id", upload.array("images", 10), async (req, res) => {
         });
       }
 
-      // Sellers may keep their current status, or publish a draft to pending.
+      // Sellers may keep their current status, or move between draft / pending
+      // (including unpublishing a live listing back to draft).
       if (
         !isAdminActor(actor) &&
-        nextStatus !== existing.status &&
-        !(existing.status === "draft" && nextStatus === "pending")
+        nextStatus !== canonicalStatus(existing.status) &&
+        !isOwnerDraftPendingSwitch(existing.status, nextStatus)
       ) {
         return res.status(403).json({
-          message: "Only an admin can change product status via edit.",
+          message: "You can only save this listing as draft or pending.",
         });
       }
 

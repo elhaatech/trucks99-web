@@ -9,7 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@babel/runtime": "^8.0.0",
     "@ctrl/react-adsense": "^2.1.0",
+    "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.8",

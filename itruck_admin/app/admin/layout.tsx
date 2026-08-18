@@ -7,7 +7,7 @@ import {
   subscribeToForegroundFcmNotifications,
 } from "@/model/services/firebase";
 import { DashboardLayout } from "@/components/dashboard";
-import { GoogleAdsProvider } from "@/components/common";
+import { GoogleAdsProvider } from "@/components/ads";
 import { NavigationProvider } from "@/components/navigation/NavigationProvider";
 
 export default function DashboardRootLayout({

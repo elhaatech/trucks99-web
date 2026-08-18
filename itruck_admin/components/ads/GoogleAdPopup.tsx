@@ -18,7 +18,7 @@ import {
 const POPUP_DELAY_MS = 600;
 
 export function GoogleAdPopup() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const eligible = isGoogleAdEligiblePage(pathname);
   const [open, setOpen] = useState(false);
   const [adReady, setAdReady] = useState(false);

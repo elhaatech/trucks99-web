@@ -90,38 +90,45 @@ export default function AdminFeaturedVehiclesPage() {
   } = useConfirmDialog<{ placementId: string; label: string }>();
   const [rejectReason, setRejectReason] = useState("");
 
-  const mapRows = (items: BuySellProduct[]): Row[] =>
-    items.map((item) => {
-      const placement = item.placement || item.featured;
-      const placementId = String(
-        item.placement?.placementId ||
-          item.placement?._id ||
-          item.featured?.featuredPlacementId ||
-          "",
-      );
-      const vehicleLabel =
-        item.description?.trim() ||
-        item.bsNumber ||
-        String(item._id || item.id || "Vehicle");
-      const requester = item.placement?.requester || item.featured?.requester;
-      const statusLabel = String(
-        item.placement?.status || item.featured?.featuredStatus || "—",
-      );
-      const source = String(item.placement?.source || item.featured?.source || "");
-      return {
-        ...item,
-        placementId,
-        vehicleLabel,
-        sellerLabel: requester?.name || item.sellerName || "—",
-        userDetails: [requester?.email, requester?.mobile].filter(Boolean).join(" · ") || "—",
-        requestLabel: source === "free_plan" ? "Free Plan" : "Paid plan",
-        expiryLabel: formatDate(
-          placement?.featuredEndDate ||
-            (placement as { expiresAt?: string } | undefined)?.expiresAt,
-        ),
-        statusLabel,
-      };
-    });
+  const mapRows = (items: unknown): Row[] => {
+    if (!Array.isArray(items)) return [];
+    return items
+      .filter((item): item is BuySellProduct => !!item && typeof item === "object")
+      .map((item) => {
+        const placement = item.placement || item.featured;
+        const placementId = String(
+          item.placement?.placementId ||
+            item.placement?._id ||
+            item.featured?.featuredPlacementId ||
+            item._id ||
+            item.id ||
+            "",
+        );
+        const vehicleLabel =
+          item.description?.trim() ||
+          item.bsNumber ||
+          item.vehicleId ||
+          String(item._id || item.id || "Vehicle");
+        const requester = item.placement?.requester || item.featured?.requester;
+        const statusLabel = String(
+          item.placement?.status || item.featured?.featuredStatus || "—",
+        );
+        const source = String(item.placement?.source || item.featured?.source || "");
+        return {
+          ...item,
+          placementId,
+          vehicleLabel,
+          sellerLabel: requester?.name || item.sellerName || "—",
+          userDetails: [requester?.email, requester?.mobile].filter(Boolean).join(" · ") || "—",
+          requestLabel: source === "free_plan" ? "Free Plan" : "Paid plan",
+          expiryLabel: formatDate(
+            placement?.featuredEndDate ||
+              (placement as { expiresAt?: string } | undefined)?.expiresAt,
+          ),
+          statusLabel,
+        };
+      });
+  };
 
   const loadRows = useCallback(async () => {
     setLoading(true);
@@ -133,9 +140,11 @@ export default function AdminFeaturedVehiclesPage() {
         status: statusFilter,
         sort: "newest",
       });
-      setRows(mapRows(res.data ?? []));
-      setTotalPages(res.pagination?.totalPages ?? 1);
+      const list = Array.isArray(res?.data) ? res.data : [];
+      setRows(mapRows(list));
+      setTotalPages(Number(res?.pagination?.totalPages) || 1);
     } catch (err) {
+      setRows([]);
       notify({
         type: "error",
         message:
@@ -301,6 +310,7 @@ export default function AdminFeaturedVehiclesPage() {
     <ModulePageLayout
       title="Featured Vehicles"
       subtitle="Approve or reject Free Plan requests. Only approved vehicles appear in Featured Vehicles."
+      showAds={false}
     >
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 2 }}>
         <TextField
@@ -343,7 +353,7 @@ export default function AdminFeaturedVehiclesPage() {
       <DataTable<Row>
         columns={columns}
         rows={rows}
-        getRowId={(row) => row.placementId || String(row._id)}
+        getRowId={(row) => String(row.placementId || row._id || row.id || "")}
         loading={loading}
         actions={actions}
         emptyMessage="No featured vehicle records found."

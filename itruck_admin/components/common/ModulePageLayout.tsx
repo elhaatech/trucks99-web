@@ -4,7 +4,7 @@ import * as React from "react";
 import Box from "@mui/material/Box";
 import Alert from "@mui/material/Alert";
 import { PageContainer, PageHeader, type BreadcrumbItem } from "@/components/ui";
-import { AdvertisementSlot } from "@/components/common";
+import { AdvertisementSlot } from "@/components/ads";
 
 export interface ModulePageLayoutProps {
   title: string;
