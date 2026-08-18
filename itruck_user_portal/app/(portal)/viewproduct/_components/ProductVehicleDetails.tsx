@@ -7,6 +7,8 @@ import { PRODUCT_THEME as T } from "@/lib/theme";
 type ProductVehicleDetailsProps = {
   specs: Array<{ label: string; value: string }>;
   listingId?: string;
+  bsNumber?: string;
+  vehicleId?: string;
   address?: string;
   description?: string;
 };
@@ -14,12 +16,16 @@ type ProductVehicleDetailsProps = {
 export function ProductVehicleDetails({
   specs,
   listingId,
+  bsNumber,
+  vehicleId,
   address,
   description,
 }: ProductVehicleDetailsProps) {
+  const resolvedVehicleId = vehicleId || listingId;
   const rows = [
     ...specs,
-    // listingId ? { label: "Listing ID", value: listingId } : null,
+    bsNumber ? { label: "BS No", value: bsNumber } : null,
+    resolvedVehicleId ? { label: "Vehicle ID", value: resolvedVehicleId } : null,
     address ? { label: "Location", value: address } : null,
   ].filter(Boolean) as Array<{ label: string; value: string }>;
 

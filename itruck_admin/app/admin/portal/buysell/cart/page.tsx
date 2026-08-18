@@ -124,6 +124,11 @@ export default function BuySellCartPage() {
                           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
                             {product.bsNumber}
                           </Typography>
+                          {product.vehicleId ? (
+                            <Typography variant="body2" color="text.secondary">
+                              Vehicle ID: {product.vehicleId}
+                            </Typography>
+                          ) : null}
                         </Box>
                         <IconButton
                           color="error"

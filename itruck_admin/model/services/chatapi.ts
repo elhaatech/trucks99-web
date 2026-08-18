@@ -3,6 +3,7 @@ import { axiosClient } from "./axiosClient";
 export type ChatProductInfo = {
   _id: string;
   bsNumber: string | null;
+  vehicleId?: string | null;
   title: string;
   price: number;
   image: string | null;
