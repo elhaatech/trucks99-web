@@ -740,6 +740,11 @@ export function AppSidebar({
                       .children!
                       .filter((child) => canViewNavItem(role, child.key))
                       .map((child) => {
+                        // Hidden temporarily - not needed for now, keep code for future use
+                        if (child.key === "buySell") {
+                          return false;
+                        }
+
                         const childActive =
                           normalizePathForMatch(pathname) ===
                           normalizePathForMatch(child.href);
