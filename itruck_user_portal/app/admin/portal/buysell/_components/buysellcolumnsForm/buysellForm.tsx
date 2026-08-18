@@ -113,6 +113,7 @@ function toStatus(raw: string | undefined | null): BuySellStatus {
     "purchased",
     "sold",
   ];
+  if (lower === "active") return "pending";
   return allowed.includes(lower) ? lower : "pending";
 }
 
@@ -253,6 +254,12 @@ export function BuySellForm({
   const effectiveMode: "create" | "edit" =
     mode ?? (product ? "edit" : "create");
   const isEdit = effectiveMode === "edit";
+  const listingStatus = toStatus(product?.status);
+  const canToggleDraft =
+    !isEdit ||
+    listingStatus === "draft" ||
+    listingStatus === "pending" ||
+    listingStatus === "rejected";
 
   const { notify } = useNotification();
   const router = useRouter();
@@ -267,11 +274,10 @@ export function BuySellForm({
 
   const cancelTarget = cancelHref ?? routes.buysell.list();
   const backButtonLabel = backLabel ?? "Back to list";
-  // The "Draft" checkbox ALWAYS starts UNCHECKED, even when editing a listing
-  // whose current status is already "draft" (per spec: do not pre-check it).
-  // On submit: unchecked → "pending", checked → "draft". This holds for both
-  // create and edit flows.
-  const [isDraft, setIsDraft] = useState(false);
+  // Checked = save as draft. On edit, start checked when the listing is already a draft.
+  const [isDraft, setIsDraft] = useState(
+    () => toStatus(product?.status) === "draft",
+  );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // ── Image state ───────────────────────────────────────────────────────────
@@ -557,9 +563,7 @@ export function BuySellForm({
     // toStatus() converts any API string → valid BuySellStatus union member
     const savedStatus = toStatus(product.status);
     setFieldValue("status", savedStatus);
-    // isDraft intentionally stays UNCHECKED (see its initial state) even when
-    // savedStatus is "draft". The user must actively check it to keep "draft";
-    // leaving it unchecked moves the status to "pending" on submit.
+    setIsDraft(savedStatus === "draft");
 
     const existing: ImageEntry[] = (product.images ?? [])
       .map((url) => ({ kind: "existing" as const, url }));
@@ -871,15 +875,14 @@ export function BuySellForm({
         specifications: values.specifications.filter(
           (s) => s.specification_id && s.specification_value,
         ),
-        // Status is driven entirely by the "Draft" checkbox: unchecked →
-        // "pending", checked → "draft". Deriving it here (rather than relying
-        // on the synced values.status) guarantees correctness even when the
-        // checkbox is left in its default unchecked state.
-        status: isDraft ? "draft" : "pending",
         // Backend accepts `images` (preferred) and `existing_images` (legacy).
         images: finalImages,
         existing_images: finalImages,
       };
+
+      if (canToggleDraft) {
+        payload.status = isDraft ? "draft" : "pending";
+      }
 
       let successContext: BuySellFormSuccessContext | undefined;
 
@@ -1492,29 +1495,7 @@ export function BuySellForm({
               </Typography>
             </Box>
 
-            {isEdit && toStatus(product?.status) === "pending" ? (
-              // EDIT flow, current status is "pending": the listing is already
-              // live/pending, so show a plain, non-interactive "Draft" label
-              // only (the checkbox must not appear).
-              <Typography
-                variant="body2"
-                sx={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  px: 1.5,
-                  py: 0.75,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 2,
-                  color: "text.secondary",
-                }}
-              >
-                Draft
-              </Typography>
-            ) : (
-              // CREATE flow, or EDIT flow with a non-pending status (e.g. "draft"):
-              // render the interactive "Draft" checkbox. It always starts
-              // UNCHECKED; checking it keeps the status as "draft" on submit.
+            {canToggleDraft ? (
               <Box
                 sx={{
                   display: "inline-flex",
@@ -1523,9 +1504,9 @@ export function BuySellForm({
                   px: 1.5,
                   py: 0.75,
                   border: "1px solid",
-                  borderColor: "divider",
+                  borderColor: isDraft ? "primary.main" : "divider",
                   borderRadius: 2,
-                  bgcolor: "transparent",
+                  bgcolor: isDraft ? "action.selected" : "transparent",
                   cursor: "pointer",
                   transition: "all 0.15s",
                 }}
@@ -1539,9 +1520,26 @@ export function BuySellForm({
                   onClick={(e) => e.stopPropagation()}
                 />
                 <Typography variant="body2" fontWeight={isDraft ? 600 : 400}>
-                  {"Draft"}
+                  Save as Draft
                 </Typography>
               </Box>
+            ) : (
+              <Typography
+                variant="body2"
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  px: 1.5,
+                  py: 0.75,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  color: "text.secondary",
+                  textTransform: "capitalize",
+                }}
+              >
+                {listingStatus}
+              </Typography>
             )}
           </Box>
         </Box>

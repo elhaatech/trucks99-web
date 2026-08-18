@@ -68,13 +68,13 @@ const FORM_ID = "buy-sell-form";
 // Status union — must match FormState["status"] exactly
 type BuySellStatus = FormState["status"];
 
-// Draft vs publish — listings go live as active (no admin approval).
+// Draft vs pending — listings go live as pending (awaiting admin approval).
 const STATUS_OPTIONS: {
   value: BuySellStatus;
   label: string;
   color: "warning" | "default" | "success";
 }[] = [
-  { value: "active", label: "Publish", color: "success" },
+  { value: "pending", label: "Publish", color: "success" },
   { value: "draft", label: "Draft", color: "default" },
 ];
 
@@ -95,9 +95,10 @@ type ImageEntry =
 function toStatus(raw: string | undefined | null): BuySellStatus {
   const lower = (raw ?? "").toLowerCase().trim();
   if (lower === "draft") return "draft";
-  if (lower === "active") return "active";
+  if (lower === "pending" || lower === "active") return "pending";
   if (lower === "inactive") return "inactive";
-  return "active";
+  if (lower === "rejected") return "rejected";
+  return "pending";
 }
 
 /** A specification counts as "Brand" if its name contains the word brand. */
@@ -459,7 +460,7 @@ export function BuySellForm({
   // ── Sync isDraft → form status (create mode only) ─────────────────────────
   useEffect(() => {
     if (isEdit) return;
-    const next: BuySellStatus = isDraft ? "draft" : "active";
+    const next: BuySellStatus = isDraft ? "draft" : "pending";
     setFieldValue("status", next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDraft, isEdit]);
@@ -574,7 +575,28 @@ export function BuySellForm({
       }
       setUploadingImages(false);
 
-      const payload = {
+      const currentStatus = isEdit ? toStatus(product?.status) : "pending";
+      const canChangeStatus =
+        !isEdit ||
+        currentStatus === "draft" ||
+        currentStatus === "pending" ||
+        currentStatus === "rejected" ||
+        currentStatus === "inactive";
+
+      const payload: {
+        category_id: string;
+        subcategory_id: string;
+        price: number;
+        description: string;
+        country_id: string;
+        state_id: string;
+        city_id: string;
+        address: string;
+        pincode: string;
+        specifications: typeof values.specifications;
+        images: string[];
+        status?: "draft" | "pending";
+      } = {
         category_id: values.category_id,
         subcategory_id: values.subcategory_id,
         price: Number(values.price),
@@ -584,12 +606,16 @@ export function BuySellForm({
         city_id: location.cityId,
         address: values.address,
         pincode: values.pincode,
-        status: values.status,
         specifications: values.specifications.filter(
           (s) => s.specification_id && s.specification_value,
         ),
         images: finalImages,
       };
+
+      if (canChangeStatus) {
+        payload.status =
+          isDraft || values.status === "draft" ? "draft" : "pending";
+      }
 
       if (isEdit && product) {
         await updateBuySellProduct(getBuySellRowId(product), payload);
