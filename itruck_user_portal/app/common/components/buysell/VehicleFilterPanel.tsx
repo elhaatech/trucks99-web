@@ -15,6 +15,7 @@ import { SearchableSelect, type SelectOption } from "@/components/common/Searcha
 import { PRODUCT_THEME as T, INFO, LAYOUT } from "@/lib/theme";
 import { useCategorySubcategories } from "@/hooks/useCategorySubcategories";
 import { CityFilterDropdown } from "./CityFilterDropdown";
+import { StateFilterDropdown } from "./StateFilterDropdown";
 import {
   EMPTY_FILTERS,
   type FilterState,
@@ -88,11 +89,19 @@ function FilterFields({
         placeholder="All subcategories"
       />
 
+      <StateFilterDropdown
+        label="State"
+        value={values.state_id}
+        onChange={(v) => onChange({ state_id: v, city_id: "" })}
+        placeholder="All states"
+      />
+
       <CityFilterDropdown
         label="City"
         value={values.city_id}
         onChange={(v) => onChange({ city_id: v })}
         placeholder="All cities"
+        selectedStateName={values.state_id}
       />
 
       <SearchableSelect

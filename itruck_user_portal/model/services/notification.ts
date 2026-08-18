@@ -22,7 +22,26 @@ export type Notification = {
 };
 
 export async function getNotifications(): Promise<Notification[]> {
-  return api<Notification[]>("/api/notification");
+  let res: unknown;
+  try {
+    res = await api<unknown>("/api/notification");
+  } catch (err) {
+    console.error("[getNotifications] request failed:", err);
+    throw err;
+  }
+
+  // The API normally returns a plain array, but guard against possible nested
+  // envelopes (e.g. { data: [...] }, { result: [...] }, { notifications: [...] })
+  // so a shape change can't break the mapping.
+  let list: unknown = res;
+  if (res && typeof res === "object" && !Array.isArray(res)) {
+    const obj = res as Record<string, unknown>;
+    if (Array.isArray(obj.data)) list = obj.data;
+    else if (Array.isArray(obj.result)) list = obj.result;
+    else if (Array.isArray(obj.notifications)) list = obj.notifications;
+  }
+
+  return Array.isArray(list) ? (list as Notification[]) : [];
 }
 
 export async function markNotificationRead(id: string) {

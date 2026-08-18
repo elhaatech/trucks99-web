@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
 import Badge from "@mui/material/Badge";
@@ -12,7 +12,9 @@ import Button from "@mui/material/Button";
 import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
 import CircleIcon from "@mui/icons-material/Circle";
 import { alpha } from "@mui/material/styles";
+import CircularProgress from "@mui/material/CircularProgress";
 import { PRIMARY, PRODUCT_THEME as T, TRANSITION } from "@/lib/theme";
+import { getNotifications, type Notification } from "@/model/services/notification";
 
 export type NotificationItem = {
   id: string;
@@ -21,6 +23,34 @@ export type NotificationItem = {
   read: boolean;
   icon?: React.ReactNode;
 };
+
+function formatTimeAgo(iso?: string): string {
+  if (!iso) return "";
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+  const diffMs = Date.now() - then;
+  const min = Math.floor(diffMs / 60000);
+  const hr = Math.floor(min / 60);
+  const day = Math.floor(hr / 24);
+  if (min < 1) return "Just now";
+  if (min < 60) return `${min} min${min === 1 ? "" : "s"} ago`;
+  if (hr < 24) return `${hr} hour${hr === 1 ? "" : "s"} ago`;
+  if (day === 1) return "Yesterday";
+  if (day < 7) return `${day} days ago`;
+  return new Date(then).toLocaleDateString();
+}
+
+function toNotificationItem(n: Notification): NotificationItem {
+  return {
+    id: n.id ?? n._id,
+    message: n.message ?? n.title ?? "",
+    timestamp: formatTimeAgo(n.createdAt),
+    read: Boolean(n.read),
+    icon: (
+      <CircleIcon sx={{ fontSize: 9, color: n.read ? "text.disabled" : PRIMARY }} />
+    ),
+  };
+}
 
 const MOCK_NOTIFICATIONS: NotificationItem[] = [
   {
@@ -64,8 +94,27 @@ export function NotificationDropdown({
   const [items, setItems] = useState<NotificationItem[]>(
     () => notificationsProp ?? MOCK_NOTIFICATIONS,
   );
+  const [loading, setLoading] = useState(false);
 
   const open = Boolean(anchor);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const list = await getNotifications();
+        if (active) setItems(list.map(toNotificationItem));
+      } catch (err) {
+        console.error("NotificationDropdown failed to load notifications:", err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const unreadCount = useMemo(
     () => items.filter((n) => !n.read).length,
@@ -150,7 +199,19 @@ export function NotificationDropdown({
           ) : null}
         </Box>
         <Divider />
-        {items.length === 0 ? (
+        {loading ? (
+          <Box
+            sx={{
+              px: 2,
+              py: 4,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <CircularProgress size={20} />
+          </Box>
+        ) : items.length === 0 ? (
           <Box
             sx={{
               px: 2,

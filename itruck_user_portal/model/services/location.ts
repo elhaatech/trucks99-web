@@ -64,3 +64,26 @@ export async function getLocationCitiesByState(stateId: number | string, options
   });
 }
 
+export const INDIA_COUNTRY_ID = "69c60d5a50d03d49adb72bc3";
+
+// Module-level cache of states per country so dependent dropdowns and the
+// filter payload can resolve a selected state NAME back to its id without
+// re-fetching (mirrors how the signup form resolves a single states query).
+const statesByCountryCache: Record<string, LocationState[]> = {};
+
+export function cacheLocationStates(countryId: string, states: LocationState[]): void {
+  statesByCountryCache[String(countryId)] = states;
+}
+
+export function getCachedLocationStates(countryId: string): LocationState[] | undefined {
+  return statesByCountryCache[String(countryId)];
+}
+
+export function resolveStateIdByName(countryId: string, name: string): string | undefined {
+  const states = statesByCountryCache[String(countryId)];
+  if (!states || !name) return undefined;
+  const target = name.trim().toLowerCase();
+  const match = states.find((s) => (s.name || "").trim().toLowerCase() === target);
+  return match?.id || match?._id || match?.uuid;
+}
+

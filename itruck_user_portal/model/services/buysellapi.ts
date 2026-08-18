@@ -918,7 +918,7 @@ export async function postBuySellProductsByOwner(
       page,
       limit,
       ...(cityId ? { city_id: cityId } : {}),
-      ...(countryId ? { country_id: countryId } : {}),
+      ...(countryId !== undefined ? { country_id: countryId } : {}),
       ...(stateId ? { state_id: stateId } : {}),
     };
 

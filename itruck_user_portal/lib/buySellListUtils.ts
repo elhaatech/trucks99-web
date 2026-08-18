@@ -1,6 +1,11 @@
 import type { BuySellListFilter, BuySellProduct } from "@/model/services/buysellapi";
 import { getBuySellRowId } from "@/model/services/buysellapi";
 import type { FilterState } from "@/app/admin/portal/buysell/_components/interface/buysell_interface";
+import { resolveStateIdByName, INDIA_COUNTRY_ID } from "@/model/services/location";
+
+const COUNTRY_ID = INDIA_COUNTRY_ID;
+// Fallback used when only a city is filtered (existing Tamil Nadu behaviour).
+const TAMIL_NADU_STATE_ID = "69c60e80e9c7314beecc1fbb";
 
 /** Map UI filter state to POST /api/buy-sell/list body (same as admin portal). */
 export function toBuySellListPayload(
@@ -21,6 +26,7 @@ export function toBuySellListPayload(
     | "make_year_min"
     | "make_year_max"
     | "city_id"
+    | "state_id"
   >,
 ): BuySellListFilter {
   const minPrice = filters.min_price ? Number(filters.min_price) : undefined;
@@ -35,6 +41,11 @@ export function toBuySellListPayload(
   const makeYearMax = filters.make_year_max ? Number(filters.make_year_max) : undefined;
 
   const cityId = filters.city_id || undefined;
+  // The State dropdown stores the state NAME (matching the profile city fix
+  // pattern); resolve it back to its id for the server-side filter.
+  const stateId = filters.state_id
+    ? resolveStateIdByName(INDIA_COUNTRY_ID, filters.state_id)
+    : undefined;
 
   return {
     status: filters.status || undefined,
@@ -63,7 +74,14 @@ export function toBuySellListPayload(
     ...(makeYearMax !== undefined && !Number.isNaN(makeYearMax)
       ? { make_year_max: makeYearMax }
       : {}),
-    ...(cityId ? { city_id: cityId, country_id: "69c60d5a50d03d49adb72bc3", state_id: "69c60e80e9c7314beecc1fbb" } : {}),
+    ...(cityId
+      ? {
+          city_id: cityId,
+          country_id: COUNTRY_ID,
+          state_id: stateId ?? TAMIL_NADU_STATE_ID,
+        }
+      : {}),
+    ...(stateId && !cityId ? { state_id: stateId, country_id: COUNTRY_ID } : {}),
   };
 }
 
