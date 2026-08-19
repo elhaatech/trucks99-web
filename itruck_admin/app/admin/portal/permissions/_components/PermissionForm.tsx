@@ -158,6 +158,25 @@ export function PermissionForm({ mode, editId, onSuccess }: PermissionFormProps)
     });
   };
 
+  const allAccessChecked = permissions.every((p) =>
+    ACCESS_KEYS.every((k) => Boolean(p.access?.[k]))
+  );
+
+  const toggleAllAccess = (value: boolean) => {
+    setPermissions((prev) =>
+      prev.map((p) => ({
+        ...p,
+        access: {
+          ...(p.access || {}),
+          create: value,
+          view: value,
+          edit: value,
+          delete: value,
+        },
+      }))
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -286,6 +305,19 @@ export function PermissionForm({ mode, editId, onSuccess }: PermissionFormProps)
             <Typography variant="body2" color="text.secondary" mb={2}>
               Add the specific features and modules this group can access.
             </Typography>
+
+            <FormControlLabel
+              sx={{ mb: 1 }}
+              control={
+                <Checkbox
+                  size="small"
+                  checked={allAccessChecked}
+                  onChange={(e) => toggleAllAccess(e.target.checked)}
+                  disabled={submitting}
+                />
+              }
+              label="Select All"
+            />
 
             <Paper elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
               {permissions.map((p, idx) => (
