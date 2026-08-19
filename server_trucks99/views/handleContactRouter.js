@@ -204,24 +204,21 @@ async function listEnquiries(input, res) {
   }
 }
 
-/** POST /api/contact/list — admin enquiry list */
+/**
+ * POST /api/contact/list
+ * Body: { page, limit, search, status }
+ */
 contactRouter.post("/list", async (req, res) => {
-  return listEnquiries(req.body || {}, res);
-});
-
-/** GET /api/contact/list — same list with query params */
-contactRouter.get("/list", async (req, res) => {
-  return listEnquiries(req.query || {}, res);
-});
-
-/** GET /api/contact/all — alias used by some admin list pages */
-contactRouter.get("/all", async (req, res) => {
-  return listEnquiries({ ...(req.query || {}), page: 1, limit: 100 }, res);
-});
-
-/** GET /api/contact — same list at the collection root */
-contactRouter.get("/", async (req, res) => {
-  return listEnquiries(req.query || {}, res);
+  const body = req.body && typeof req.body === "object" ? req.body : {};
+  return listEnquiries(
+    {
+      page: body.page,
+      limit: body.limit,
+      search: body.search,
+      status: body.status,
+    },
+    res,
+  );
 });
 
 /** GET /api/contact/:id — admin enquiry detail */

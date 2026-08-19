@@ -50,19 +50,20 @@ export function resolveContactAttachmentUrl(url?: string | null): string {
   return `${base}${path}`;
 }
 
-/** GET /api/contact/list — admin enquiry list */
+/** POST /api/contact/list — admin enquiry list (filters in JSON body). */
 export async function getContactEnquiries(
   params?: ContactEnquiryFilterParams,
 ): Promise<ContactEnquiryListResponse> {
-  const query: Record<string, string> = {
-    page: String(params?.page || 1),
-    limit: String(params?.limit || 20),
+  const body = {
+    page: params?.page || 1,
+    limit: params?.limit || 20,
+    search: params?.search?.trim() || "",
+    status: params?.status && params.status !== "all" ? params.status : "",
   };
-  if (params?.search?.trim()) query.search = params.search.trim();
-  if (params?.status && params.status !== "all") query.status = params.status;
 
   const res = await api<ContactEnquiryListResponse | ContactEnquiry[]>("/api/contact/list", {
-    params: query,
+    method: "POST",
+    body: JSON.stringify(body),
   });
 
   if (Array.isArray(res)) {
