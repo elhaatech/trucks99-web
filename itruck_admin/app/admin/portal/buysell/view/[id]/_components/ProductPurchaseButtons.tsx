@@ -137,7 +137,7 @@ export function ProductPurchaseButtons({
         width: "100%",
       }}
     >
-      <Button
+      {/* <Button
         variant="outlined"
         size="large"
         fullWidth={variant === "panel"}
@@ -147,7 +147,7 @@ export function ProductPurchaseButtons({
         onClick={handleAddToCart}
       >
         {inCart ? "Added to cart" : "Add to cart"}
-      </Button>
+      </Button> */}
     </Box>
   ) : null;
 

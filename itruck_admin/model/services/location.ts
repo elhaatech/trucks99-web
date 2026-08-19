@@ -64,3 +64,14 @@ export async function getLocationCitiesByState(stateId: number | string, options
   });
 }
 
+export const INDIA_COUNTRY_ID = "69c60d5a50d03d49adb72bc3";
+
+// Module-level cache of states per country so the State filter dropdown can
+// resolve a selected state NAME without re-fetching. Mirrors the shared
+// implementation used by the main Buy & Sell listings filter panel.
+const statesByCountryCache: Record<string, LocationState[]> = {};
+
+export function cacheLocationStates(countryId: string, states: LocationState[]): void {
+  statesByCountryCache[String(countryId)] = states;
+}
+
