@@ -95,9 +95,15 @@ permissionRouter.post("/", async (req, res) => {
 // Create a new permission group  (NO TOKEN REQUIRED)
 permissionRouter.post("/add", async (req, res) => {
   try {
-    const { name, description, permissions, user } = req.body;
+    const { name, title_name, description, permissions, user } = req.body;
 
-    const trimmedName = typeof name === "string" ? name.trim() : "";
+    const rawName =
+      typeof name === "string"
+        ? name
+        : typeof title_name === "string"
+          ? title_name
+          : "";
+    const trimmedName = rawName.trim();
     if (!trimmedName) {
       return res.status(400).json({ message: "name is required" });
     }

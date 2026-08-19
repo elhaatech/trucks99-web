@@ -373,6 +373,19 @@ app.use((req, res, next) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error("[Server Error]", err?.stack || err);
+
+  const isJsonParseError =
+    err instanceof SyntaxError &&
+    (err.status === 400 || err.type === "entity.parse.failed");
+
+  if (isJsonParseError && req.originalUrl?.startsWith("/api")) {
+    return res.status(400).json({
+      message:
+        "Invalid JSON in request body. Remove trailing commas and send a valid JSON object.",
+      error: err?.message || String(err),
+    });
+  }
+
   if (req.originalUrl?.startsWith("/api")) {
     return res
       .status(500)
