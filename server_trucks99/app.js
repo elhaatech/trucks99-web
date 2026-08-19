@@ -101,8 +101,6 @@ const defaultOrigins = [
   "http://127.0.0.1:3001",
   "http://127.0.0.1:3002",
   "http://127.0.0.1:3003",
-  "https://roxylius.github.io",
-  "https://admin-control-rbac.vercel.app",
   // Production frontend (port matters — browser Origin includes :3002)
   "http://truck.elhaa.com:3002",
   "https://truck.elhaa.com:3002",
