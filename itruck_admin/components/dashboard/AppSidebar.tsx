@@ -377,6 +377,23 @@ function FindTruckIcon() {
   );
 }
 
+function FavoritesIcon() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 21s-7-4.4-9.5-8.2C.3 9.6 2.2 5 6.5 5c2.1 0 3.4 1.2 4.5 2.6C12.1 6.2 13.4 5 15.5 5 19.8 5 21.7 9.6 21.5 12.8 19 16.6 12 21 12 21z" />
+    </svg>
+  );
+}
+
 function EnquiryIcon() {
   return (
     <svg
@@ -422,6 +439,7 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   matchLoad: <FindLoadIcon />,
   matchTruck: <FindTruckIcon />,
   enquiry: <EnquiryIcon />,
+  favorites: <FavoritesIcon />,
 };
 
 // ─── Types ─────────────────────────────────────────────────────────────────────

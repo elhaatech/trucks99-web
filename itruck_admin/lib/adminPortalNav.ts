@@ -38,6 +38,7 @@ const NAV_ID_TO_TITLE_NAME: Record<string, string> = {
   matchTruck: "match_truck",
   cms: "CMS",
   enquiry: "Contact Enquiry",
+  favorites: "Favorites",
 };
 
 /**
@@ -125,6 +126,12 @@ export function getAdminPortalNavDefinitions(
       label: getLabel("enquiry", role, "Enquiry"),
       getHref: () => routes.enquiry.list(),
       appFolder: "/enquiry/list",
+    },
+    {
+      id: "favorites",
+      label: getLabel("favorites", role, "Favorites"),
+      getHref: () => routes.favorites.list(),
+      appFolder: "/favorites/list",
     },
     {
       id: "incomeExpenseCategory",

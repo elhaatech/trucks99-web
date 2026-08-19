@@ -58,6 +58,7 @@ const NAV_ID_TO_PERMISSION_KEY: Record<string, string> = {
   profile: "profile",
   cms: "cms",  // title_name: "CMS"
   enquiry: "contact_enquiry",  // title_name: "Contact Enquiry"
+  favorites: "buy_sell",
 };
 
 // ─── Route path → API permission key ─────────────────────────────────────────
@@ -97,6 +98,7 @@ function buildNavPermissionMap(base: string): Record<string, string> {
     [`${b}/subscription/transactions`]: "payment_transactions",
     [`${b}/cms`]: "cms",
     [`${b}/enquiry`]: "contact_enquiry",
+    [`${b}/favorites`]: "buy_sell",
   };
 }
 
@@ -199,6 +201,10 @@ export function canViewNavItem(
   // does not yet include this new module (canModuleAction allows missing keys).
   if (navId === "enquiry") {
     return canModuleAction(role, "contact_enquiry", "view");
+  }
+
+  if (navId === "favorites") {
+    return isAdminLikeRole(role) || canModuleAction(role, "buy_sell", "view");
   }
 
   // Matching parent

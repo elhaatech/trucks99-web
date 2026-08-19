@@ -88,6 +88,9 @@ export const routes = {
     list: () => `${BASE}/enquiry/list`,
     view: (id: string) => `${BASE}/enquiry/view/${id}`,
   },
+  favorites: {
+    list: () => `${BASE}/favorites/list`,
+  },
   // Product
   // Load
   load: {
