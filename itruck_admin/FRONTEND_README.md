@@ -207,8 +207,8 @@ All backend calls go through a single `api<T>(path, options)` helper with `crede
 1. **Install:** `npm install`
 2. **Env (optional):** Create `.env.local` with `NEXT_PUBLIC_API_URL=http://localhost:3001` if the API is elsewhere.
 3. **Backend:** Ensure the iTruck server is running (e.g. `npm run dev` in `server/` on port 3001).
-4. **Local development:** `npm run dev` — Next.js development server on port 3004 with hot reload. Do not run `npm run build` for day-to-day UI/code changes.
-5. **Production:** `npm run build` once, then `npm run start` to serve the production build.
+4. **Local development:** `npm start` or `npm run dev` — Next.js development server on port 3004 with hot reload. Do not run `npm run build` for UI/code changes.
+5. **Production only:** `npm run build` then `npm run start:prod`.
 
 ---
 

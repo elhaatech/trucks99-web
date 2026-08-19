@@ -350,14 +350,14 @@ export default function AdminFeaturedVehiclesPage() {
         </Button>
       </Box>
 
-      <DataTable<Row>
+      {/* <DataTable<Row>
         columns={columns}
         rows={rows}
         getRowId={(row) => String(row.placementId || row._id || row.id || "")}
         loading={loading}
         actions={actions}
         emptyMessage="No featured vehicle records found."
-      />
+      /> */}
 
       {totalPages > 1 ? (
         <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>

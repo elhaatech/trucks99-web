@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "node scripts/free-port.js 3004 && next dev -p 3004",
     "build": "next build",
-    "start": "node scripts/free-port.js 3004 && next start -p 3004",
+    "start": "node scripts/free-port.js 3004 && next dev -p 3004",
+    "start:prod": "node scripts/free-port.js 3004 && next start -p 3004",
     "lint": "eslint"
   },
   "dependencies": {
