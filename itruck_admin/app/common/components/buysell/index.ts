@@ -22,6 +22,7 @@ export {
   type SortOption,
 } from "./VehicleFilterPanel";
 export { EmiCalculator, EmiSummary } from "./EmiCalculator";
+export { ProductShareMenu } from "./ProductShareMenu";
 export { MakeOfferModal } from "./MakeOfferModal";
 export { SellerCard } from "./SellerCard";
 export { CartItemRow, CartSummary } from "./CartSummary";

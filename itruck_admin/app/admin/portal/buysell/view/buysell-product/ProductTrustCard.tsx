@@ -5,12 +5,16 @@ import Typography from "@mui/material/Typography";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import ScheduleOutlinedIcon from "@mui/icons-material/ScheduleOutlined";
+import Link from "@mui/material/Link";
 import { PRODUCT_THEME as T } from "./theme";
+import { contactTelHref, formatContactMobile } from "@/app/common/components/buysell/utils";
 
 interface ProductTrustCardProps {
   sellerName?: string;
+  sellerMobile?: string | null;
   /** Only render the "Verified Seller" badge when this is explicitly true —
    *  never assume verification just because a name is present. */
   isVerified?: boolean;
@@ -48,12 +52,15 @@ function StatRow({
  */
 export function ProductTrustCard({
   sellerName,
+  sellerMobile,
   isVerified,
   memberSince,
   totalListings,
   responseTime,
 }: ProductTrustCardProps) {
   const hasSellerStats = memberSince || totalListings != null || responseTime;
+  const phone = formatContactMobile(sellerMobile);
+  const telHref = contactTelHref(phone);
 
   return (
     <Box
@@ -100,6 +107,16 @@ export function ProductTrustCard({
           )}
         </Box>
       )}
+      {phone && telHref ? (
+        <Link
+          href={telHref}
+          underline="hover"
+          sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, mb: 1, fontSize: 13, fontWeight: 600, color: T.color.trustNavy }}
+        >
+          <PhoneOutlinedIcon sx={{ fontSize: 16 }} />
+          {phone}
+        </Link>
+      ) : null}
 
       {hasSellerStats && (
         <Box sx={{ borderTop: `1px solid ${T.color.border}`, pt: 0.5, mb: 1 }}>

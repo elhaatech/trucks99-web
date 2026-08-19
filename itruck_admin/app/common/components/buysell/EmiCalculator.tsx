@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Slider from "@mui/material/Slider";
@@ -8,9 +8,16 @@ import TextField from "@mui/material/TextField";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
 import CalculateOutlinedIcon from "@mui/icons-material/CalculateOutlined";
 import { PRODUCT_THEME as T, INFO, SUCCESS } from "@/lib/theme";
-import { calculateEmi, formatInr } from "@/lib/emiUtils";
+import { EMPTY_EMI_RESULT, formatInr, type EmiCalculationResult } from "@/lib/emiUtils";
+import { calculateEmiApi, getEmiDefaults } from "@/model/services/emi";
+
+const MIN_RATE = 1;
+const MAX_RATE = 24;
+const MIN_DOWN_PCT = 0;
+const MAX_DOWN_PCT = 90;
 
 type EmiCalculatorProps = {
   defaultVehiclePrice?: number;
@@ -22,21 +29,32 @@ type EmiCalculatorProps = {
   onOpenFullCalculator?: () => void;
 };
 
+function clamp(n: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, n));
+}
+
+function parsePositiveNumber(raw: string): number {
+  const cleaned = raw.replace(/[^\d.]/g, "");
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function EmiDonutChart({
   principal,
   interest,
-  size = 156,
+  size = 148,
 }: {
   principal: number;
   interest: number;
   size?: number;
 }) {
   const total = principal + interest;
-  const principalPct = total > 0 ? (principal / total) * 100 : 50;
+  const principalPct = total > 0 ? (principal / total) * 100 : 100;
+  const interestPct = Math.max(0, 100 - principalPct);
   const inner = Math.round(size * 0.56);
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+    <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1.5 }}>
       <Box
         sx={{
           width: size,
@@ -53,7 +71,7 @@ function EmiDonutChart({
             width: inner,
             height: inner,
             borderRadius: "50%",
-            bgcolor: T.color.surface,
+            bgcolor: "#fff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -64,7 +82,7 @@ function EmiDonutChart({
           <Typography sx={{ fontSize: 10, color: T.color.textMuted, fontWeight: 700, letterSpacing: 0.4 }}>
             LOAN COST
           </Typography>
-          <Typography sx={{ fontSize: 13, fontWeight: 800, color: T.color.textPrimary }}>
+          <Typography sx={{ fontSize: 12, fontWeight: 800, color: T.color.textPrimary, px: 1, textAlign: "center" }}>
             {formatInr(total)}
           </Typography>
         </Box>
@@ -79,7 +97,7 @@ function EmiDonutChart({
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
           <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: SUCCESS }} />
           <Typography sx={{ fontSize: 12, color: T.color.textSecondary, fontWeight: 500 }}>
-            Interest {(100 - principalPct).toFixed(0)}%
+            Interest {interestPct.toFixed(0)}%
           </Typography>
         </Box>
       </Box>
@@ -93,14 +111,101 @@ function SummaryStat({ label, value }: { label: string; value: string }) {
       sx={{
         p: 1.25,
         borderRadius: T.radius.sm,
-        bgcolor: "rgba(255,255,255,0.7)",
+        bgcolor: "rgba(255,255,255,0.85)",
         border: "1px solid rgba(37,99,235,0.1)",
       }}
     >
       <Typography sx={{ fontSize: 11, color: T.color.textMuted, mb: 0.25 }}>{label}</Typography>
-      <Typography sx={{ fontWeight: 700, fontSize: 14, color: T.color.textPrimary }}>{value}</Typography>
+      <Typography sx={{ fontWeight: 700, fontSize: 13, color: T.color.textPrimary, wordBreak: "break-word" }}>
+        {value}
+      </Typography>
     </Box>
   );
+}
+
+function FieldCard({ children }: { children: React.ReactNode }) {
+  return (
+    <Box
+      sx={{
+        p: 1.75,
+        borderRadius: T.radius.md,
+        bgcolor: "#f8fafc",
+        border: `1px solid ${T.color.border}`,
+      }}
+    >
+      {children}
+    </Box>
+  );
+}
+
+function useEmiApiCalculation(input: {
+  vehiclePrice: number;
+  downPayment: number;
+  interestRate: number;
+  tenureMonths: number;
+  enabled?: boolean;
+}) {
+  const { vehiclePrice, downPayment, interestRate, tenureMonths, enabled = true } = input;
+  const [result, setResult] = useState<EmiCalculationResult>(EMPTY_EMI_RESULT);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const reqId = useRef(0);
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (!Number.isFinite(vehiclePrice) || vehiclePrice < 0) return;
+    if (!Number.isFinite(interestRate) || interestRate < MIN_RATE || interestRate > MAX_RATE) {
+      setError(`Interest rate must be between ${MIN_RATE}% and ${MAX_RATE}%.`);
+      return;
+    }
+
+    const controller = new AbortController();
+    const currentReq = ++reqId.current;
+
+    const timer = window.setTimeout(() => {
+      setLoading(true);
+      setError(null);
+
+      void calculateEmiApi(
+        {
+          vehiclePrice,
+          downPayment: clamp(downPayment, 0, vehiclePrice),
+          interestRate: clamp(interestRate, MIN_RATE, MAX_RATE),
+          tenureMonths,
+        },
+        controller.signal,
+      )
+        .then((data) => {
+          if (currentReq !== reqId.current) return;
+          setResult({
+            monthlyEmi: data.monthlyEmi,
+            totalPayable: data.totalPayable,
+            totalInterest: data.totalInterest,
+            principalAmount: data.principalAmount,
+            loanAmount: data.loanAmount,
+          });
+        })
+        .catch((err: unknown) => {
+          if (controller.signal.aborted) return;
+          if (err instanceof DOMException && err.name === "AbortError") return;
+          if (err instanceof Error && err.name === "AbortError") return;
+          if (currentReq !== reqId.current) return;
+          setError(err instanceof Error ? err.message : "Failed to calculate EMI");
+        })
+        .finally(() => {
+          if (!controller.signal.aborted && currentReq === reqId.current) {
+            setLoading(false);
+          }
+        });
+    }, 300);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [vehiclePrice, downPayment, interestRate, tenureMonths, enabled]);
+
+  return { result, loading, error };
 }
 
 export function EmiCalculator({
@@ -114,43 +219,67 @@ export function EmiCalculator({
   const isModal = resolvedVariant === "modal";
   const isSidebar = resolvedVariant === "sidebar";
 
-  const [vehiclePrice, setVehiclePrice] = useState(defaultVehiclePrice);
-  const [downPayment, setDownPayment] = useState(Math.round(defaultVehiclePrice * 0.2));
+  const safeDefaultPrice = Math.max(0, Number(defaultVehiclePrice) || 0);
+  const [ready, setReady] = useState(false);
+  const [vehiclePrice, setVehiclePrice] = useState(safeDefaultPrice);
+  const [downPaymentPct, setDownPaymentPct] = useState(20);
   const [interestRate, setInterestRate] = useState(10);
   const [tenureYears, setTenureYears] = useState(3);
+  const [tenureOptionsYears, setTenureOptionsYears] = useState([1, 2, 3, 4, 5]);
   const tenureMonths = tenureYears * 12;
 
-  useEffect(() => {
-    setVehiclePrice(defaultVehiclePrice);
-    setDownPayment(Math.round(defaultVehiclePrice * 0.2));
-  }, [defaultVehiclePrice]);
+  const downPayment = Math.round(vehiclePrice * (downPaymentPct / 100));
 
   useEffect(() => {
-    setDownPayment((prev) => Math.min(prev, vehiclePrice));
-  }, [vehiclePrice]);
+    const controller = new AbortController();
+    setReady(false);
 
-  const sliderStep = useMemo(
-    () => Math.max(1, Math.round(Math.max(vehiclePrice, 1) / 40)),
-    [vehiclePrice],
-  );
+    void getEmiDefaults(controller.signal)
+      .then((defaults) => {
+        if (controller.signal.aborted) return;
+        const years = defaults.tenures
+          .filter((m) => m % 12 === 0)
+          .map((m) => m / 12)
+          .sort((a, b) => a - b);
+        if (years.length) setTenureOptionsYears(years);
 
-  const result = useMemo(
-    () =>
-      calculateEmi({
-        vehiclePrice,
-        downPayment,
-        annualInterestRate: interestRate,
-        tenureMonths,
-      }),
-    [vehiclePrice, downPayment, interestRate, tenureMonths],
-  );
+        const rate = clamp(Number(defaults.defaultInterestRate) || 10, MIN_RATE, MAX_RATE);
+        const downPct = clamp(Number(defaults.defaultDownPaymentPercent) || 20, MIN_DOWN_PCT, MAX_DOWN_PCT);
+        const tenureYr = Math.round((Number(defaults.defaultTenureMonths) || 36) / 12);
+
+        setInterestRate(rate);
+        setDownPaymentPct(downPct);
+        if (!years.length || years.includes(tenureYr)) setTenureYears(tenureYr || 3);
+        setVehiclePrice(safeDefaultPrice);
+        setReady(true);
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setVehiclePrice(safeDefaultPrice);
+        setInterestRate(10);
+        setDownPaymentPct(20);
+        setTenureYears(3);
+        setReady(true);
+      });
+
+    return () => controller.abort();
+  }, [safeDefaultPrice]);
+
+  const { result, loading, error } = useEmiApiCalculation({
+    vehiclePrice,
+    downPayment,
+    interestRate,
+    tenureMonths,
+    enabled: ready && !isSidebar,
+  });
+
+  const priceInputValue = useMemo(() => (vehiclePrice ? String(vehiclePrice) : ""), [vehiclePrice]);
 
   if (isSidebar) {
     return (
       <EmiSummary
-        vehiclePrice={vehiclePrice}
+        vehiclePrice={safeDefaultPrice}
         onClick={onOpenFullCalculator}
-        monthlyEmi={result.monthlyEmi}
       />
     );
   }
@@ -176,20 +305,13 @@ export function EmiCalculator({
           display: "grid",
           gridTemplateColumns: {
             xs: "1fr",
-            md: showChart ? "minmax(0, 1.1fr) minmax(0, 0.9fr)" : "1fr 1fr",
+            md: showChart ? "minmax(0, 1.05fr) minmax(0, 0.95fr)" : "1fr 1fr",
           },
           gap: { xs: 2.5, md: 3 },
         }}
       >
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 2,
-            p: isModal ? { xs: 0, md: 0.5 } : 0,
-          }}
-        >
-          <Typography sx={{ fontSize: 13, fontWeight: 700, color: T.color.textPrimary, mb: -0.5 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.75 }}>
+          <Typography sx={{ fontSize: 13, fontWeight: 700, color: T.color.textPrimary }}>
             Loan details
           </Typography>
 
@@ -197,52 +319,52 @@ export function EmiCalculator({
             fullWidth
             size="small"
             label="Vehicle price (₹)"
-            type="number"
-            value={vehiclePrice}
-            onChange={(e) => setVehiclePrice(Math.max(0, Number(e.target.value) || 0))}
-            inputProps={{ min: 0 }}
+            value={priceInputValue}
+            onChange={(e) => setVehiclePrice(Math.max(0, Math.round(parsePositiveNumber(e.target.value))))}
+            inputProps={{ inputMode: "numeric" }}
+            helperText="Amount used for EMI estimate"
           />
 
-          <Box
-            sx={{
-              p: 1.75,
-              borderRadius: T.radius.md,
-              bgcolor: "#f8fafc",
-              border: `1px solid ${T.color.border}`,
-            }}
-          >
+          <FieldCard>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }}>
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: T.color.textSecondary }}>
                 Down payment
               </Typography>
               <Typography sx={{ fontSize: 13, fontWeight: 700, color: INFO }}>
-                {formatInr(downPayment)}
+                {formatInr(downPayment)} ({downPaymentPct}%)
               </Typography>
             </Box>
             <Slider
-              value={Math.min(downPayment, vehiclePrice)}
-              min={0}
-              max={Math.max(vehiclePrice, 1)}
-              step={sliderStep}
-              onChange={(_, v) => setDownPayment(v as number)}
+              value={downPaymentPct}
+              min={MIN_DOWN_PCT}
+              max={MAX_DOWN_PCT}
+              step={1}
+              onChange={(_, v) => setDownPaymentPct(v as number)}
+              sx={{ mt: 0.5, color: INFO }}
+            />
+          </FieldCard>
+
+          <FieldCard>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }}>
+              <Typography sx={{ fontSize: 13, fontWeight: 600, color: T.color.textSecondary }}>
+                Interest rate (p.a.)
+              </Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 700, color: INFO }}>
+                {interestRate.toFixed(1)}%
+              </Typography>
+            </Box>
+            <Slider
+              value={interestRate}
+              min={MIN_RATE}
+              max={MAX_RATE}
+              step={0.1}
+              onChange={(_, v) => setInterestRate(Number((v as number).toFixed(1)))}
               sx={{ mt: 0.5, color: INFO }}
             />
             <Typography sx={{ fontSize: 11, color: T.color.textMuted }}>
-              {vehiclePrice > 0
-                ? `${Math.round((downPayment / vehiclePrice) * 100)}% of vehicle price`
-                : "—"}
+              Allowed range {MIN_RATE}% – {MAX_RATE}%
             </Typography>
-          </Box>
-
-          <TextField
-            fullWidth
-            size="small"
-            label="Interest rate (% p.a.)"
-            type="number"
-            value={interestRate}
-            onChange={(e) => setInterestRate(Math.max(0, Number(e.target.value) || 0))}
-            inputProps={{ min: 0, step: 0.1 }}
-          />
+          </FieldCard>
 
           <Box>
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: T.color.textSecondary, mb: 1 }}>
@@ -275,7 +397,7 @@ export function EmiCalculator({
                 },
               }}
             >
-              {[1, 2, 3, 4, 5].map((y) => (
+              {tenureOptionsYears.map((y) => (
                 <ToggleButton key={y} value={y}>
                   {y} yr
                 </ToggleButton>
@@ -291,8 +413,16 @@ export function EmiCalculator({
               borderRadius: T.radius.lg,
               background: "linear-gradient(135deg, rgba(37,99,235,0.08) 0%, rgba(37,99,235,0.03) 100%)",
               border: "1px solid rgba(37,99,235,0.18)",
+              position: "relative",
+              minHeight: 210,
             }}
           >
+            {loading || !ready ? (
+              <Box sx={{ position: "absolute", top: 12, right: 12 }}>
+                <CircularProgress size={16} />
+              </Box>
+            ) : null}
+
             <Typography
               sx={{
                 fontSize: 11,
@@ -308,12 +438,20 @@ export function EmiCalculator({
             <Typography sx={{ fontSize: 13, color: T.color.textSecondary, mb: 0.5 }}>
               Estimated monthly EMI
             </Typography>
-            <Typography sx={{ fontSize: { xs: 34, md: 38 }, fontWeight: 800, color: INFO, lineHeight: 1.05 }}>
-              {formatInr(result.monthlyEmi)}
-              <Typography component="span" sx={{ fontSize: 16, fontWeight: 600, color: T.color.textSecondary, ml: 0.5 }}>
+            <Typography sx={{ fontSize: { xs: 30, md: 36 }, fontWeight: 800, color: INFO, lineHeight: 1.05 }}>
+              {!ready || loading ? "…" : formatInr(result.monthlyEmi)}
+              <Typography component="span" sx={{ fontSize: 15, fontWeight: 600, color: T.color.textSecondary, ml: 0.5 }}>
                 /mo
               </Typography>
             </Typography>
+
+            {error ? (
+              <Typography sx={{ mt: 1, fontSize: 12, color: "#dc2626" }}>{error}</Typography>
+            ) : (
+              <Typography sx={{ mt: 1, fontSize: 11, color: T.color.textMuted }}>
+                Live estimate based on your loan details
+              </Typography>
+            )}
 
             <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.25, mt: 2.5 }}>
               <SummaryStat label="Total payable" value={formatInr(result.totalPayable)} />
@@ -347,21 +485,69 @@ export function EmiSummary({
   vehiclePrice,
   onClick,
   monthlyEmi,
+  loading = false,
 }: {
   vehiclePrice: number;
   onClick?: () => void;
   monthlyEmi?: number;
+  loading?: boolean;
 }) {
-  const result = calculateEmi({
-    vehiclePrice,
-    downPayment: Math.round(vehiclePrice * 0.2),
-    annualInterestRate: 10,
-    tenureMonths: 36,
-  });
-  const emi = monthlyEmi ?? result.monthlyEmi;
+  const [emi, setEmi] = useState(monthlyEmi ?? 0);
+  const [interestRate, setInterestRate] = useState(10);
+  const [downPct, setDownPct] = useState(20);
+  const [tenureMonths, setTenureMonths] = useState(36);
+  const [busy, setBusy] = useState(false);
 
-  const content = (
-    <>
+  useEffect(() => {
+    if (monthlyEmi != null) {
+      setEmi(monthlyEmi);
+      return;
+    }
+
+    const controller = new AbortController();
+    setBusy(true);
+
+    void (async () => {
+      try {
+        const defaults = await getEmiDefaults(controller.signal);
+        const rate = clamp(defaults.defaultInterestRate, MIN_RATE, MAX_RATE);
+        const pct = clamp(defaults.defaultDownPaymentPercent, MIN_DOWN_PCT, MAX_DOWN_PCT);
+        setInterestRate(rate);
+        setDownPct(pct);
+        setTenureMonths(defaults.defaultTenureMonths);
+        const downPayment = Math.round(vehiclePrice * (pct / 100));
+        const data = await calculateEmiApi(
+          {
+            vehiclePrice,
+            downPayment,
+            interestRate: rate,
+            tenureMonths: defaults.defaultTenureMonths,
+          },
+          controller.signal,
+        );
+        setEmi(data.monthlyEmi);
+      } catch {
+        if (!controller.signal.aborted) setEmi(0);
+      } finally {
+        if (!controller.signal.aborted) setBusy(false);
+      }
+    })();
+
+    return () => controller.abort();
+  }, [vehiclePrice, monthlyEmi]);
+
+  const downPayment = Math.round(vehiclePrice * (downPct / 100));
+  const showLoading = loading || busy;
+
+  return (
+    <Box
+      sx={{
+        p: 2,
+        borderRadius: T.radius.md,
+        bgcolor: T.color.surfaceMuted,
+        border: `1px solid ${T.color.border}`,
+      }}
+    >
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
         <Box
           sx={{
@@ -380,12 +566,14 @@ export function EmiSummary({
           <Typography sx={{ fontSize: 13, fontWeight: 700, color: T.color.textPrimary }}>
             EMI Calculator
           </Typography>
-          <Typography sx={{ fontSize: 11, color: T.color.textMuted }}>@ 10% · 3 years</Typography>
+          <Typography sx={{ fontSize: 11, color: T.color.textMuted }}>
+            @ {interestRate}% · {Math.round(tenureMonths / 12)} years
+          </Typography>
         </Box>
       </Box>
 
       <Typography sx={{ fontWeight: 800, fontSize: 26, color: INFO, lineHeight: 1.1 }}>
-        {formatInr(emi)}
+        {showLoading ? "…" : formatInr(emi)}
         <Typography component="span" sx={{ fontSize: 14, fontWeight: 500, color: T.color.textSecondary }}>
           {" "}
           /month
@@ -395,9 +583,7 @@ export function EmiSummary({
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, mt: 1.5 }}>
         <Box>
           <Typography sx={{ fontSize: 11, color: T.color.textMuted }}>Down payment</Typography>
-          <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
-            {formatInr(Math.round(vehiclePrice * 0.2))}
-          </Typography>
+          <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{formatInr(downPayment)}</Typography>
         </Box>
         <Box>
           <Typography sx={{ fontSize: 11, color: T.color.textMuted }}>Vehicle price</Typography>
@@ -416,19 +602,6 @@ export function EmiSummary({
           Open full calculator
         </Button>
       ) : null}
-    </>
-  );
-
-  return (
-    <Box
-      sx={{
-        p: 2,
-        borderRadius: T.radius.md,
-        bgcolor: T.color.surfaceMuted,
-        border: `1px solid ${T.color.border}`,
-      }}
-    >
-      {content}
     </Box>
   );
 }

@@ -381,24 +381,7 @@ export function BuySellListPage() {
       onErrorClose={() => setError("")}
       action={
         canCreate ? (
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-            <Button
-              variant="outlined"
-              startIcon={<UploadFileIcon />}
-              onClick={() => setBulkUploadOpen(true)}
-            >
-              Bulk Upload
-            </Button>
-            <Button variant="outlined" onClick={() => navigate(routes.buysell.cart())}>
-              My Cart
-            </Button>
-            <Button variant="outlined" onClick={() => navigate(routes.buysell.purchasedList())}>
-              My Purchases
-            </Button>
-            <Button variant="contained" onClick={() => navigate(routes.buysell.create())}>
-              Add Product
-            </Button>
-          </Box>
+       <></>
         ) : undefined
       }
     >

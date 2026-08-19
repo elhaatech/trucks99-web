@@ -5,11 +5,11 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
-import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 import { formatProductPrice } from "@/app/common/components/buysell/utils";
+import { ProductShareMenu } from "@/app/common/components/buysell/ProductShareMenu";
 import { ProductStatusChip } from "@/app/admin/portal/buysell/_components/ProductStatusChip";
 import type { BuySellProductStatus } from "@/model/services/buysellapi";
 
@@ -25,7 +25,8 @@ type ProductViewSummaryProps = {
   wishlisted?: boolean;
   favoriteBusy?: boolean;
   onFavoriteToggle?: () => void;
-  onShare?: () => void;
+  shareUrl?: string;
+  productTitle?: string;
 };
 
 function StatPill({ label, value }: { label: string; value: string | number }) {
@@ -49,7 +50,8 @@ export function ProductViewSummary({
   wishlisted = false,
   favoriteBusy = false,
   onFavoriteToggle,
-  onShare,
+  shareUrl,
+  productTitle,
 }: ProductViewSummaryProps) {
   return (
     <Box
@@ -112,17 +114,7 @@ export function ProductViewSummary({
       </Box>
 
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-        {onShare ? (
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<ShareOutlinedIcon />}
-            onClick={onShare}
-            sx={{ textTransform: "none", fontWeight: 600, borderColor: T.color.border }}
-          >
-            Share
-          </Button>
-        ) : null}
+        <ProductShareMenu productTitle={productTitle ?? title} shareUrl={shareUrl} />
         {onFavoriteToggle ? (
           <Button
             variant="outlined"
