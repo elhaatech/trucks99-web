@@ -12,7 +12,7 @@ export interface StatCardProps {
   subtitle?: string;
   icon?: React.ReactNode;
   /** MUI palette key or CSS color for icon background */
-  accent?: "primary" | "secondary" | "success" | "info" | "warning";
+  accent?: "primary" | "secondary" | "success" | "info" | "warning" | "error";
   loading?: boolean;
   onClick?: () => void;
   badge?: React.ReactNode;
@@ -38,9 +38,11 @@ export function StatCard({
         ? theme.palette.info.main
         : accent === "warning"
           ? theme.palette.warning.main
-          : accent === "secondary"
-            ? theme.palette.secondary.main
-            : theme.palette.primary.main;
+          : accent === "error"
+            ? theme.palette.error.main
+            : accent === "secondary"
+              ? theme.palette.secondary.main
+              : theme.palette.primary.main;
 
   return (
     <AppCard

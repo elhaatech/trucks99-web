@@ -71,6 +71,13 @@ async function startServer() {
         console.log("Successfully connected to database!!");
 
         try {
+            const { ensureMarketItemViewIndexes } = require('./schema/marketItemView');
+            await ensureMarketItemViewIndexes();
+        } catch (err) {
+            console.error('[MarketItemView] Index migration failed:', err.message || err);
+        }
+
+        try {
             const { checkOtpDependencies } = require('./helpers/otpStartupCheck');
             await checkOtpDependencies();
         } catch (err) {

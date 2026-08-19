@@ -17,6 +17,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: ChipColor }> = {
   active: { label: "Active", color: "success" },
   inactive: { label: "Inactive", color: "error" },
   rejected: { label: "Rejected", color: "error" },
+  accepeted: { label: "Approved", color: "success" },
+  accepted: { label: "Approved", color: "success" },
   booking: { label: "Booked", color: "info" },
   purchased: { label: "Purchased", color: "primary" },
   sold: { label: "Sold", color: "secondary" },

@@ -149,6 +149,10 @@ const buySellSchema = new mongoose.Schema(
 buySellSchema.index({ status: 1, createdAt: -1 });
 buySellSchema.index({ userid: 1, status: 1, createdAt: -1 });
 buySellSchema.index({ category_id: 1, status: 1, createdAt: -1 });
+buySellSchema.index({ viewCount: -1, createdAt: -1 });
+buySellSchema.index({ soldAt: -1 });
+buySellSchema.index({ bookedAt: -1 });
+buySellSchema.index({ updatedAt: -1 });
 buySellSchema.index({ subcategory_id: 1, status: 1, createdAt: -1 });
 buySellSchema.index({ status: 1, price: 1, createdAt: -1 });
 buySellSchema.index({

@@ -1,8 +1,9 @@
 const express = require('express');
 const Load = require('../schema/load');
 const Truck = require('../schema/truck');
-const { requireDashboardAccess, checkDashboardAccess } = require('../helpers/dashboardAccess');
+const { checkDashboardAccess, isAdminUser } = require('../helpers/dashboardAccess');
 const dashboardService = require('../services/dashboardService');
+const marketplaceDashboardService = require('../services/marketplaceDashboardService');
 
 const dashboardRouter = express.Router();
 
@@ -90,8 +91,7 @@ dashboardRouter.post(
   }),
 );
 
-// All premium dashboard endpoints require subscription (admins bypass)
-// dashboardRouter.use(requireDashboardAccess());
+// Legacy logistics dashboard endpoints remain POST-only for compatibility.
 
 const routes = [
   ['overview', dashboardService.getOverview],
@@ -125,6 +125,44 @@ routes.forEach(([path, handler]) => {
       }
     }),
   );
+});
+
+function requireAdminAnalytics(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+  if (!isAdminUser(req.user)) {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+  return next();
+}
+
+function marketplaceFilters(req) {
+  return { ...(req.query || {}), ...(req.body || {}) };
+}
+
+const marketplaceRoutes = [
+  ['summary', marketplaceDashboardService.getSummary],
+  ['product-status', marketplaceDashboardService.getProductStatus],
+  ['most-viewed-products', marketplaceDashboardService.getMostViewedProducts],
+  ['top-performing-products', marketplaceDashboardService.getTopPerformingProducts],
+  ['product-views', marketplaceDashboardService.getProductViews],
+  ['categories', marketplaceDashboardService.getCategoryAnalytics],
+  ['user-analytics', marketplaceDashboardService.getUserAnalytics],
+  ['recent-activity', marketplaceDashboardService.getRecentActivity],
+];
+
+marketplaceRoutes.forEach(([path, handler]) => {
+  const wrap = asyncHandler(async (req, res) => {
+    try {
+      const data = await handler(marketplaceFilters(req));
+      return res.status(200).json(data);
+    } catch (error) {
+      return handleError(res, error, path);
+    }
+  });
+  dashboardRouter.get(`/${path}`, requireAdminAnalytics, wrap);
+  dashboardRouter.post(`/${path}`, requireAdminAnalytics, wrap);
 });
 
 module.exports = dashboardRouter;

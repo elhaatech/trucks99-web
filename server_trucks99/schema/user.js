@@ -95,6 +95,7 @@ const userSchema = new Schema({
 userSchema.index({ "purchasedSubscriptions.fieldName": 1 });
 userSchema.index({ "purchasedSubscriptions.paymentId": 1 });
 userSchema.index({ "purchasedSubscriptions.subscriptionItemId": 1 });
+userSchema.index({ status: 1 });
 
 userSchema.plugin(findOrCreate);
 

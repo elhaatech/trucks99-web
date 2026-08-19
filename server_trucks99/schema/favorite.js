@@ -31,5 +31,6 @@ const favoriteSchema = new mongoose.Schema(
 
 favoriteSchema.index({ userId: 1, entity: 1, entityId: 1 });
 favoriteSchema.index({ userId: 1, entity: 1, is_favorite: 1 });
+favoriteSchema.index({ entity: 1, is_favorite: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Favorite', favoriteSchema);

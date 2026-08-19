@@ -44,5 +44,7 @@ const chatRoomSchema = new mongoose.Schema(
 
 // Prevents duplicate rooms for the same buyer/seller/product combo.
 chatRoomSchema.index({ productId: 1, sellerId: 1, buyerId: 1 }, { unique: true });
+chatRoomSchema.index({ createdAt: -1 });
+chatRoomSchema.index({ buyerId: 1, createdAt: -1 });
 
 module.exports = mongoose.model("ChatRoom", chatRoomSchema);

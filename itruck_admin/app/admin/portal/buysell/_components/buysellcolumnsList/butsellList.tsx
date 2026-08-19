@@ -144,10 +144,20 @@ export function BuySellListPage() {
   // ── Mount: restore saved filters when navigating back ─────────────────────
   useEffect(() => {
     const saved = loadListState<BuySellListPersistedState>(pathname);
-    const initialApplied = saved?.appliedFilters ?? EMPTY_FILTERS;
-    if (saved) {
-      setFiltersPatch(saved.filters);
-      setAppliedFilters(saved.appliedFilters);
+    const categoryFromUrl =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("category_id") || ""
+        : "";
+    const initialApplied = {
+      ...(saved?.appliedFilters ?? EMPTY_FILTERS),
+      ...(categoryFromUrl ? { category_id: categoryFromUrl } : {}),
+    };
+    if (saved || categoryFromUrl) {
+      setFiltersPatch({
+        ...(saved?.filters ?? EMPTY_FILTERS),
+        ...(categoryFromUrl ? { category_id: categoryFromUrl } : {}),
+      });
+      setAppliedFilters(initialApplied);
     }
     void loadAll(initialApplied);
     getCurrentUser()

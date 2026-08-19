@@ -6,13 +6,21 @@ const DASHBOARD_PACKAGE_TYPES = new Set(['dashboard', 'agent']);
 
 function isAdminUser(user) {
   if (!user) return false;
-  const roleName =
-    (user.roleId && user.roleId.name) ||
-    (typeof user.role === 'string' ? user.role : '');
-  const normalized = String(roleName || '').toLowerCase();
-  if (normalized === 'admin' || normalized === 'superadmin') return true;
   const email = user.email && String(user.email).toLowerCase();
-  return email === 'admin@mail.com';
+  if (email === 'admin@mail.com') return true;
+  const role = user.roleId || user.role;
+  const roleName =
+    typeof role === 'string' ? role : role?.name || '';
+  const roleStatus = typeof role === 'object' ? role?.status || '' : '';
+  const normalized = String(roleName || '').toLowerCase().trim();
+  const status = String(roleStatus || '').toLowerCase().trim();
+  return (
+    status === 'admin' ||
+    normalized === 'admin' ||
+    normalized === 'superadmin' ||
+    normalized === 'super_admin' ||
+    normalized === 'super admin'
+  );
 }
 
 async function hasActiveDashboardSubscription(userId) {

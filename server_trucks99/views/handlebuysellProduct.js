@@ -3924,63 +3924,81 @@ buySellRouter.delete("/delete", async (req, res) => {
   }
 });
 
+function sanitizeViewSessionId(raw) {
+  const value = String(raw || "").trim();
+  if (!value) return null;
+  const cleaned = value.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64);
+  return cleaned.length >= 8 ? cleaned : null;
+}
+
 // ─── INCREMENT VIEW COUNT ─────────────────────────────────────────────────────
 // PATCH /api/buy-sell/:id/view
+// Counts a genuine product-detail view once per user/session within 24 hours.
+// Appends a MarketItemView event so dashboard time-series aggregations work.
 buySellRouter.patch("/:id/view", async (req, res) => {
   try {
     const actor = getActor(req);
-    if (!actor.id)
-      return res.status(401).json({ message: "Unauthorized user" });
-
     const item = await findByIdOrUuid(BuySellProduct, req.params.id);
     if (!item) return res.status(404).json({ message: "Not found" });
 
-    const userObjectId = toObjectId(actor.id);
     const productObjectId = item._id;
+    const viewCount = item.viewCount || 0;
+
+    // Admin and owner views are not marketplace engagement.
+    if (actor.id && (isAdminActor(actor) || isSameUserAsActor(item.userid, actor))) {
+      return res.status(200).json({
+        id: item.id || String(productObjectId),
+        viewCount,
+        incremented: false,
+      });
+    }
+
+    const userObjectId = actor.id
+      ? toObjectId(actor.id) || toObjectId(actor.mongoId)
+      : null;
+    const sessionId = sanitizeViewSessionId(
+      req.body?.sessionId || req.headers["x-view-session"],
+    );
+
+    if (!userObjectId && !sessionId) {
+      return res.status(200).json({
+        id: item.id || String(productObjectId),
+        viewCount,
+        incremented: false,
+      });
+    }
 
     const dedupeHours = 24;
     const dedupeSince = new Date(Date.now() - dedupeHours * 60 * 60 * 1000);
+    const dedupeQuery = userObjectId
+      ? { productId: productObjectId, userId: userObjectId, viewedAt: { $gte: dedupeSince } }
+      : { productId: productObjectId, sessionId, viewedAt: { $gte: dedupeSince } };
 
-    const existingView = await MarketItemView.findOne({
+    const recentView = await MarketItemView.findOne(dedupeQuery).select("_id").lean();
+    if (recentView) {
+      return res.status(200).json({
+        id: item.id || String(productObjectId),
+        viewCount,
+        incremented: false,
+      });
+    }
+
+    await MarketItemView.create({
       productId: productObjectId,
       userId: userObjectId,
-    }).lean();
-
-    let incremented = false;
-    let viewCount = item.viewCount || 0;
-
-    if (!existingView) {
-      await MarketItemView.create({
-        productId: productObjectId,
-        userId: userObjectId,
-        viewedAt: new Date(),
-      });
-      const updated = await BuySellProduct.findByIdAndUpdate(
-        productObjectId,
-        { $inc: { viewCount: 1 } },
-        { new: true },
-      ).select("id viewCount");
-      viewCount = updated?.viewCount ?? viewCount + 1;
-      incremented = true;
-    } else if (existingView.viewedAt < dedupeSince) {
-      await MarketItemView.findByIdAndUpdate(existingView._id, {
-        $set: { viewedAt: new Date() },
-      });
-      const updated = await BuySellProduct.findByIdAndUpdate(
-        productObjectId,
-        { $inc: { viewCount: 1 } },
-        { new: true },
-      ).select("id viewCount");
-      viewCount = updated?.viewCount ?? viewCount + 1;
-      incremented = true;
-    } else {
-      viewCount = item.viewCount || 0;
-    }
+      sessionId,
+      viewedAt: new Date(),
+    });
+    const updated = await BuySellProduct.findByIdAndUpdate(
+      productObjectId,
+      { $inc: { viewCount: 1 } },
+      { new: true },
+    ).select("id viewCount");
 
     return res.status(200).json({
       id: item.id || String(productObjectId),
-      viewCount,
-      incremented,
+      viewCount: updated?.viewCount ?? viewCount + 1,
+      incremented: true,
     });
   } catch (error) {
     if (error.code === 11000) {

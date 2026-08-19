@@ -826,16 +826,52 @@ export async function getBuySellProduct(id: string): Promise<BuySellProduct> {
   }
 }
 
-/** Increment market item view count (deduped per user within 24h on server). */
-export async function incrementMarketItemView(id: string): Promise<{ id?: string; viewCount: number; incremented: boolean }> {
+const viewedInFlight = new Map<string, Promise<{ id?: string; viewCount: number; incremented: boolean }>>();
+
+function getMarketplaceViewSessionId(): string {
+  if (typeof window === "undefined") return "";
+  const key = "itruck_view_session";
   try {
-    const res = await axiosClient.patch<{ id?: string; viewCount: number; incremented: boolean }>(
-      `/api/buy-sell/${id}/view`,
-      {},
-    );
-    return res.data;
-  } catch (error) {
-    normalizeError(error);
+    let id = window.localStorage.getItem(key);
+    if (!id) {
+      id = (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`)
+        .replace(/[^a-zA-Z0-9_-]/g, "")
+        .slice(0, 64);
+      window.localStorage.setItem(key, id);
+    }
+    return id;
+  } catch {
+    return "";
+  }
+}
+
+/** Increment market item view count (deduped per user/session within 24h on server). */
+export async function incrementMarketItemView(id: string): Promise<{ id?: string; viewCount: number; incremented: boolean }> {
+  const existing = viewedInFlight.get(id);
+  if (existing) return existing;
+
+  const run = (async () => {
+    try {
+      const sessionId = getMarketplaceViewSessionId();
+      const res = await axiosClient.patch<{ id?: string; viewCount: number; incremented: boolean }>(
+        `/api/buy-sell/${id}/view`,
+        sessionId ? { sessionId } : {},
+      );
+      return res.data;
+    } catch (error) {
+      normalizeError(error);
+    }
+  })();
+
+  viewedInFlight.set(id, run);
+  try {
+    return await run;
+  } finally {
+    if (typeof window !== "undefined") {
+      window.setTimeout(() => viewedInFlight.delete(id), 4000);
+    } else {
+      viewedInFlight.delete(id);
+    }
   }
 }
 
