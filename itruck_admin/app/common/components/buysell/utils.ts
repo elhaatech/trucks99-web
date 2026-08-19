@@ -193,6 +193,36 @@ export function mapDashboardMetricsToMarketplaceStats(
   };
 }
 
+export function formatContactMobile(value?: string | null): string | null {
+  if (value == null) return null;
+  const raw = String(value).trim();
+  if (!raw || raw.toLowerCase() === "unknown") return null;
+  return raw;
+}
+
+/** `tel:` href from a stored mobile value. */
+export function contactTelHref(mobile?: string | null): string | null {
+  const formatted = formatContactMobile(mobile);
+  if (!formatted) return null;
+  const digits = formatted.replace(/[^\d+]/g, "");
+  return digits ? `tel:${digits}` : null;
+}
+
+export function getSellerDisplayName(
+  product?: BuySellProduct | null | Partial<BuySellProduct>,
+): string {
+  if (!product) return "Seller";
+  const candidates = [product.sellerName, product.created_by];
+  for (const c of candidates) {
+    const name = String(c ?? "").trim();
+    if (!name) continue;
+    const lower = name.toLowerCase();
+    if (lower === "buyer" || lower === "seller" || lower === "unknown") continue;
+    return name;
+  }
+  return "Seller";
+}
+
 export function deriveMarketplaceStats(products: BuySellProduct[]): MarketplaceStats {
   let activeListings = 0;
   let soldVehicles = 0;

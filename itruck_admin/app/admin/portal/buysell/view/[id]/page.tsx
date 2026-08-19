@@ -10,6 +10,7 @@ import Grid from "@mui/material/Grid";
 import Skeleton from "@mui/material/Skeleton";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
+import CircularProgress from "@mui/material/CircularProgress";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -17,7 +18,6 @@ import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
@@ -45,6 +45,7 @@ import { getChatList } from "@/model/services/chatapi";
 import { BitRecordsSection } from "@/components/common/BitRecordsSection";
 import { getCurrentUser } from "@/model/services/user";
 import type { User } from "@/model/services/user";
+import { addFavorite, removeFavorite } from "@/model/services/favoriteapi";
 import ChatInboxPage from "@/components/common/Chatinboxpage";
 import { ProductStatusChip } from "../../_components/ProductStatusChip";
 import { ProductLifecycleSection } from "./_components/ProductLifecycleSection";
@@ -64,6 +65,10 @@ import {
   type RelatedProduct,
 } from "../buysell-product/RelatedProductsCarousel";
 import { ProductExploreSection } from "../buysell-product/ProductExploreSection";
+import { ProductShareMenu } from "@/app/common/components/buysell/ProductShareMenu";
+import { EmiCalculator } from "@/app/common/components/buysell";
+import { ProductEmiSidebarCard } from "@/app/usear/product/viewproduct/_components/ProductEmiSidebarCard";
+import { getProductTitle } from "@/app/common/components/buysell/utils";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -165,10 +170,9 @@ export default function BuySellViewPage() {
   const [cartCount, setCartCount] = useState(0);
   const [subcategoryFilter, setSubcategoryFilter] = useState<SubcategoryFilterValue>(null);
 
-  // ── UI-only additions (no backend endpoint in the original file) ──
-  // Wishlist state is local only — it resets on reload. Wire to a real
-  // "add to wishlist" endpoint when one exists, then swap this out.
   const [wishlisted, setWishlisted] = useState(false);
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
+  const [emiOpen, setEmiOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportText, setReportText] = useState("");
   // Presentational only — replace with a real "similar products" API call.
@@ -196,6 +200,7 @@ export default function BuySellViewPage() {
             : product,
         );
         setBitRecords(records ?? []);
+        setWishlisted(Boolean(product.is_favorite));
       })
       .catch((err) =>
         setError(err instanceof Error ? err.message : "Failed to load"),
@@ -238,17 +243,30 @@ export default function BuySellViewPage() {
     };
   }, []);
 
-  const handleShare = async () => {
-    const url = typeof window !== "undefined" ? window.location.href : "";
+  const handleFavorite = async () => {
+    if (!currentUser) {
+      notify({ type: "error", message: "Please log in to save favourites." });
+      return;
+    }
+    if (!id) return;
+    setFavoriteBusy(true);
     try {
-      if (typeof navigator !== "undefined" && navigator.share) {
-        await navigator.share({ title: item?.description || "Listing", url });
-      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(url);
-        notify({ type: "success", message: "Link copied to clipboard" });
+      if (wishlisted) {
+        await removeFavorite("buySell", id);
+        setWishlisted(false);
+        notify({ type: "success", message: "Removed from favourites." });
+      } else {
+        await addFavorite("buySell", id);
+        setWishlisted(true);
+        notify({ type: "success", message: "Added to your favourite list." });
       }
-    } catch {
-      // user cancelled the share sheet — nothing to do
+    } catch (err) {
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to update favourite",
+      });
+    } finally {
+      setFavoriteBusy(false);
     }
   };
 
@@ -602,19 +620,28 @@ export default function BuySellViewPage() {
                   }}
                 >
                   <Tooltip title={wishlisted ? "Remove from wishlist" : "Add to wishlist"}>
-                    <IconButton
-                      onClick={() => setWishlisted((w) => !w)}
-                      size="small"
-                      sx={{ color: wishlisted ? T.color.danger : T.color.textSecondary }}
-                    >
-                      {wishlisted ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
-                    </IconButton>
+                    <span>
+                      <IconButton
+                        onClick={() => void handleFavorite()}
+                        size="small"
+                        disabled={favoriteBusy || !currentUser}
+                        sx={{ color: wishlisted ? T.color.danger : T.color.textSecondary }}
+                      >
+                        {favoriteBusy ? (
+                          <CircularProgress size={16} />
+                        ) : wishlisted ? (
+                          <FavoriteIcon fontSize="small" />
+                        ) : (
+                          <FavoriteBorderIcon fontSize="small" />
+                        )}
+                      </IconButton>
+                    </span>
                   </Tooltip>
-                  <Tooltip title="Share this listing">
-                    <IconButton onClick={handleShare} size="small" sx={{ color: T.color.textSecondary }}>
-                      <ShareOutlinedIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  <ProductShareMenu
+                    trigger="icon"
+                    productTitle={getProductTitle(item)}
+                    shareUrl={typeof window !== "undefined" ? window.location.href : undefined}
+                  />
                   <Tooltip title="Report this listing">
                     <IconButton onClick={() => setReportOpen(true)} size="small" sx={{ color: T.color.textSecondary }}>
                       <FlagOutlinedIcon fontSize="small" />
@@ -623,7 +650,12 @@ export default function BuySellViewPage() {
                 </Box>
               </ProductPriceCard>
 
-              <ProductTrustCard sellerName={item.created_by} />
+              <ProductEmiSidebarCard
+                vehiclePrice={Number(item.price) || 0}
+                onOpenCalculator={() => setEmiOpen(true)}
+              />
+
+              <ProductTrustCard sellerName={item.created_by} sellerMobile={item.seller_mobile} />
             </Box>
           </Grid>
         </Grid>
@@ -658,6 +690,39 @@ export default function BuySellViewPage() {
           </Button>
         </Box>
       )}
+
+      <Dialog
+        open={emiOpen}
+        onClose={() => setEmiOpen(false)}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            py: 2,
+            px: 3,
+            borderBottom: `1px solid ${T.color.border}`,
+            fontWeight: 800,
+            fontSize: 20,
+          }}
+        >
+          EMI Calculator
+          <IconButton onClick={() => setEmiOpen(false)} aria-label="Close" size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ px: { xs: 2, sm: 3 }, py: 3 }}>
+          <EmiCalculator
+            variant="modal"
+            defaultVehiclePrice={Number(item.price) || 500000}
+            showChart
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* ── Report dialog (UI stub — wire to a real endpoint) ── */}
       <Dialog open={reportOpen} onClose={() => setReportOpen(false)} fullWidth maxWidth="xs">

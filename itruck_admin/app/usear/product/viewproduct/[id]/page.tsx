@@ -222,20 +222,6 @@ export default function UserProductViewPage() {
   const offerActionLabel = hasMyOfferOnProduct ? "View your offer" : "Make an Offer";
   const offerActionLabelCompact = hasMyOfferOnProduct ? "View your offer" : "Make Offer";
 
-  const handleShare = async () => {
-    const url = typeof window !== "undefined" ? window.location.href : "";
-    try {
-      if (typeof navigator !== "undefined" && navigator.share) {
-        await navigator.share({ title, url });
-      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(url);
-        notify({ type: "success", message: "Link copied to clipboard." });
-      }
-    } catch {
-      /* user cancelled share */
-    }
-  };
-
   const summaryProps = {
     title,
     subtitle: subtitle || (year ? `${year} Model` : undefined),
@@ -248,7 +234,8 @@ export default function UserProductViewPage() {
     wishlisted,
     favoriteBusy,
     onFavoriteToggle: canShop ? () => void handleFavorite() : undefined,
-    onShare: handleShare,
+    shareUrl: typeof window !== "undefined" ? window.location.href : undefined,
+    productTitle: title,
   };
 
   const offersSectionProps = {
@@ -308,8 +295,9 @@ export default function UserProductViewPage() {
 
           <ProductSellerInfo
             sellerName={item.created_by ?? "Seller"}
+            sellerMobile={item.seller_mobile}
             location={locationLabel || item.address || undefined}
-            reviewCount={106}
+            reviewCount={0}
           />
 
           <ProductViewActionBar
@@ -365,6 +353,15 @@ export default function UserProductViewPage() {
               <FeaturedVehiclePromoCard
                 compact
                 onPayNow={() => setFeaturedPlansOpen(true)}
+              />
+            </Box>
+          ) : null}
+
+          {canShop ? (
+            <Box sx={{ mb: 2.5, display: { xs: "block", md: "none" } }}>
+              <ProductEmiSidebarCard
+                vehiclePrice={Number(item.price) || 0}
+                onOpenCalculator={() => setEmiOpen(true)}
               />
             </Box>
           ) : null}

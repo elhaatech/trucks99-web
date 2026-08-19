@@ -18,6 +18,14 @@ export type EmiCalculationResult = {
   loanAmount: number;
 };
 
+export const EMPTY_EMI_RESULT: EmiCalculationResult = {
+  monthlyEmi: 0,
+  totalPayable: 0,
+  totalInterest: 0,
+  principalAmount: 0,
+  loanAmount: 0,
+};
+
 /** Standard reducing-balance EMI formula. */
 export function calculateEmi(input: EmiCalculationInput): EmiCalculationResult {
   const vehiclePrice = Math.max(0, input.vehiclePrice);
