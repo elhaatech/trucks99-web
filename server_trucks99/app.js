@@ -107,8 +107,7 @@ const defaultOrigins = [
   "http://truck.elhaa.com",
   "https://truck.elhaa.com",
   "http://truck.elhaa.com:3000",
-  "http://46.202.176.124:3002",
-  "http://46.202.176.124:3000",
+
 ];
 
 const envOrigins = [
