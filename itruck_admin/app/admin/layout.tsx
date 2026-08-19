@@ -27,26 +27,29 @@ export default function DashboardRootLayout({
       .catch(() => setUser(null));
   }, []);
 
-  const refreshNotifications = () => {
-    getNotifications()
-      .then((list) => setNotificationCount(list.filter((n) => !n.read).length))
-      .catch(() => setNotificationCount(0));
-  };
-
   useEffect(() => {
-    refreshNotifications();
-  }, []);
+    let lastFetchAt = 0;
+    const MIN_VISIBLE_REFETCH_MS = 60_000;
 
-  useEffect(() => {
-    const onFocus = () => refreshNotifications();
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, []);
+    const refreshNotifications = (force = false) => {
+      const now = Date.now();
+      if (!force && now - lastFetchAt < MIN_VISIBLE_REFETCH_MS) return;
+      lastFetchAt = now;
+      getNotifications()
+        .then((list) => setNotificationCount(list.filter((n) => !n.read).length))
+        .catch(() => setNotificationCount(0));
+    };
 
-  useEffect(() => {
+    refreshNotifications(true);
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refreshNotifications(false);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
     let unsubscribe: (() => void) | null = null;
     subscribeToForegroundFcmNotifications(({ title, body }) => {
-      refreshNotifications();
+      refreshNotifications(true);
       // Browser notifications are shown by OS while app is closed; this handles active tab state.
       if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
         new Notification(title, { body });
@@ -57,15 +60,9 @@ export default function DashboardRootLayout({
       })
       .catch(() => undefined);
 
-    const onServiceWorkerMessage = () => refreshNotifications();
-    if (typeof navigator !== "undefined" && navigator.serviceWorker) {
-      navigator.serviceWorker.addEventListener("message", onServiceWorkerMessage);
-    }
     return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
       if (unsubscribe) unsubscribe();
-      if (typeof navigator !== "undefined" && navigator.serviceWorker) {
-        navigator.serviceWorker.removeEventListener("message", onServiceWorkerMessage);
-      }
     };
   }, []);
 

@@ -60,8 +60,11 @@ export default function ChatInboxPage({ onSelectRoom }: Props) {
   }, []);
 
   useEffect(() => {
-    loadRooms();
-    const interval = setInterval(() => loadRooms(true), POLL_INTERVAL_MS);
+    void loadRooms();
+    const interval = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      void loadRooms(true);
+    }, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [loadRooms]);
 

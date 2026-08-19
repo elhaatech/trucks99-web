@@ -79,28 +79,33 @@ export function TopNavbar({ user, notificationCount = 0, onMenuClick }: TopNavba
   const [inboxOpen, setInboxOpen] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
 
-  // Poll unread count across all of this user's conversations so the badge
-  // stays accurate no matter where they navigate.
-  useEffect(() => {
-    let cancelled = false;
-
-    async function poll() {
-      try {
-        const rooms = await getChatList();
-        if (cancelled) return;
-        setTotalUnread(rooms.reduce((sum, r) => sum + (r.unreadCount || 0), 0));
-      } catch {
-        // ignore — badge just won't update this cycle
-      }
+  const refreshUnread = React.useCallback(async () => {
+    try {
+      const rooms = await getChatList();
+      setTotalUnread(rooms.reduce((sum, r) => sum + (r.unreadCount || 0), 0));
+    } catch {
+      // ignore — badge just won't update this cycle
     }
-
-    poll();
-    const interval = setInterval(poll, 8000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
   }, []);
+
+  // Load once, then only when the tab is shown again (throttled) or inbox/chat is used.
+  useEffect(() => {
+    let lastAt = 0;
+    const run = (force: boolean) => {
+      const now = Date.now();
+      if (!force && now - lastAt < 60_000) return;
+      lastAt = now;
+      void refreshUnread();
+    };
+
+    run(true);
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") run(false);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [refreshUnread]);
 
   return (
     <AppBar
@@ -184,7 +189,14 @@ export function TopNavbar({ user, notificationCount = 0, onMenuClick }: TopNavba
           <NotificationBell initialCount={notificationCount} />
 
           <Tooltip title="Messages">
-            <IconButton size="small" onClick={() => setInboxOpen(true)} sx={actionIconSx}>
+            <IconButton
+              size="small"
+              onClick={() => {
+                setInboxOpen(true);
+                void refreshUnread();
+              }}
+              sx={actionIconSx}
+            >
               <Badge badgeContent={totalUnread} color="error">
                 <MarkChatUnreadOutlinedIcon fontSize="small" />
               </Badge>
@@ -267,19 +279,24 @@ export function TopNavbar({ user, notificationCount = 0, onMenuClick }: TopNavba
         </DialogTitle>
 
         <DialogContent sx={{ p: 2, overflowY: "auto" }}>
-          <ChatInboxPage
-            onSelectRoom={(roomId) => {
-              setSelectedRoomId(roomId);
-              setInboxOpen(false); // close dialog first, else drawer renders trapped behind its backdrop
-            }}
-          />
+          {inboxOpen ? (
+            <ChatInboxPage
+              onSelectRoom={(roomId) => {
+                setSelectedRoomId(roomId);
+                setInboxOpen(false); // close dialog first, else drawer renders trapped behind its backdrop
+              }}
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
 
       {/* Sibling of Dialog (not nested) so it doesn't stack behind its backdrop */}
       <ChatDrawer
         open={!!selectedRoomId}
-        onClose={() => setSelectedRoomId(null)}
+        onClose={() => {
+          setSelectedRoomId(null);
+          void refreshUnread();
+        }}
         roomId={selectedRoomId ?? undefined}
         currentUserId={currentUserId}
       />

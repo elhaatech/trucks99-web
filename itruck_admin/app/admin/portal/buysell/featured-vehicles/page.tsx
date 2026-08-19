@@ -106,7 +106,7 @@ export default function AdminFeaturedVehiclesPage() {
         );
         const vehicleLabel =
           item.description?.trim() ||
-          item.bsNumber ||
+          item.vehicleId ||
           item.vehicleId ||
           String(item._id || item.id || "Vehicle");
         const requester = item.placement?.requester || item.featured?.requester;
@@ -228,7 +228,6 @@ export default function AdminFeaturedVehiclesPage() {
   const columns = [
     { id: "vehicleLabel", label: "Vehicle", minWidth: 180 },
     { id: "sellerLabel", label: "User", minWidth: 140 },
-    { id: "userDetails", label: "User details", minWidth: 180 },
     { id: "requestLabel", label: "Request", minWidth: 110 },
     {
       id: "statusLabel",
