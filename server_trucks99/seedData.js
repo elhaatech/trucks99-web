@@ -28,6 +28,7 @@ const DEFAULT_PERMISSION_MODULES = [
   { title_name: 'Subscription', display_name: 'Packages' },
   { title_name: 'Payment Transactions', display_name: 'Transactions' },
   { title_name: 'permission', display_name: 'Permission' },
+  { title_name: 'Contact Enquiry', display_name: 'Enquiry' },
 ];
 
 function buildPermissionItems(access) {

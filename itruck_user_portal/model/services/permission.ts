@@ -47,6 +47,7 @@ export const DEFAULT_PERMISSION_TEMPLATE: PermissionItem[] = [
   { title_name: "Subscription", display_name: "Packages", access: { create: false, view: false, edit: false, delete: false, list: false } },
   { title_name: "Payment Transactions", display_name: "Transactions", access: { create: false, view: false, edit: false, delete: false, list: false } },
   { title_name: "permission", display_name: "Permission", access: { create: false, view: false, edit: false, delete: false, list: false } },
+  { title_name: "Contact Enquiry", display_name: "Enquiry", access: { create: false, view: false, edit: false, delete: false, list: false } },
 ];
 
 export async function getPermissions(params?: { search?: string }): Promise<PermissionGroup[]> {

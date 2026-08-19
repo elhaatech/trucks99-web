@@ -377,6 +377,24 @@ function FindTruckIcon() {
   );
 }
 
+function EnquiryIcon() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 4h16v16H4z" />
+      <path d="M4 7l8 6 8-6" />
+    </svg>
+  );
+}
+
 // ─── Icon map ──────────────────────────────────────────────────────────────────
 
 const NAV_ICONS: Record<string, React.ReactNode> = {
@@ -403,6 +421,7 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   matching: <DashboardIcon />,
   matchLoad: <FindLoadIcon />,
   matchTruck: <FindTruckIcon />,
+  enquiry: <EnquiryIcon />,
 };
 
 // ─── Types ─────────────────────────────────────────────────────────────────────

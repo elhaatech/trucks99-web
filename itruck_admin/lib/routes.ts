@@ -84,6 +84,10 @@ export const routes = {
     view: (id: string) => `${BASE}/cms/${id}`,
     edit: (id: string) => `${BASE}/cms/${id}/edit`,
   },
+  enquiry: {
+    list: () => `${BASE}/enquiry/list`,
+    view: (id: string) => `${BASE}/enquiry/view/${id}`,
+  },
   // Product
   // Load
   load: {

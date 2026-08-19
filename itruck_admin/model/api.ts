@@ -53,3 +53,4 @@ export * from "./services/companyStartCountry";
 export * from "./services/location";
 export * from "./services/firebase";
 export * from "./services/specification";
+export * from "./services/contact";

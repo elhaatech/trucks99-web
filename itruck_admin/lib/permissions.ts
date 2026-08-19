@@ -57,6 +57,7 @@ const NAV_ID_TO_PERMISSION_KEY: Record<string, string> = {
   notifications: "notifications",
   profile: "profile",
   cms: "cms",  // title_name: "CMS"
+  enquiry: "contact_enquiry",  // title_name: "Contact Enquiry"
 };
 
 // ─── Route path → API permission key ─────────────────────────────────────────
@@ -95,6 +96,7 @@ function buildNavPermissionMap(base: string): Record<string, string> {
     [`${b}/subscription`]: "subscription",
     [`${b}/subscription/transactions`]: "payment_transactions",
     [`${b}/cms`]: "cms",
+    [`${b}/enquiry`]: "contact_enquiry",
   };
 }
 
@@ -193,6 +195,12 @@ export function canViewNavItem(
 
   if (navId === "dashboard") return true;
 
+  // Contact enquiries: show for admin-like roles, or any role whose template
+  // does not yet include this new module (canModuleAction allows missing keys).
+  if (navId === "enquiry") {
+    return canModuleAction(role, "contact_enquiry", "view");
+  }
+
   // Matching parent
   if (navId === "matching") {
     return (
@@ -280,6 +288,10 @@ export function canViewRoute(
   // href not in our map → not gated (e.g. profile, external links)
   if (!permKey) return true;
 
+  if (permKey === "contact_enquiry") {
+    return canModuleAction(role, "contact_enquiry", "view");
+  }
+
   return canAccess(role, permKey, "view");
 }
 
@@ -295,13 +307,11 @@ export function canViewPath(
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export function isAdminLikeRole(role: Role | null | undefined): boolean {
-  const name = role?.name?.toLowerCase().trim();
+  const name = role?.name?.toLowerCase().trim() || "";
   const status = role?.status?.toLowerCase().trim();
   return (
     status === "admin" ||
-    name === "super admin" ||
-    name === "superadmin" ||
-    name === "super_admin" ||
-    name === "admin"
+    name === "admin" ||
+    name.includes("admin")
   );
 }

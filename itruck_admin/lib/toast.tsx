@@ -54,13 +54,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     </svg>
   );
 
-  const value: ToastContextValue = {
-    success: (message) => show(message, "success"),
-    error: (message) => show(message, "error"),
-    info: (message) => show(message, "info"),
-    warning: (message) => show(message, "warning"),
-    danger: (message) => show(message, "error", <DeleteIcon />),
-  };
+  const value = React.useMemo<ToastContextValue>(
+    () => ({
+      success: (message) => show(message, "success"),
+      error: (message) => show(message, "error"),
+      info: (message) => show(message, "info"),
+      warning: (message) => show(message, "warning"),
+      danger: (message) => show(message, "error", <DeleteIcon />),
+    }),
+    [show],
+  );
 
   const handleClose = useCallback(() => {
     setSnack((prev) => ({ ...prev, open: false }));

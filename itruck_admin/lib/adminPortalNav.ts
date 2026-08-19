@@ -37,6 +37,7 @@ const NAV_ID_TO_TITLE_NAME: Record<string, string> = {
   matchLoad: "match_load",
   matchTruck: "match_truck",
   cms: "CMS",
+  enquiry: "Contact Enquiry",
 };
 
 /**
@@ -118,6 +119,12 @@ export function getAdminPortalNavDefinitions(
       label: getLabel("user", role, "Users"),
       getHref: () => routes.user.list(),
       appFolder: "user/list",
+    },
+    {
+      id: "enquiry",
+      label: getLabel("enquiry", role, "Enquiry"),
+      getHref: () => routes.enquiry.list(),
+      appFolder: "/enquiry/list",
     },
     {
       id: "incomeExpenseCategory",
