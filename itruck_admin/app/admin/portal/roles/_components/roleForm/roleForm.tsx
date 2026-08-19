@@ -99,7 +99,7 @@ export default function RoleForm({ role, mode, onSuccess }: RoleFormProps) {
   const selectedGroup: PermissionGroup | null =
     permissionGroups.find((g) => g._id === selectedGroupId) ?? null;
 
-  // Merge the selected group's permissions with the default template so all 25 items are always visible
+  // Merge the selected group's permissions with the default template so all items are always visible
   const previewPermissions: PermissionItem[] = React.useMemo(() => {
     if (!selectedGroup) return [];
     

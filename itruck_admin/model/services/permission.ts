@@ -31,11 +31,6 @@ export const DEFAULT_PERMISSION_TEMPLATE: PermissionItem[] = [
   { title_name: "Dashboard", display_name: "Dashboard", access: { create: false, view: false, edit: false, delete: false, list: false } },
   { title_name: "Roles", display_name: "Roles", access: { create: false, view: false, edit: false, delete: false, list: false } },
   { title_name: "Users", display_name: "Users", access: { create: false, view: false, edit: false, delete: false, list: false } },
-  { title_name: "Load", display_name: "Load", access: { create: false, view: false, edit: false, delete: false, list: false } },
-  { title_name: "Materials", display_name: "Materials", access: { create: false, view: false, edit: false, delete: false, list: false } },
-  { title_name: "VehicleType", display_name: "Vehicle Type", access: { create: false, view: false, edit: false, delete: false, list: false } },
-  { title_name: "VehicleBodyType", display_name: "Vehicle Body Type", access: { create: false, view: false, edit: false, delete: false, list: false } },
-  { title_name: "Truck", display_name: "Truck", access: { create: false, view: false, edit: false, delete: false, list: false } },
   { title_name: "Income & Expense Categories", display_name: "Income & Expense Categories", access: { create: false, view: false, edit: false, delete: false, list: false } },
   { title_name: "Advertisement", display_name: "Advertisement", access: { create: false, view: false, edit: false, delete: false, list: false } },
   { title_name: "Income & Expense", display_name: "Income & Expense", access: { create: false, view: false, edit: false, delete: false, list: false } },
@@ -51,9 +46,7 @@ export const DEFAULT_PERMISSION_TEMPLATE: PermissionItem[] = [
   { title_name: "Settings", display_name: "Settings", access: { create: false, view: false, edit: false, delete: false, list: false } },
   { title_name: "Subscription", display_name: "Packages", access: { create: false, view: false, edit: false, delete: false, list: false } },
   { title_name: "Payment Transactions", display_name: "Transactions", access: { create: false, view: false, edit: false, delete: false, list: false } },
-  { title_name: "match_load", display_name: "Load", access: { create: false, view: false, edit: false, delete: false, list: false } },
-  { title_name: "match_truck", display_name: "Truck", access: { create: false, view: false, edit: false, delete: false, list: false } },
-  { title_name: "permission", display_name: "Permission", access: { create: false, view: false, edit: false, delete: false, list: false } }
+  { title_name: "permission", display_name: "Permission", access: { create: false, view: false, edit: false, delete: false, list: false } },
 ];
 
 export async function getPermissions(params?: { search?: string }): Promise<PermissionGroup[]> {
