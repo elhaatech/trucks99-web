@@ -33,16 +33,32 @@
  *           schema:
  *             type: object
  *             properties:
- *               title_name: { type: string }
+ *               name: { type: string }
+ *               title_name: { type: string, description: Alias for name }
  *               description: { type: string }
+ *               permissions:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     title_name: { type: string }
+ *                     display_name: { type: string }
+ *                     access:
+ *                       type: object
+ *                       properties:
+ *                         create: { type: boolean }
+ *                         view: { type: boolean }
+ *                         edit: { type: boolean }
+ *                         delete: { type: boolean }
+ *                         list: { type: boolean }
  *               user: { type: object }
- *             required: [title_name]
+ *             required: [name]
  *     security: [{ cookieAuth: [] }, { bearerAuth: [] }]
  *     responses:
  *       201:
  *         description: Permission created
  *       400:
- *         description: title_name required
+ *         description: name required or invalid JSON
  *       500:
  *         description: Server error
  */
