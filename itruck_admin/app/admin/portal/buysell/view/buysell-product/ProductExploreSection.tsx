@@ -14,6 +14,7 @@ import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 
 import { CategorySubcategoriesList, type SubcategoryFilterValue } from "@/components/common";
+import { StateFilterDropdown } from "@/app/common/components/buysell/StateFilterDropdown";
 import {
   BuySellProduct,
   postBuySellProductsByOwner,
@@ -22,7 +23,6 @@ import {
 import { getBuySellImageUrl } from "@/lib/buysellUtils";
 import { formatCreatedDate } from "@/lib/dateUtils";
 import { routes } from "@/lib/routes";
-import { ProductStatusChip } from "../../_components/ProductStatusChip";
 import { PRODUCT_THEME as T } from "./theme";
 
 type ProductExploreSectionProps = {
@@ -36,6 +36,8 @@ type ProductExploreSectionProps = {
   isLoggedIn: boolean;
   subcategoryFilter: SubcategoryFilterValue;
   onSubcategoryFilterChange: (filter: SubcategoryFilterValue) => void;
+  stateFilter: string;
+  onStateFilterChange: (state: string) => void;
   /** Override product detail route (defaults to admin portal view). */
   getViewRoute?: (productId: string) => string;
 };
@@ -82,8 +84,6 @@ function SellerProductCard({
   const postedDate = product.createdAt
     ? formatCreatedDate(product.createdAt)
     : "—";
-
-  const showStatusBadge = product.status && product.status !== "active";
 
   return (
     <Box
@@ -144,11 +144,6 @@ function SellerProductCard({
             <Typography sx={{ fontSize: 12, color: T.color.textMuted }}>
               No photo
             </Typography>
-          </Box>
-        )}
-        {showStatusBadge && (
-          <Box sx={{ position: "absolute", top: 8, left: 8 }}>
-            <ProductStatusChip status={product.status} />
           </Box>
         )}
       </Box>
@@ -213,23 +208,29 @@ function SellerProductCard({
 function SellerProductsGrid({
   products,
   subcategoryFilter,
+  stateFilter,
   sellerName,
   onNavigate,
 }: {
   products: BuySellProduct[];
   subcategoryFilter: SubcategoryFilterValue;
+  stateFilter: string;
   sellerName?: string;
   onNavigate: (id: string) => void;
 }) {
-  const filtered = subcategoryFilter?.id
-    ? products.filter((product) => {
-        const subId =
-          typeof product.subcategory_id === "object" && product.subcategory_id
-            ? product.subcategory_id._id
-            : String(product.subcategory_id ?? "");
-        return subId === subcategoryFilter.id;
-      })
-    : products;
+  const filtered = products.filter((product) => {
+    if (subcategoryFilter?.id) {
+      const subId =
+        typeof product.subcategory_id === "object" && product.subcategory_id
+          ? product.subcategory_id._id
+          : String(product.subcategory_id ?? "");
+      if (subId !== subcategoryFilter.id) return false;
+    }
+    if (stateFilter) {
+      if (product.state_info?.name !== stateFilter) return false;
+    }
+    return true;
+  });
 
   if (products.length === 0) {
     return (
@@ -256,7 +257,7 @@ function SellerProductsGrid({
     );
   }
 
-  if (subcategoryFilter?.id && filtered.length === 0) {
+  if ((subcategoryFilter?.id || stateFilter) && filtered.length === 0) {
     return (
       <Box
         sx={{
@@ -269,10 +270,12 @@ function SellerProductsGrid({
         }}
       >
         <Typography sx={{ fontWeight: 600, color: T.color.textPrimary, mb: 0.5 }}>
-          No listings in {subcategoryFilter.name}
+          No listings
+          {subcategoryFilter?.name ? ` in ${subcategoryFilter.name}` : ""}
+          {stateFilter ? ` in ${stateFilter}` : ""}
         </Typography>
         <Typography sx={{ fontSize: 13, color: T.color.textSecondary }}>
-          Try &quot;All types&quot; above to see every listing from this seller.
+          Try clearing a filter above to see more listings from this seller.
         </Typography>
       </Box>
     );
@@ -284,6 +287,7 @@ function SellerProductsGrid({
         Showing {filtered.length} of {products.length} listing
         {products.length === 1 ? "" : "s"}
         {subcategoryFilter?.name ? ` in ${subcategoryFilter.name}` : ""}
+        {stateFilter ? ` in ${stateFilter}` : ""}
         {sellerName ? ` from ${sellerName}` : ""}.
       </Typography>
       <Grid container spacing={2}>
@@ -308,6 +312,8 @@ export function ProductExploreSection({
   isLoggedIn,
   subcategoryFilter,
   onSubcategoryFilterChange,
+  stateFilter,
+  onStateFilterChange,
   getViewRoute,
 }: ProductExploreSectionProps) {
   const router = useRouter();
@@ -386,23 +392,34 @@ export function ProductExploreSection({
           }}
         >
           Explore other active listings from the same seller. Use the filters below
-          to narrow by subcategory.
+          to narrow by subcategory or state.
         </Typography>
       </Box>
 
-      {categoryId ? (
-        <Box sx={{ mb: 2 }}>
-          <CategorySubcategoriesList
-            compact
-            categoryId={categoryId}
-            categoryName={categoryName}
-            currentSubcategoryId={currentSubcategoryId}
-            currentSubcategoryName={currentSubcategoryName}
-            selectedFilter={subcategoryFilter}
-            onFilterChange={onSubcategoryFilterChange}
+      <Box sx={{ mb: 2, display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 2, alignItems: { sm: "flex-start" } }}>
+        {categoryId ? (
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <CategorySubcategoriesList
+              compact
+              categoryId={categoryId}
+              categoryName={categoryName}
+              currentSubcategoryId={currentSubcategoryId}
+              currentSubcategoryName={currentSubcategoryName}
+              selectedFilter={subcategoryFilter}
+              onFilterChange={onSubcategoryFilterChange}
+            />
+          </Box>
+        ) : null}
+
+        <Box sx={{ width: { xs: "100%", sm: 260 }, flexShrink: 0 }}>
+          <StateFilterDropdown
+            label="State"
+            value={stateFilter}
+            onChange={onStateFilterChange}
+            placeholder="All states"
           />
         </Box>
-      ) : null}
+      </Box>
 
       {!isLoggedIn ? (
         <Alert
@@ -433,6 +450,7 @@ export function ProductExploreSection({
         <SellerProductsGrid
           products={products}
           subcategoryFilter={subcategoryFilter}
+          stateFilter={stateFilter}
           sellerName={sellerName}
           onNavigate={(productId) =>
             router.push(getViewRoute?.(productId) ?? routes.buysell.view(productId))

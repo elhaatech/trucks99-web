@@ -169,6 +169,7 @@ export default function BuySellViewPage() {
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
   const [subcategoryFilter, setSubcategoryFilter] = useState<SubcategoryFilterValue>(null);
+  const [stateFilter, setStateFilter] = useState<string>("");
 
   const [wishlisted, setWishlisted] = useState(false);
   const [favoriteBusy, setFavoriteBusy] = useState(false);
@@ -218,6 +219,7 @@ export default function BuySellViewPage() {
   useEffect(() => {
     void loadProduct();
     setSubcategoryFilter(null);
+    setStateFilter("");
   }, [id]);
 
   // Poll unread count across ALL of this user's conversations (not just this
@@ -426,21 +428,23 @@ export default function BuySellViewPage() {
               <ProductImageGallery
                 images={item.images ?? []}
                 title={item.description}
-                statusBadge={<ProductStatusChip status={item.status} />}
               />
 
               <Box sx={{ mt: 3 }}>
-                <Typography
-                  sx={{
-                    fontFamily: T.font.display,
-                    fontWeight: 800,
-                    fontSize: { xs: 20, md: 24 },
-                    color: T.color.textPrimary,
-                    lineHeight: 1.25,
-                  }}
-                >
-                  {item.description || "Product"}
-                </Typography>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Typography
+                    sx={{
+                      fontFamily: T.font.display,
+                      fontWeight: 800,
+                      fontSize: { xs: 20, md: 24 },
+                      color: T.color.textPrimary,
+                      lineHeight: 1.25,
+                    }}
+                  >
+                    {item.description || "Product"}
+                  </Typography>
+                  <ProductStatusChip status={item.status} />
+                </Box>
 
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 1.5, mb: 2 }}>
                   {categoryName !== "—" && (
@@ -559,6 +563,8 @@ export default function BuySellViewPage() {
                 isLoggedIn={isLoggedIn}
                 subcategoryFilter={subcategoryFilter}
                 onSubcategoryFilterChange={setSubcategoryFilter}
+                stateFilter={stateFilter}
+                onStateFilterChange={setStateFilter}
               />
             ) : null}
 
@@ -597,7 +603,7 @@ export default function BuySellViewPage() {
                   </Button>
                 )}
 
-                {canShop && (
+                {/* {canShop && (
                   <Button
                     fullWidth
                     variant="text"
@@ -607,7 +613,7 @@ export default function BuySellViewPage() {
                   >
                     My cart{cartCount > 0 ? ` (${cartCount})` : ""}
                   </Button>
-                )}
+                )} */}
 
                 {/* Secondary actions */}
                 <Box

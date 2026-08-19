@@ -81,7 +81,11 @@ export async function api<T = unknown>(
     return data as T;
   };
 
-  if (isGet && typeof window !== "undefined") {
+  // Only dedupe when no AbortSignal is given. A shared in-flight promise is
+  // bound to the first caller's signal, so a later caller would inherit an
+  // "aborted" signal once the first one cancels (e.g. React Strict Mode's
+  // double-invoked effect). See buysellapi.ts for the same guard.
+  if (isGet && typeof window !== "undefined" && !init.signal) {
     let p = inFlightGet.get(urlKey) as Promise<T> | undefined;
     if (!p) {
       p = run().finally(() => {
@@ -127,7 +131,8 @@ export async function publicApi<T = unknown>(
     return data as T;
   };
 
-  if (isGet && typeof window !== "undefined") {
+  // Only dedupe when no AbortSignal is given (see api() above for rationale).
+  if (isGet && typeof window !== "undefined" && !init.signal) {
     let p = inFlightGet.get(urlKey) as Promise<T> | undefined;
     if (!p) {
       p = run().finally(() => inFlightGet.delete(urlKey));
