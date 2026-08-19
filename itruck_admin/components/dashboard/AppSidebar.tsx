@@ -760,7 +760,7 @@ export function AppSidebar({
                       .filter((child) => canViewNavItem(role, child.key))
                       .map((child) => {
                         // Hidden temporarily - not needed for now, keep code for future use
-                        if (child.key === "buySell") {
+                        if (child.key === "subscriptionTransactions") {
                           return false;
                         }
 
