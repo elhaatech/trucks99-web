@@ -23,6 +23,7 @@ import { seedFavoriteIds } from "@/lib/buySellListUtils";
 import { useNotification } from "@/hooks/useNotification";
 import { VehicleCard } from "@/app/common/components/buysell/VehicleCard";
 import { GoogleAdBanner } from "@/components/ads/GoogleAdBanner";
+import { SHOW_ADS } from "@/components/ads/adsConfig";
 
 type TabValue = "purchased" | "nonPurchased";
 
@@ -147,7 +148,7 @@ export default function UserPurchasesPage() {
         <Tab value="nonPurchased" label={`Available (${nonPurchased.length})`} />
       </Tabs>
 
-      <GoogleAdBanner placement="purchases" format="auto" responsive />
+      {SHOW_ADS && <GoogleAdBanner placement="purchases" format="auto" responsive />}
 
       {loading ? (
         <Grid container spacing={2}>
