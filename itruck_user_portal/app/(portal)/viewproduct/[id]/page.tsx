@@ -29,7 +29,6 @@ import {
   getProductLocation,
   getSellerDisplayName,
   productSpecsToEntries,
-  getProductBsNumber,
   getProductVehicleId,
 } from "@/app/common/components/buysell";
 import { FeaturedVehicleListingPanel } from "../_components/FeaturedVehicleListingPanel";
@@ -333,7 +332,6 @@ export default function UserProductViewPage() {
 
           <ProductVehicleDetails
             specs={specEntries}
-            bsNumber={getProductBsNumber(item) || undefined}
             vehicleId={getProductVehicleId(item) || undefined}
             address={locationLabel || item.address || undefined}
             description={item.description?.trim() || undefined}
