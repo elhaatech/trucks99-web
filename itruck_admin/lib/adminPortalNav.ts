@@ -1,5 +1,6 @@
 import { Role, User } from "@/model/api";
 import { routes } from "./routes";
+import { SHOW_ADVERTISEMENT_MODULE } from "./featureFlags";
 
 /**
  * Sidebar / deep-link targets for the admin portal.
@@ -95,7 +96,7 @@ export function getAdminPortalNavDefinitions(
   userId: string,
   user: User | null | undefined
 ): AdminPortalNavDef[] {
-  return [
+  const nav: AdminPortalNavDef[] = [
     {
       id: "dashboard",
       label: getLabel("dashboard", role, "Dashboard"),
@@ -274,4 +275,10 @@ export function getAdminPortalNavDefinitions(
       appFolder: "/cms",
     },
   ];
+
+  if (!SHOW_ADVERTISEMENT_MODULE) {
+    return nav.filter((item) => item.id !== "advertisement");
+  }
+
+  return nav;
 }
