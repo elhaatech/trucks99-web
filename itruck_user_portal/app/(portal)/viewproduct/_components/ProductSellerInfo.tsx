@@ -43,7 +43,7 @@ export function ProductSellerInfo({
       }}
     >
       <Typography sx={{ fontWeight: 700, fontSize: 16, mb: 1.5, color: T.color.textPrimary }}>
-        Seller Information
+        Seller Information and Related Vechile Details
       </Typography>
 
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>

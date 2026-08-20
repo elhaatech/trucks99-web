@@ -13,7 +13,10 @@ export const userProductRoutes = {
     const params = new URLSearchParams(query);
     return `${path}?${params.toString()}`;
   },
-  view: (id: string) => `${BASE}/viewproduct/${encodeURIComponent(id)}`,
+  view: (id: string, from?: "my-listings" | "buy-vehicle") => {
+    const path = `${BASE}/viewproduct/${encodeURIComponent(id)}`;
+    return from ? `${path}?from=${from}` : path;
+  },
   create: () => `${BASE}/my-listings?tab=create`,
   edit: (id: string) => `${BASE}/edit/${encodeURIComponent(id)}`,
   cart: () => `${BASE}/cart`,
