@@ -4045,6 +4045,8 @@ buySellRouter.post("/products/owner/:ownerId", async (req, res) => {
       country_id,
       state_id,
       city_id,
+      category_id,
+      subcategory_id,
     } = req.body || {};
 
     if (excludeProductId) {
@@ -4065,6 +4067,14 @@ buySellRouter.post("/products/owner/:ownerId", async (req, res) => {
     if (state_id) {
       const id = await resolveLocationMongoId(LocationState, state_id);
       if (id) andConditions.push({ state_id: id });
+    }
+    if (category_id) {
+      const id = toObjectId(category_id);
+      if (id) andConditions.push({ category_id: id });
+    }
+    if (subcategory_id) {
+      const id = toObjectId(subcategory_id);
+      if (id) andConditions.push({ subcategory_id: id });
     }
     if (city_id) {
       const id = await resolveLocationMongoId(LocationCity, city_id);

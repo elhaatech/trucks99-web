@@ -61,6 +61,7 @@ function filtersFromSearchParams(searchParams: URLSearchParams): VehicleFilterVa
     ...EMPTY_VEHICLE_FILTERS,
     category_id: searchParams.get("category_id") ?? "",
     subcategory_id: searchParams.get("subcategory_id") ?? "",
+    state_id: searchParams.get("state_id") ?? "",
     status: searchParams.get("status") ?? "",
     min_price: searchParams.get("min_price") ?? "",
     max_price: searchParams.get("max_price") ?? "",
@@ -80,6 +81,7 @@ function filtersToQuery(filters: VehicleFilterValues): Record<string, string> {
   const query: Record<string, string> = {};
   if (filters.category_id) query.category_id = filters.category_id;
   if (filters.subcategory_id) query.subcategory_id = filters.subcategory_id;
+  if (filters.state_id) query.state_id = filters.state_id;
   if (filters.status) query.status = filters.status;
   if (filters.min_price) query.min_price = filters.min_price;
   if (filters.max_price) query.max_price = filters.max_price;
@@ -198,7 +200,7 @@ export default function UserProductListContent() {
         authReady,
         onNeedLogin: (loginPath) => router.push(loginPath),
       });
-      if (allowed) router.push(userProductRoutes.view(productId));
+      if (allowed) router.push(userProductRoutes.view(productId, "buy-vehicle"));
     },
     [notify, router, isLoggedIn, authReady],
   );

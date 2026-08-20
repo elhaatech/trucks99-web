@@ -315,7 +315,7 @@ function SellVehicleContent() {
       currentUser={currentUser}
       onViewListing={(productId) => {
         setFeaturedPrompt(null);
-        router.push(userProductRoutes.view(productId));
+        router.push(userProductRoutes.view(productId, "my-listings"));
       }}
       onPaymentSuccess={(_plan, detail) => {
         notify({
@@ -470,7 +470,7 @@ function SellVehicleContent() {
                 products={products}
                 loading={loading}
                 layout="grid"
-                onProductClick={(id) => router.push(userProductRoutes.view(id))}
+                onProductClick={(id) => router.push(userProductRoutes.view(id, "my-listings"))}
                 onEdit={handleEdit}
                 onDelete={handleDeleteRequest}
                 deletingIds={deletingIds}
