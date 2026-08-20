@@ -56,6 +56,7 @@ import { UserProductBitRecordsSection, type ProductOfferTab } from "../_componen
 import { resolveFeaturedListingUi } from "@/lib/featuredVehicleListingStatus";
 import type { SubscriptionItem } from "@/model/services/subscription";
 import { GoogleAdBanner } from "@/components/ads/GoogleAdBanner";
+import { SHOW_ADS } from "@/components/ads/adsConfig";
 
 const MakeOfferModal = dynamic(
   () =>
@@ -452,7 +453,7 @@ export default function UserProductViewPage() {
             </Box>
           ) : null}
 
-          <GoogleAdBanner placement="details" format="auto" responsive />
+          {SHOW_ADS && <GoogleAdBanner placement="details" format="auto" responsive />}
 
           {relatedOwnerId ? (
              <UserRelatedProductsSection

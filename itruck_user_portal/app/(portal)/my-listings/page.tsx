@@ -53,6 +53,7 @@ import { toErrorMessage } from "@/lib/errors";
 import { MARKETPLACE } from "@/constants/marketplace";
 import { isAbortError } from "@/lib/apiCache";
 import { GoogleAdBanner } from "@/components/ads/GoogleAdBanner";
+import { SHOW_ADS } from "@/components/ads/adsConfig";
 
 const BuySellForm = dynamic(
   () =>
@@ -456,7 +457,7 @@ function SellVehicleContent() {
             <MobileFilterButton onClick={() => setMobileFiltersOpen(true)} />
           </Box>
 
-          <GoogleAdBanner placement="myListing" format="auto" responsive />
+          {SHOW_ADS && <GoogleAdBanner placement="myListing" format="auto" responsive />}
 
           <Box>
             {listError && !loading ? (

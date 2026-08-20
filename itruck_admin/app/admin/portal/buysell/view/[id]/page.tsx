@@ -27,6 +27,7 @@ import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import CloseIcon from "@mui/icons-material/Close";
 import { PageHeader } from "@/components/ui";
 import { AdvertisementSlot } from "@/components/common";
+import { SHOW_ADS } from "@/components/ads/adsConfig";
 import type { SubcategoryFilterValue } from "@/components/common";
 import { BackButton } from "@/components/common";
 import { ChatDrawer } from "@/components/common/ChatDrawer";
@@ -404,7 +405,7 @@ export default function BuySellViewPage() {
           }
         />
 
-        <AdvertisementSlot />
+        {SHOW_ADS && <AdvertisementSlot />}
 
         {error && (
           <Alert severity="error" onClose={() => setError("")} sx={{ my: 2 }}>

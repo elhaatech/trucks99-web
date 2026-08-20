@@ -5,6 +5,7 @@ import Box from "@mui/material/Box";
 import Alert from "@mui/material/Alert";
 import { PageContainer, PageHeader, type BreadcrumbItem } from "@/components/ui";
 import { AdvertisementSlot } from "@/components/ads";
+import { SHOW_ADS } from "@/components/ads/adsConfig";
 
 export interface ModulePageLayoutProps {
   title: string;
@@ -48,7 +49,7 @@ export function ModulePageLayout({
         </Alert>
       ) : null}
 
-      {showAds ? <AdvertisementSlot /> : null}
+      {showAds && SHOW_ADS ? <AdvertisementSlot /> : null}
 
       {children}
     </PageContainer>
