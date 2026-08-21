@@ -1,5 +1,5 @@
 /**
- * Next.js same-origin Places proxy (`/user/api/places/*`).
+ * Next.js same-origin Places proxy (`/api/places/*`).
  * These are App Router routes, not the backend at PRODUCTION_API_ORIGIN.
  */
 

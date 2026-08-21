@@ -10,8 +10,7 @@ import {
  * - localhost / private LAN → local backend on port 3003
  * - production and SSR → https://trucks99.elhaa.com
  *
- * Do not send browser calls to `/user/api/...`. That prefix is the
- * Next.js page base path, not the backend.
+ * Do not send browser calls to `/user/api/...`. Backend routes are `/api/...`.
  */
 export function resolveApiBase(): string {
   if (typeof window !== "undefined") {

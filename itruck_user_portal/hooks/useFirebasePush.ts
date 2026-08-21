@@ -58,7 +58,7 @@ export function useFirebasePush() {
 
         const registration = await navigator.serviceWorker.register(
           withAppBasePath("/firebase-messaging-sw.js"),
-          { scope: `${APP_BASE_PATH}/` },
+          { scope: APP_BASE_PATH ? `${APP_BASE_PATH}/` : "/" },
         );
         console.log("[FCM][web] service worker registered:", registration.scope);
 

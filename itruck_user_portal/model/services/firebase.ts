@@ -33,7 +33,7 @@ export async function registerFcmTokenForCurrentUser(): Promise<void> {
   console.log("[FCM][web] registering FCM token (admin)…");
   const registration = await navigator.serviceWorker.register(
     withAppBasePath("/firebase-messaging-sw.js"),
-    { scope: `${APP_BASE_PATH}/` },
+    { scope: APP_BASE_PATH ? `${APP_BASE_PATH}/` : "/" },
   );
 
   const permission = await Notification.requestPermission();

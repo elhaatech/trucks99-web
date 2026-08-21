@@ -1,30 +1,22 @@
 import type { NextConfig } from "next";
 
 /**
- * Public URL: https://trucks99.elhaa.com/user/
- * `basePath` makes pages, `/_next` chunks, and next/link resolve under `/user`.
- * Do not also set `assetPrefix` to `/user` — Next.js would double-prefix assets.
+ * User portal is served at the host root on port 3002:
+ *   http://localhost:3002/
  *
- * Reverse proxy must forward `/user` to this app WITHOUT stripping the prefix,
- * e.g. proxy_pass http://127.0.0.1:3002;  (no trailing slash on the target).
+ * Production reverse proxy should strip `/user` when forwarding here,
+ * e.g. proxy_pass http://127.0.0.1:3002/;  (trailing slash on the target).
  */
-const APP_BASE_PATH = "/user";
 const INTERNAL_BACKEND = "http://127.0.0.1:3003";
 
 const nextConfig: NextConfig = {
-  basePath: APP_BASE_PATH,
-  /**
-   * Production is opened as `/user/` (trailing slash). Apache currently 404s
-   * `/user` without a slash. Do not 308 `/user/` → `/user`.
-   */
   skipTrailingSlashRedirect: true,
   turbopack: {
     root: import.meta.dirname,
   },
   /**
    * Backend `/api` and `/uploads` stay at the site root on purpose
-   * (`https://trucks99.elhaa.com/api/...`), not under `/user/api`.
-   * `basePath: false` so these match the real backend paths, not `/user/api`.
+   * (`https://trucks99.elhaa.com/api/...`).
    */
   async rewrites() {
     const backend = INTERNAL_BACKEND.replace(/\/$/, "");
@@ -33,12 +25,10 @@ const nextConfig: NextConfig = {
         {
           source: "/api/:path*",
           destination: `${backend}/api/:path*`,
-          basePath: false,
         },
         {
           source: "/uploads/:path*",
           destination: `${backend}/uploads/:path*`,
-          basePath: false,
         },
       ],
     };
@@ -60,6 +50,16 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      {
+        source: "/user",
+        destination: "/",
+        permanent: false,
+      },
+      {
+        source: "/user/:path*",
+        destination: "/:path*",
+        permanent: false,
+      },
       {
         source: "/usear/product",
         destination: "/dashboard",

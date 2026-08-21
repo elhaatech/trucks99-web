@@ -2,8 +2,8 @@
  * TRUCK99 user marketplace routes (standalone Next.js portal).
  * Pattern: /{screen}[/:id]
  *
- * Paths are without the `/user` `basePath`. `router.push` / `next/link`
- * add it automatically. Compare against `usePathname()`, not window.location.
+ * Paths are host-root (no `/user` prefix). Compare against
+ * `usePathname()`, not window.location.
  */
 
 import { stripAppBasePath } from "@/lib/appConfig";

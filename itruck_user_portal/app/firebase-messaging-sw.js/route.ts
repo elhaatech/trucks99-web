@@ -60,6 +60,7 @@ try {
 function withBase(route) {
   if (!route) return APP_BASE_PATH || "/";
   if (route.startsWith("http://") || route.startsWith("https://")) return route;
+  if (!APP_BASE_PATH) return route.startsWith("/") ? route : "/" + route;
   if (route === APP_BASE_PATH || route.startsWith(APP_BASE_PATH + "/")) return route;
   return APP_BASE_PATH + (route.startsWith("/") ? route : "/" + route);
 }
@@ -88,7 +89,7 @@ export async function GET() {
     headers: {
       "Content-Type": "application/javascript; charset=utf-8",
       "Cache-Control": "no-cache, no-store, must-revalidate",
-      "Service-Worker-Allowed": `${APP_BASE_PATH}/`,
+      "Service-Worker-Allowed": APP_BASE_PATH ? `${APP_BASE_PATH}/` : "/",
     },
   });
 }
