@@ -353,23 +353,43 @@ export default function BuySellViewPage() {
   // and exclude those from the generic specs grid below to avoid duplication.
   const brand = pullSpec(item.specifications, "brand", "make");
   const model = pullSpec(item.specifications, "model");
-  const year = pullSpec(item.specifications, "year", "manufacture year");
+  const year = pullSpec(item.specifications, "year", "manufacture year", "make year");
+  const fuelType = pullSpec(item.specifications, "fuel type", "fuel");
+  const owners = pullSpec(item.specifications, "no. of owners", "no of owners", "owners");
   const condition = pullSpec(item.specifications, "condition");
   const matchedSpecNames = new Set(
-    ["brand", "make", "model", "year", "manufacture year", "condition"],
+    [
+      "brand",
+      "make",
+      "model",
+      "year",
+      "manufacture year",
+      "make year",
+      "condition",
+      "fuel type",
+      "fuel",
+      "no. of owners",
+      "no of owners",
+      "owners",
+    ],
   );
   const remainingSpecs: SpecEntry[] = (item.specifications ?? [])
     .filter((s) => {
       const name = s.specification_info?.specification_name?.toLowerCase();
       return !name || !matchedSpecNames.has(name);
     })
-    .map((s, idx) => ({
-      name: s.specification_info?.specification_name ?? `Spec ${idx + 1}`,
-      value:
+    .map((s, idx) => {
+      const raw =
         s.specification_value_info?.specification_value_name ??
         (s.specification_value as string) ??
-        "—",
-    }));
+        "—";
+      const value =
+        typeof raw === "string" && /^[a-fA-F0-9]{24}$/.test(raw.trim()) ? "—" : raw;
+      return {
+        name: s.specification_info?.specification_name ?? `Spec ${idx + 1}`,
+        value,
+      };
+    });
 
   const locationLabel = [item.city_info?.name, item.state_info?.name]
     .filter(Boolean)
@@ -489,6 +509,8 @@ export default function BuySellViewPage() {
                   {brand && <DetailRow label="Brand" value={brand} />}
                   {model && <DetailRow label="Model" value={model} />}
                   {year && <DetailRow label="Year" value={year} />}
+                  {fuelType && <DetailRow label="Fuel Type" value={fuelType} />}
+                  {owners && <DetailRow label="No. of Owners" value={owners} />}
                   {condition && <DetailRow label="Condition" value={condition} />}
                   <DetailRow
                     label="Posted"

@@ -5,11 +5,14 @@ const SubCategory = require('../../schema/subcategorymodel');
 const Specification = require('../../schema/specificationModel');
 const SpecificationValue = require('../../schema/specificationValueModel');
 
-const BRAND_RE = /brand|make/i;
 const MODEL_RE = /^model$/i;
 
 function isBrandSpec(spec) {
-  return BRAND_RE.test(String(spec.specification_name || ''));
+  const n = String(spec.specification_name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  return n === 'brand' || n === 'make';
 }
 
 function isModelSpec(spec) {
@@ -75,7 +78,7 @@ async function loadSubCategories(category) {
 }
 
 async function loadActiveSpecs() {
-  return Specification.find({ status: 'Active' })
+  return Specification.find({ status: { $regex: /^active$/i } })
     .select('_id id specification_name type is_required')
     .lean();
 }
@@ -86,12 +89,12 @@ async function loadSpecValues(specificationId, subcategoryId) {
     status: 'Active',
   };
   if (subcategoryId) {
-    filter.subcategory_id = String(subcategoryId);
+    filter.subcategory_id = { $in: [String(subcategoryId), '*', 'ALL'] };
   }
   return SpecificationValue.find(filter)
     .select('_id id specification_value_name subcategory_id')
     .lean()
-    .limit(200);
+    .limit(500);
 }
 
 function buildSpecQueue(specs) {

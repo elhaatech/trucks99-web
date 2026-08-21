@@ -141,14 +141,67 @@ function normalizeError(error: unknown): never {
   throw error instanceof Error ? error : new Error("Request failed");
 }
 
+/** Prefer Mongo _id for buy/sell refs; fall back to catalog uuid. */
+export function getSpecificationRowId(item?: {
+  _id?: unknown;
+  id?: unknown;
+} | null): string {
+  if (!item) return "";
+  const oid = item._id != null ? String(item._id) : "";
+  if (/^[a-fA-F0-9]{24}$/.test(oid)) return oid;
+  const id = item.id != null ? String(item.id) : "";
+  return id || oid;
+}
+
+export function getSpecificationValueRowId(item?: {
+  _id?: unknown;
+  id?: unknown;
+} | null): string {
+  return getSpecificationRowId(item);
+}
+
+function unwrapList<T>(payload: unknown): T[] {
+  if (Array.isArray(payload)) return payload as T[];
+  if (payload && typeof payload === "object") {
+    const obj = payload as Record<string, unknown>;
+    const list = obj.data ?? obj.specifications ?? obj.specification_values ?? obj.items ?? obj.rows;
+    if (Array.isArray(list)) return list as T[];
+  }
+  return [];
+}
+
+function normalizeSpecification(row: Specification): Specification {
+  const _id = getSpecificationRowId(row);
+  return {
+    ...row,
+    _id,
+    id: row.id || _id,
+  };
+}
+
+function normalizeSpecificationValue(row: SpecificationValue): SpecificationValue {
+  const _id = getSpecificationValueRowId(row);
+  return {
+    ...row,
+    _id,
+    id: row.id || _id,
+    specification_id: row.specification_id
+      ? getSpecificationRowId({
+          _id: row.specification_id,
+          id: (row.specification as { id?: string } | undefined)?.id,
+        }) || String(row.specification_id)
+      : row.specification_id,
+  };
+}
+
 export async function getSpecifications(
   params: ListParams = {}
 ): Promise<Specification[]> {
   try {
-    const res = await axiosClient.get<Specification[]>("/api/specifications", {
+    const res = await axiosClient.get<unknown>("/api/specifications", {
       params,
     });
-    return res.data ?? [];
+    return unwrapList<Specification>(res.data).map(normalizeSpecification);
   } catch (error) {
     normalizeError(error);
   }
@@ -209,11 +262,11 @@ export async function getSpecificationValues(
   params: ListParams = {}
 ): Promise<SpecificationValue[]> {
   try {
-    const res = await axiosClient.get<SpecificationValue[]>(
+    const res = await axiosClient.get<unknown>(
       "/api/specification-values",
       { params }
     );
-    return res.data ?? [];
+    return unwrapList<SpecificationValue>(res.data).map(normalizeSpecificationValue);
   } catch (error) {
     normalizeError(error);
   }
@@ -223,11 +276,12 @@ export async function getSpecificationValue(
   id: string
 ): Promise<SpecificationValue> {
   try {
-    const res = await axiosClient.get<SpecificationValue[]>(
+    const res = await axiosClient.get<unknown>(
       "/api/specification-values",
       { params: { specification_value_id: id } }
     );
-    const item = Array.isArray(res.data) ? res.data[0] : undefined;
+    const rows = unwrapList<SpecificationValue>(res.data).map(normalizeSpecificationValue);
+    const item = rows[0];
     if (!item) throw new Error("Specification value not found");
     return item;
   } catch (error) {

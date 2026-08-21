@@ -55,14 +55,14 @@ export function SearchableSelect({
   id,
   error = false,
 }: SearchableSelectProps) {
-  const selectedOption = options.find((o) => o.value === value) ?? null;
-
   const enrichedOptions = React.useMemo(() => {
     if (value && !options.some((o) => o.value === value)) {
       return [...options, { value, label: value }];
     }
     return options;
   }, [options, value]);
+
+  const selectedOption = enrichedOptions.find((o) => o.value === value) ?? null;
 
   return (
     <Autocomplete

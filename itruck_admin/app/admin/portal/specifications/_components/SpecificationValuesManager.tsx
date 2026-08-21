@@ -55,7 +55,7 @@ if (editing) {
 } else {
         await createSpecificationValue({
           specification_id: getRowId(specification),
-          subcategory_id: specification.subcategory_id,
+          subcategory_id: specification.subcategory_id || "*",
           specification_value_name: form.specification_value_name.trim(),
           // status: form.status,
         });

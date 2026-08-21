@@ -10,7 +10,7 @@ import Tooltip from "@mui/material/Tooltip";
 import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 import LocalGasStationOutlinedIcon from "@mui/icons-material/LocalGasStationOutlined";
-import SpeedOutlinedIcon from "@mui/icons-material/SpeedOutlined";
+import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
@@ -51,17 +51,26 @@ export function VehicleSpecifications({ product }: { product: BuySellProduct }) 
     let year = "";
     let fuelType = "";
     let kmDriven = "";
+    let owners = "";
 
     product.specifications?.forEach((spec) => {
       const name = spec.specification_info?.specification_name?.toLowerCase() || "";
       const raw =
         spec.specification_value_info?.specification_value_name || spec.specification_value;
       const value = raw == null || raw === "" ? "" : String(raw);
+      if (!value || /^[a-fA-F0-9]{24}$/.test(value)) return;
 
       if (name.includes("year") || name.includes("make year")) year = value;
-      else if (name.includes("fuel type") || name.includes("fuel")) fuelType = value;
-      else if (name.includes("km driven") || name.includes("kilometers")) kmDriven = value;
+      else if (name.includes("fuel")) fuelType = value;
+      else if (name.includes("km") || name.includes("driven") || name.includes("kilometers")) kmDriven = value;
+      else if (name.includes("owner")) owners = value;
     });
+
+    const highlights = product.listing_highlights;
+    if (!fuelType && highlights?.fuelType) fuelType = String(highlights.fuelType);
+    if (!owners && highlights?.owners) owners = String(highlights.owners);
+    if (!year && highlights?.makeYear) year = String(highlights.makeYear);
+    if (!kmDriven && highlights?.mileage) kmDriven = String(highlights.mileage);
 
     const city = product.city_info?.name;
     const state = product.state_info?.name;
@@ -74,7 +83,7 @@ export function VehicleSpecifications({ product }: { product: BuySellProduct }) 
       }
     }
 
-    return { year, fuelType, kmDriven, location };
+    return { year, fuelType, kmDriven, owners, location };
   }, [product]);
 
   return (
@@ -102,6 +111,16 @@ export function VehicleSpecifications({ product }: { product: BuySellProduct }) 
           <Box sx={{ minWidth: 0 }}>
             <Typography sx={{ fontSize: 11, color: T.color.textSecondary, lineHeight: 1 }}>Fuel Type</Typography>
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: T.color.textPrimary, mt: 0.3 }} noWrap>{specs.fuelType}</Typography>
+          </Box>
+        </Box>
+      ) : null}
+
+      {specs.owners ? (
+        <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1, minWidth: 0 }}>
+          <PersonOutlineOutlinedIcon sx={{ fontSize: 18, color: T.color.textSecondary, mt: "2px" }} />
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontSize: 11, color: T.color.textSecondary, lineHeight: 1 }}>No. of Owners</Typography>
+            <Typography sx={{ fontSize: 13, fontWeight: 600, color: T.color.textPrimary, mt: 0.3 }} noWrap>{specs.owners}</Typography>
           </Box>
         </Box>
       ) : null}

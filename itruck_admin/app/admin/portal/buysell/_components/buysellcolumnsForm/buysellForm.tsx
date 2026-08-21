@@ -101,9 +101,99 @@ function toStatus(raw: string | undefined | null): BuySellStatus {
   return "pending";
 }
 
-/** A specification counts as "Brand" if its name contains the word brand. */
+/** A specification counts as "Brand" if its name is brand/make — not "Make Year". */
+function normalizeSpecName(name?: string): string {
+  return String(name || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function isBrandSpec(spec: Specification): boolean {
-  return /\bbrand\b|\bmake\b/i.test(spec.specification_name);
+  const n = normalizeSpecName(spec.specification_name);
+  return n === "brand" || n === "make";
+}
+
+function isFuelSpec(spec: Specification): boolean {
+  return /\bfuel\b/.test(normalizeSpecName(spec.specification_name));
+}
+
+function isOwnerSpec(spec: Specification): boolean {
+  return /\bowners?\b/.test(normalizeSpecName(spec.specification_name));
+}
+
+const FUEL_FALLBACK_OPTIONS = [
+  "DIESEL",
+  "PETROL",
+  "CNG",
+  "ELECTRIC",
+  "HYBRID",
+  "LPG",
+  "NOT APPLICABLE",
+];
+const OWNER_FALLBACK_OPTIONS = ["1", "2", "3", "4", "5+"];
+const FUEL_TYPE_SPEC_ID = "6a32447946ebddbeb905e6f2";
+const OWNERS_SPEC_ID = "6a32457a46ebddbeb905e8b9";
+
+function specId(item: { _id?: unknown; id?: unknown } | null | undefined): string {
+  if (!item) return "";
+  const oid = item._id != null ? String(item._id) : "";
+  if (/^[a-fA-F0-9]{24}$/.test(oid)) return oid;
+  return String(item.id || oid || "");
+}
+
+function valueId(sv: { _id?: unknown; id?: unknown } | null | undefined): string {
+  return specId(sv);
+}
+
+function isActiveSpec(spec: Specification): boolean {
+  return !spec.status || /^active$/i.test(String(spec.status));
+}
+
+function optionsForSpec(
+  spec: Specification,
+  values: SpecificationValue[],
+): { value: string; label: string }[] {
+  const fromCatalog = (values || [])
+    .filter((sv) => String(sv.specification_value_name || "").trim())
+    .map((sv) => ({
+      value: valueId(sv) || String(sv.specification_value_name),
+      label: String(sv.specification_value_name),
+    }));
+  if (fromCatalog.length > 0) return fromCatalog;
+  if (isFuelSpec(spec)) {
+    return FUEL_FALLBACK_OPTIONS.map((v) => ({ value: v, label: v }));
+  }
+  if (isOwnerSpec(spec)) {
+    return OWNER_FALLBACK_OPTIONS.map((v) => ({ value: v, label: v }));
+  }
+  return [];
+}
+
+function ensureCoreVehicleSpecs(specs: Specification[]): Specification[] {
+  const list = [...specs];
+  if (!list.some(isFuelSpec)) {
+    list.push({
+      _id: FUEL_TYPE_SPEC_ID,
+      specification_name: "Fuel Type",
+      type: "selectable",
+      is_required: "Yes",
+      status: "Active",
+      subcategory_id: "*",
+    } as Specification);
+  }
+  if (!list.some(isOwnerSpec)) {
+    list.push({
+      _id: OWNERS_SPEC_ID,
+      specification_name: "No. of Owners",
+      type: "selectable",
+      is_required: "Yes",
+      status: "Active",
+      subcategory_id: "*",
+    } as Specification);
+  }
+  return list;
 }
 
 // ─── Step header ──────────────────────────────────────────────────────────────
@@ -143,23 +233,19 @@ function SpecField({
   const isSelectable = spec.type === "selectable";
 
   if (isSelectable) {
+    const options = optionsForSpec(spec, values);
     return (
       <Box sx={{ position: "relative" }}>
         <FormSelectField
           label={
             loading
               ? `${spec.specification_name} (loading...)`
-              : values.length === 0
-                ? `${spec.specification_name} (no values)`
-                : spec.specification_name
+              : spec.specification_name
           }
           value={value}
           onChange={(v) => onChange(typeof v === "string" ? v : ((v as any)?.value ?? ""))}
-          options={values.map((sv) => ({
-            value: sv._id,
-            label: sv.specification_value_name,
-          }))}
-          disabled={disabled || loading || values.length === 0}
+          options={options}
+          disabled={disabled || loading}
         />
         {loading && (
           <CircularProgress
@@ -255,22 +341,22 @@ export function BuySellForm({
 
   // ── Lazy-load spec values ─────────────────────────────────────────────────
   const ensureSpecValuesLoaded = useCallback(
-    async (specId: string) => {
-      if (!specId) return;
-      const spec = specifications.find((s) => s._id === specId);
+    async (id: string) => {
+      if (!id) return;
+      const spec = specifications.find((s) => specId(s) === id);
       if (!spec || spec.type !== "selectable") return;
-      if (specValueMap[specId] !== undefined || specValueLoadingMap[specId])
+      if (specValueMap[id] !== undefined || specValueLoadingMap[id])
         return;
-      setSpecValueLoadingMap((prev) => ({ ...prev, [specId]: true }));
+      setSpecValueLoadingMap((prev) => ({ ...prev, [id]: true }));
       try {
         const fetched = await getSpecificationValues({
-          specification_id: specId,
+          specification_id: id,
         });
-        setSpecValueMap((prev) => ({ ...prev, [specId]: fetched ?? [] }));
+        setSpecValueMap((prev) => ({ ...prev, [id]: fetched ?? [] }));
       } catch {
-        setSpecValueMap((prev) => ({ ...prev, [specId]: [] }));
+        setSpecValueMap((prev) => ({ ...prev, [id]: [] }));
       } finally {
-        setSpecValueLoadingMap((prev) => ({ ...prev, [specId]: false }));
+        setSpecValueLoadingMap((prev) => ({ ...prev, [id]: false }));
       }
     },
     [specifications, specValueMap, specValueLoadingMap],
@@ -283,25 +369,40 @@ export function BuySellForm({
       .catch(() => setCurrentUser(null))
       .finally(() => setAuthReady(true));
 
-    getSpecifications({ status: "Active" })
-      .then((specs) => {
-        setSpecifications(specs);
-        specs.forEach((spec) => {
+    const loadSpecs = async () => {
+      try {
+        let specs = await getSpecifications({ status: "Active" });
+        if (!Array.isArray(specs) || specs.length === 0) {
+          const all = await getSpecifications({});
+          specs = (Array.isArray(all) ? all : []).filter(isActiveSpec);
+        }
+        const list = ensureCoreVehicleSpecs(Array.isArray(specs) ? specs : []);
+        setSpecifications(list);
+        list.forEach((spec) => {
           if (spec.type === "selectable") {
-            getSpecificationValues({ specification_id: spec._id })
+            const id = specId(spec);
+            getSpecificationValues({ specification_id: id })
               .then((fetched) =>
                 setSpecValueMap((prev) => ({
                   ...prev,
-                  [spec._id]: fetched ?? [],
+                  [id]: fetched ?? [],
                 })),
               )
               .catch(() =>
-                setSpecValueMap((prev) => ({ ...prev, [spec._id]: [] })),
+                setSpecValueMap((prev) => ({ ...prev, [id]: [] })),
               );
           }
         });
-      })
-      .catch(() => {});
+      } catch (e) {
+        setSpecifications(ensureCoreVehicleSpecs([]));
+        setError(
+          e instanceof Error
+            ? e.message
+            : "Failed to load vehicle details. Please refresh and try again.",
+        );
+      }
+    };
+    void loadSpecs();
   }, []);
 
   // ── Split specifications into "Brand" vs the rest (Vehicle Details) ──────
@@ -310,8 +411,8 @@ export function BuySellForm({
     [specifications],
   );
   const vehicleDetailSpecs = useMemo(
-    () => specifications.filter((s) => s._id !== brandSpec?._id),
-    [specifications, brandSpec],
+    () => specifications.filter((s) => !isBrandSpec(s)),
+    [specifications],
   );
 
   // ── Refetch brand values scoped to the selected sub category ──────────────
@@ -325,28 +426,28 @@ export function BuySellForm({
     if (!brandSpec) return;
     const subId = values.subcategory_id;
     if (!subId) {
-      setSpecValueMap((prev) => ({ ...prev, [brandSpec._id]: [] }));
+      setSpecValueMap((prev) => ({ ...prev, [specId(brandSpec)]: [] }));
       return;
     }
     if (lastBrandSubcategoryRef.current === subId) return;
     lastBrandSubcategoryRef.current = subId;
 
     setBrandLoading(true);
-    getSpecificationValues({ specification_id: brandSpec._id, subcategory_id: subId })
+    getSpecificationValues({ specification_id: specId(brandSpec), subcategory_id: subId })
       .then((fetched) => {
-        setSpecValueMap((prev) => ({ ...prev, [brandSpec._id]: fetched ?? [] }));
+        setSpecValueMap((prev) => ({ ...prev, [specId(brandSpec)]: fetched ?? [] }));
         // The brand chosen for a different sub category is no longer valid.
         const idx = values.specifications.findIndex(
-          (s) => s.specification_id === brandSpec._id,
+          (s) => s.specification_id === specId(brandSpec),
         );
         const stillValid =
           idx >= 0 &&
-          (fetched ?? []).some((v) => v._id === values.specifications[idx].specification_value);
+          (fetched ?? []).some((v) => valueId(v) === values.specifications[idx].specification_value);
         if (idx >= 0 && !stillValid) {
-          updateSpecValue(brandSpec._id, "");
+          updateSpecValue(specId(brandSpec), "");
         }
       })
-      .catch(() => setSpecValueMap((prev) => ({ ...prev, [brandSpec._id]: [] })))
+      .catch(() => setSpecValueMap((prev) => ({ ...prev, [specId(brandSpec)]: [] })))
       .finally(() => setBrandLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brandSpec, values.subcategory_id]);
@@ -363,8 +464,8 @@ export function BuySellForm({
     );
 
     const merged = specifications.map((spec) => ({
-      specification_id: spec._id,
-      specification_value: existingMap.get(spec._id) ?? "",
+      specification_id: specId(spec),
+      specification_value: existingMap.get(specId(spec)) ?? "",
     }));
 
     setFieldValue("specifications", merged);
@@ -779,9 +880,9 @@ export function BuySellForm({
                 {brandSpec && (
                   <SpecField
                     spec={brandSpec}
-                    value={getSpecEntry(brandSpec._id).value}
-                    onChange={(v) => updateSpecValue(brandSpec._id, v)}
-                    values={specValueMap[brandSpec._id] ?? []}
+                    value={getSpecEntry(specId(brandSpec)).value}
+                    onChange={(v) => updateSpecValue(specId(brandSpec), v)}
+                    values={specValueMap[specId(brandSpec)] ?? []}
                     loading={brandLoading}
                     disabled={!values.subcategory_id}
                   />
@@ -822,12 +923,12 @@ export function BuySellForm({
                 <FormGrid>
                   {vehicleDetailSpecs.map((spec) => (
                     <SpecField
-                      key={spec._id}
+                      key={specId(spec)}
                       spec={spec}
-                      value={getSpecEntry(spec._id).value}
-                      onChange={(v) => updateSpecValue(spec._id, v)}
-                      values={specValueMap[spec._id] ?? []}
-                      loading={!!specValueLoadingMap[spec._id]}
+                      value={getSpecEntry(specId(spec)).value}
+                      onChange={(v) => updateSpecValue(specId(spec), v)}
+                      values={specValueMap[specId(spec)] ?? []}
+                      loading={!!specValueLoadingMap[specId(spec)]}
                     />
                   ))}
                 </FormGrid>

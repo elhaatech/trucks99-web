@@ -102,6 +102,7 @@ export function getSpecDisplayValue(spec: BuySellSpecification): string {
     (spec.specification_value != null ? String(spec.specification_value) : "");
 
   if (!raw) return "—";
+  if (/^[a-fA-F0-9]{24}$/.test(raw.trim())) return "—";
   if (name.includes("km") || name.includes("mileage") || name.includes("driven")) {
     const n = Number(String(raw).replace(/[^\d.]/g, ""));
     if (Number.isFinite(n)) return `${n.toLocaleString("en-IN")} km`;

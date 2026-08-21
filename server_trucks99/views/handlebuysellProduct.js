@@ -150,13 +150,46 @@ function buildImageUrl(filename) {
 function toObjectId(value) {
   if (!value || value === "") return null;
   if (value instanceof mongoose.Types.ObjectId) return value;
-  const str = String(value).trim();
+  const str = extractRefId(value);
   // Strict 24-hex check — avoids mongoose isValid("101") false positives
   if (/^[a-fA-F0-9]{24}$/.test(str)) {
     return new mongoose.Types.ObjectId(str);
   }
   return null;
 }
+
+function extractRefId(value) {
+  if (value == null || value === "") return "";
+  if (typeof value === "object") {
+    if (typeof value.toHexString === "function") return value.toHexString();
+    if (value._id) return extractRefId(value._id);
+    if (value.$oid) return String(value.$oid);
+    if (value.id && typeof value.id !== "object") return String(value.id);
+  }
+  const str = String(value).trim();
+  return str === "[object Object]" ? "" : str;
+}
+
+const SPEC_ID_ALIASES = {
+  "6a7dae093bd76bf10c1e4a83": "6a41f4e20fd927b44f1a2254", // Brand
+  "6a7dae0a3bd76bf10c1e4a8a": "6a41f4e30fd927b44f1a2255", // Model
+  "6a7dae0a3bd76bf10c1e4a8d": "6a32447946ebddbeb905e6f2", // Fuel Type
+  "6a87dc5e7f4e721373aa5ab4": "6a32441146ebddbeb905e6c4", // Make Year
+  "6a87dc5e7f4e721373aa5ab6": "6a32444546ebddbeb905e6db", // KM Driven
+  "6a87dc5e7f4e721373aa5ab8": "6a32457a46ebddbeb905e8b9", // No. of Owners
+};
+const OFFICIAL_FUEL_SPEC_ID = "6a32447946ebddbeb905e6f2";
+const KNOWN_FUEL_NAMES = new Set([
+  "diesel",
+  "petrol",
+  "cng",
+  "lpg",
+  "electric",
+  "hybrid",
+  "not applicable",
+  "gasoline",
+  "gas",
+]);
 
 /**
  * Resolve LocationCountry/State/City input (mongo _id, uuid `id`, or numeric externalId)
@@ -747,25 +780,39 @@ async function buildEnrichedResponse(data) {
   const enrichedSpecs = await Promise.all(
     (data.specifications || []).map(async (spec) => {
       const specInfo = spec.specification_id
-        ? await Specification.findById(spec.specification_id)
+        ? await Specification.findOne({
+            $or: [
+              ...(/^[a-fA-F0-9]{24}$/.test(String(spec.specification_id))
+                ? [{ _id: spec.specification_id }]
+                : []),
+              { id: String(spec.specification_id) },
+            ],
+          })
             .select("specification_name type is_required")
             .lean()
         : null;
 
       let specValueInfo = null;
-      if (
-        specInfo?.type === "selectable" &&
-        spec.specification_value &&
-        mongoose.Types.ObjectId.isValid(spec.specification_value)
-      ) {
-        const valDoc = await SpecificationValue.findById(
-          spec.specification_value,
-        )
-          .select("specification_value_name")
-          .lean();
-        specValueInfo = valDoc
-          ? { specification_value_name: valDoc.specification_value_name }
-          : null;
+      const rawValue = String(spec.specification_value || "").trim();
+      if (rawValue) {
+        let valDoc = null;
+        if (/^[a-fA-F0-9]{24}$/.test(rawValue)) {
+          valDoc = await SpecificationValue.findById(rawValue)
+            .select("specification_value_name")
+            .lean();
+        }
+        if (!valDoc) {
+          valDoc = await SpecificationValue.findOne({
+            specification_value_name: { $regex: `^${rawValue.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
+          })
+            .select("specification_value_name")
+            .lean();
+        }
+        if (valDoc) {
+          specValueInfo = {
+            specification_value_name: valDoc.specification_value_name,
+          };
+        }
       }
 
       return {
@@ -806,6 +853,7 @@ async function buildEnrichedResponse(data) {
     address: data.address || "",
     pincode: data.pincode || "",
     specifications: enrichedSpecs,
+    listing_highlights: buildListingHighlights(enrichedSpecs),
     status: data.status,
     bookedBy: data.bookedBy || null,
     bookedAt: data.bookedAt || null,
@@ -964,66 +1012,145 @@ async function enrichBuySellSpecifications(items) {
 
   items.forEach((item) => {
     (item.specifications || []).forEach((spec) => {
-      if (spec?.specification_id) {
-        specIds.add(String(spec.specification_id));
+      const specId = extractRefId(spec?.specification_id);
+      if (specId) {
+        specIds.add(specId);
+        const alias = SPEC_ID_ALIASES[specId];
+        if (alias) specIds.add(alias);
       }
-      if (
-        spec?.specification_value &&
-        mongoose.Types.ObjectId.isValid(String(spec.specification_value))
-      ) {
-        valueIds.add(String(spec.specification_value));
+      const rawValue = extractRefId(spec?.specification_value);
+      if (rawValue && /^[a-fA-F0-9]{24}$/.test(rawValue)) {
+        valueIds.add(rawValue);
       }
     });
   });
+  specIds.add(OFFICIAL_FUEL_SPEC_ID);
+  specIds.add("6a7dae0a3bd76bf10c1e4a8d");
+
+  const specMongoIds = [...specIds]
+    .filter((id) => /^[a-fA-F0-9]{24}$/.test(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+  const specAltIds = [...specIds].filter((id) => !/^[a-fA-F0-9]{24}$/.test(id));
+
+  const specQuery = [];
+  if (specMongoIds.length) specQuery.push({ _id: { $in: specMongoIds } });
+  if (specAltIds.length) specQuery.push({ id: { $in: specAltIds } });
+
+  const valueMongoIds = [...valueIds]
+    .filter((id) => /^[a-fA-F0-9]{24}$/.test(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+  const valueNames = [];
+  items.forEach((item) => {
+    (item.specifications || []).forEach((spec) => {
+      const raw = extractRefId(spec?.specification_value) || String(spec?.specification_value || "").trim();
+      if (raw && !/^[a-fA-F0-9]{24}$/.test(raw)) valueNames.push(raw);
+    });
+  });
+
+  const valueQuery = [];
+  if (valueMongoIds.length) {
+    valueQuery.push({ _id: { $in: valueMongoIds } });
+    valueQuery.push({ id: { $in: [...valueIds] } });
+  }
+  if (valueNames.length) {
+    valueQuery.push({
+      specification_value_name: { $in: [...new Set(valueNames)] },
+    });
+  }
+  const fuelSpecOids = [OFFICIAL_FUEL_SPEC_ID, "6a7dae0a3bd76bf10c1e4a8d"]
+    .filter((id) => /^[a-fA-F0-9]{24}$/.test(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+  if (fuelSpecOids.length) {
+    valueQuery.push({ specification_id: { $in: fuelSpecOids } });
+  }
 
   const [specDocs, valueDocs] = await Promise.all([
-    specIds.size
-      ? Specification.find({
-          _id: {
-            $in: [...specIds].map((id) => new mongoose.Types.ObjectId(id)),
-          },
-        })
+    specQuery.length
+      ? Specification.find(specQuery.length === 1 ? specQuery[0] : { $or: specQuery })
           .select("specification_name type is_required")
           .lean()
       : [],
-    valueIds.size
-      ? SpecificationValue.find({
-          _id: {
-            $in: [...valueIds].map((id) => new mongoose.Types.ObjectId(id)),
-          },
-        })
-          .select("specification_value_name")
+    valueQuery.length
+      ? SpecificationValue.find({ $or: valueQuery })
+          .select("specification_value_name specification_id id")
           .lean()
       : [],
   ]);
 
   const specMap = {};
   specDocs.forEach((doc) => {
-    if (doc?._id) {
-      specMap[String(doc._id)] = doc;
-    }
+    if (doc?._id) specMap[String(doc._id)] = doc;
+    if (doc?.id) specMap[String(doc.id)] = doc;
   });
+  Object.entries(SPEC_ID_ALIASES).forEach(([from, to]) => {
+    if (specMap[to] && !specMap[from]) specMap[from] = specMap[to];
+  });
+
+  const extraParentIds = [];
+  valueDocs.forEach((doc) => {
+    const parentId = extractRefId(doc?.specification_id);
+    if (parentId && !specMap[parentId]) extraParentIds.push(parentId);
+  });
+  if (extraParentIds.length) {
+    const extraSpecs = await Specification.find({
+      $or: [
+        {
+          _id: {
+            $in: extraParentIds
+              .filter((id) => /^[a-fA-F0-9]{24}$/.test(id))
+              .map((id) => new mongoose.Types.ObjectId(id)),
+          },
+        },
+        { id: { $in: extraParentIds } },
+      ],
+    })
+      .select("specification_name type is_required")
+      .lean();
+    extraSpecs.forEach((doc) => {
+      if (doc?._id) specMap[String(doc._id)] = doc;
+      if (doc?.id) specMap[String(doc.id)] = doc;
+    });
+  }
 
   const valueMap = {};
   valueDocs.forEach((doc) => {
-    if (doc?._id) {
-      valueMap[String(doc._id)] = doc;
-    }
+    if (doc?._id) valueMap[String(doc._id)] = doc;
+    if (doc?.id) valueMap[String(doc.id)] = doc;
+    const name = String(doc?.specification_value_name || "").trim();
+    if (name) valueMap[name.toLowerCase()] = doc;
   });
 
-  return items.map((item) => ({
-    ...item,
-    specifications: (item.specifications || []).map((spec) => {
-      const specId = String(spec?.specification_id || "");
-      const specInfoDoc = specMap[specId] || null;
-      const specValueId = String(spec?.specification_value || "");
-      const specValueInfo =
-        specInfoDoc?.type === "selectable" && valueMap[specValueId]
-          ? {
-              specification_value_name:
-                valueMap[specValueId].specification_value_name,
-            }
-          : null;
+  return items.map((item) => {
+    const specifications = (item.specifications || []).map((spec) => {
+      const specId = extractRefId(spec?.specification_id);
+      const specValueRaw =
+        extractRefId(spec?.specification_value) ||
+        String(spec?.specification_value || "").trim();
+      const valueDoc =
+        valueMap[specValueRaw] ||
+        valueMap[specValueRaw.toLowerCase()] ||
+        null;
+      let specInfoDoc =
+        specMap[specId] ||
+        specMap[SPEC_ID_ALIASES[specId]] ||
+        null;
+      if (!specInfoDoc && valueDoc?.specification_id) {
+        const parentId = extractRefId(valueDoc.specification_id);
+        specInfoDoc =
+          specMap[parentId] || specMap[SPEC_ID_ALIASES[parentId]] || null;
+      }
+      if (
+        !specInfoDoc &&
+        (specId === OFFICIAL_FUEL_SPEC_ID ||
+          SPEC_ID_ALIASES[specId] === OFFICIAL_FUEL_SPEC_ID)
+      ) {
+        specInfoDoc = specMap[OFFICIAL_FUEL_SPEC_ID] || {
+          specification_name: "Fuel Type",
+          type: "selectable",
+          is_required: "Yes",
+        };
+      }
+      const valueName = valueDoc?.specification_value_name || null;
 
       return {
         specification_id: spec?.specification_id,
@@ -1035,10 +1162,64 @@ async function enrichBuySellSpecifications(items) {
               is_required: specInfoDoc.is_required,
             }
           : null,
-        specification_value_info: specValueInfo,
+        specification_value_info: valueName
+          ? { specification_value_name: valueName }
+          : null,
       };
-    }),
-  }));
+    });
+
+    return {
+      ...item,
+      specifications,
+      listing_highlights: buildListingHighlights(specifications),
+    };
+  });
+}
+
+function specNameKey(name) {
+  return String(name || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function highlightValue(spec) {
+  const named = spec?.specification_value_info?.specification_value_name;
+  if (named) return String(named).trim();
+  const raw = String(spec?.specification_value || "").trim();
+  if (!raw || /^[a-fA-F0-9]{24}$/.test(raw)) return "";
+  return raw;
+}
+
+function buildListingHighlights(specifications) {
+  const highlights = {
+    makeYear: null,
+    mileage: null,
+    fuelType: null,
+    owners: null,
+    brand: null,
+  };
+  (specifications || []).forEach((spec) => {
+    const name = specNameKey(spec?.specification_info?.specification_name);
+    const value = highlightValue(spec);
+    if (!value) return;
+    if (KNOWN_FUEL_NAMES.has(value.toLowerCase())) highlights.fuelType = value;
+    if (!name) return;
+    if (name === "brand" || name === "make") highlights.brand = value;
+    if (name.includes("year")) highlights.makeYear = value;
+    if (name.includes("fuel")) highlights.fuelType = value;
+    if (name.includes("owner")) highlights.owners = value;
+    if (
+      name.includes("km") ||
+      name.includes("driven") ||
+      name.includes("mileage") ||
+      name.includes("odometer")
+    ) {
+      highlights.mileage = value;
+    }
+  });
+  return highlights;
 }
 
 /** Shared list enrichment: favorites, seller mobile/name, and bid summary. */

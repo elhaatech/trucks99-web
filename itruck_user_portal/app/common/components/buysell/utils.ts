@@ -184,6 +184,72 @@ function formatKilometers(raw: string | undefined): string | undefined {
   return value;
 }
 
+function extractRefId(value: unknown): string {
+  if (value == null || value === "") return "";
+  if (typeof value === "object") {
+    const obj = value as { _id?: unknown; id?: unknown; $oid?: string };
+    if (obj._id != null) return String(obj._id);
+    if (obj.$oid) return String(obj.$oid);
+    if (obj.id != null) return String(obj.id);
+  }
+  const str = String(value).trim();
+  return str === "[object Object]" ? "" : str;
+}
+
+const FUEL_SPEC_IDS = new Set([
+  "6a32447946ebddbeb905e6f2",
+  "6a7dae0a3bd76bf10c1e4a8d",
+]);
+const KNOWN_FUEL_NAMES = new Set([
+  "diesel",
+  "petrol",
+  "cng",
+  "lpg",
+  "electric",
+  "hybrid",
+  "not applicable",
+  "gasoline",
+  "gas",
+]);
+
+function looksLikeObjectId(value?: string): boolean {
+  return Boolean(value && /^[a-f0-9]{24}$/i.test(value.trim()));
+}
+
+function specDisplayValue(spec: BuySellSpecification | undefined): string {
+  if (!spec) return "";
+  const named = spec.specification_value_info?.specification_value_name;
+  if (named && String(named).trim()) return String(named).trim();
+  const raw = extractRefId(spec.specification_value);
+  if (!raw || looksLikeObjectId(raw)) return "";
+  return raw;
+}
+
+function pullFuelType(
+  specifications: BuySellSpecification[] | undefined,
+): string | undefined {
+  const byName = pullSpecLoose(
+    specifications,
+    "fuel type",
+    "fule type",
+    "fuel",
+  );
+  if (byName && !looksLikeObjectId(byName)) return byName;
+
+  const byKnownId = specifications?.find((s) =>
+    FUEL_SPEC_IDS.has(extractRefId(s.specification_id)),
+  );
+  const fromId = specDisplayValue(byKnownId);
+  if (fromId) return fromId;
+
+  for (const spec of specifications || []) {
+    const value = specDisplayValue(spec);
+    if (value && KNOWN_FUEL_NAMES.has(value.toLowerCase())) return value;
+  }
+
+  return undefined;
+}
+
 /**
  * List-card highlights aligned with Vehicle Details:
  * Make Year, Fuel Type, No. of Owners.
@@ -218,7 +284,7 @@ export function getListingSpecChips(
   const fuel =
     highlights?.fuelType?.trim() ||
     String((product as BuySellProduct & { fuelType?: string | null }).fuelType ?? "").trim() ||
-    pullSpecLoose(specs, "fuel type", "fuel");
+    pullFuelType(specs);
   const owners =
     highlights?.owners?.trim() ||
     String((product as BuySellProduct & { owners?: string | null }).owners ?? "").trim() ||
@@ -231,9 +297,6 @@ export function getListingSpecChips(
       "owners",
       "owner",
     );
-
-  const looksLikeObjectId = (v?: string) =>
-    Boolean(v && /^[a-f0-9]{24}$/i.test(v.trim()));
 
   const fallback = "N/A";
   const chips: ListingSpecChip[] = [];
@@ -418,6 +481,7 @@ export function getSpecDisplayValue(spec: BuySellSpecification): string {
     (spec.specification_value != null ? String(spec.specification_value) : "");
 
   if (!raw) return "—";
+  if (/^[a-fA-F0-9]{24}$/.test(raw.trim())) return "—";
   if (name.includes("km") || name.includes("mileage") || name.includes("driven")) {
     const n = Number(String(raw).replace(/[^\d.]/g, ""));
     if (Number.isFinite(n)) return `${n.toLocaleString("en-IN")} km`;
