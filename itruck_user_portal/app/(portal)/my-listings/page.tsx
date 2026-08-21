@@ -421,6 +421,7 @@ function SellVehicleContent() {
             mobileOpen={mobileFiltersOpen}
             onMobileClose={() => setMobileFiltersOpen(false)}
             applyLoading={applyLoading}
+            showStatusFilter={true}
           />
         </Box>
 

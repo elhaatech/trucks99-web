@@ -83,7 +83,6 @@ function filtersToQuery(filters: VehicleFilterValues): Record<string, string> {
   if (filters.category_id) query.category_id = filters.category_id;
   if (filters.subcategory_id) query.subcategory_id = filters.subcategory_id;
   if (filters.state_id) query.state_id = filters.state_id;
-  if (filters.status) query.status = filters.status;
   if (filters.min_price) query.min_price = filters.min_price;
   if (filters.max_price) query.max_price = filters.max_price;
   if (filters.no_of_owners_min) query.no_of_owners_min = filters.no_of_owners_min;
@@ -305,6 +304,7 @@ export default function UserProductListContent() {
             mobileOpen={mobileFiltersOpen}
             onMobileClose={() => setMobileFiltersOpen(false)}
             applyLoading={applyLoading}
+            showStatusFilter={false}
           />
         </Box>
 

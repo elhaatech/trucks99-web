@@ -51,7 +51,7 @@ import { NotificationDropdown } from "@/components/common/NotificationDropdown";
 const NAV_LINKS = [
   { label: "Buy Vehicle", href: userProductRoutes.list() },
   { label: "Featured", href: userProductRoutes.featuredVehicles() },
-  { label: "My Listings", href: userProductRoutes.sellVehicle() },
+  { label: "Sell Vehicle", href: userProductRoutes.sellVehicle() },
   { label: "Favorites", href: userProductRoutes.favorites() },
 ];
 
@@ -65,7 +65,7 @@ export function resolveBuySellNavHref(
   link: { label: string; href: string },
   isLoggedIn: boolean,
 ): string {
-  if (link.label === "My Listings" && !isLoggedIn) {
+  if (link.label === "Sell Vehicle" && !isLoggedIn) {
     return userProductRoutes.login(userProductRoutes.sellVehicle());
   }
   return link.href;
@@ -128,7 +128,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
   };
 
   const isLinkActive = (link: { label: string; href: string }) => {
-    if (link.label === "My Listings") return isSellHubPath(pathname);
+    if (link.label === "Sell Vehicle") return isSellHubPath(pathname);
     if (link.label === "Favorites" || link.label === "My Favorite List") {
       return pathname === userProductRoutes.favorites() || pathname === userProductRoutes.cart();
     }
@@ -454,7 +454,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                   }}
                 >
                   <DirectionsCarOutlinedIcon sx={{ mr: 1.5, fontSize: 18, color: "text.secondary" }} />
-                  My Listings
+                  Sell Vehicle
                 </MenuItem>
                 <MenuItem
                   onClick={() => {

@@ -30,6 +30,7 @@ import {
   getSellerDisplayName,
   productSpecsToEntries,
   getProductVehicleId,
+  formatVehicleIdDisplay,
 } from "@/app/common/components/buysell";
 import { FeaturedVehicleListingPanel } from "../_components/FeaturedVehicleListingPanel";
 import {
@@ -316,6 +317,29 @@ export default function UserProductViewPage() {
       ) : null}
 
       <ProductViewBreadcrumbs title={title} from={from} onNavigate={(href) => router.push(href)} />
+
+      <Box sx={{ mb: { xs: 2, md: 2.5 } }}>
+        <Typography
+          sx={{
+            fontWeight: 800,
+            fontSize: { xs: 22, md: 26 },
+            color: T.color.textPrimary,
+            lineHeight: 1.25,
+          }}
+        >
+          {title}
+        </Typography>
+        {summaryProps.subtitle ? (
+          <Typography sx={{ color: T.color.textSecondary, fontSize: 14, mt: 0.25 }}>
+            {summaryProps.subtitle}
+          </Typography>
+        ) : null}
+        {formatVehicleIdDisplay(getProductVehicleId(item)) ? (
+          <Typography sx={{ color: T.color.textSecondary, fontSize: 14, mt: 0.25 }}>
+            {formatVehicleIdDisplay(getProductVehicleId(item))}
+          </Typography>
+        ) : null}
+      </Box>
 
       <Box
         sx={{

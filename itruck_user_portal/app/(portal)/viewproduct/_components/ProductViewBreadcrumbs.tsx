@@ -18,7 +18,7 @@ type ProductViewBreadcrumbsProps = {
 export function ProductViewBreadcrumbs({ title, onNavigate, from }: ProductViewBreadcrumbsProps) {
   const middle =
     from === "my-listings"
-      ? { label: "My Listings", href: userProductRoutes.sellVehicle() }
+      ? { label: "Sell Vehicle", href: userProductRoutes.sellVehicle() }
       : { label: "Buy Vehicles", href: userProductRoutes.list() };
 
   const crumbs: Crumb[] = [

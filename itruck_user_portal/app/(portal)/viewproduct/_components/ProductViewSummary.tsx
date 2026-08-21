@@ -156,24 +156,6 @@ export function ProductViewSummary({
         borderBottom: `1px solid ${T.color.border}`,
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1, mb: 0.5 }}>
-        <Typography
-          sx={{
-            fontWeight: 800,
-            fontSize: { xs: 22, md: 26 },
-            color: T.color.textPrimary,
-            lineHeight: 1.25,
-          }}
-        >
-          {title}
-        </Typography>
-        {status ? <ProductStatusChip status={status} /> : null}
-      </Box>
-
-      {subtitle ? (
-        <Typography sx={{ color: T.color.textSecondary, fontSize: 14, mb: 1.25 }}>{subtitle}</Typography>
-      ) : null}
-
       <Typography
         sx={{
           fontWeight: 800,
