@@ -6,7 +6,6 @@ import {
   getLocationStatesByCountry,
   getLocationCitiesByState,
   cacheLocationStates,
-  resolveStateIdByName,
   INDIA_COUNTRY_ID,
 } from "@/model/services/location";
 
@@ -17,15 +16,15 @@ export function CityFilterDropdown({
   onChange,
   label = "City",
   placeholder = "All cities",
-  /** When set, only cities belonging to this state (by name) are shown. */
-  selectedStateName,
+  /** When set, only cities belonging to this state (by state id) are shown. */
+  selectedStateId,
   sx,
 }: {
   value: string;
   onChange: (value: string) => void;
   label?: string;
   placeholder?: string;
-  selectedStateName?: string;
+  selectedStateId?: string;
   sx?: Record<string, unknown>;
 }) {
   const [cityOptions, setCityOptions] = useState<SelectOption[]>([]);
@@ -38,11 +37,10 @@ export function CityFilterDropdown({
     (async () => {
       setLoading(true);
       try {
-        // Resolve the selected state's id, reusing the cached states list when
-        // available (the State filter dropdown populates it on mount).
-        let stateId = selectedStateName
-          ? resolveStateIdByName(INDIA_COUNTRY_ID, selectedStateName)
-          : "";
+        // The State filter already supplies a real state id, so it can be used
+        // directly. Only the "no state selected" case needs a lookup, which
+        // keeps the existing default of listing Tamil Nadu cities.
+        let stateId = selectedStateId?.trim() || "";
 
         if (!stateId) {
           const statesRes = await getLocationStatesByCountry(INDIA_COUNTRY_ID, {
@@ -53,13 +51,7 @@ export function CityFilterDropdown({
           const states = Array.isArray(statesRes?.items) ? statesRes.items : [];
           cacheLocationStates(INDIA_COUNTRY_ID, states);
 
-          const target = selectedStateName
-            ? states.find(
-                (s) =>
-                  (s.name || "").trim().toLowerCase() ===
-                  selectedStateName.trim().toLowerCase(),
-              )
-            : states.find((s) => s.name === TARGET_STATE_NAME);
+          const target = states.find((s) => s.name === TARGET_STATE_NAME);
           stateId = target?._id || target?.id || target?.uuid || "";
         }
 
@@ -98,7 +90,7 @@ export function CityFilterDropdown({
       cancelled = true;
       controller.abort();
     };
-  }, [selectedStateName]);
+  }, [selectedStateId]);
 
   const handleChange = useCallback(
     (newValue: string) => {
@@ -113,7 +105,7 @@ export function CityFilterDropdown({
       value={value}
       onChange={handleChange}
       options={cityOptions}
-      placeholder={selectedStateName ? "All cities" : placeholder}
+      placeholder={selectedStateId ? "All cities" : placeholder}
       loading={loading}
       sx={sx}
     />

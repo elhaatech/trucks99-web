@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
@@ -29,7 +29,6 @@ import {
   getProductLocation,
   getSellerDisplayName,
   productSpecsToEntries,
-  getProductBsNumber,
   getProductVehicleId,
 } from "@/app/common/components/buysell";
 import { FeaturedVehicleListingPanel } from "../_components/FeaturedVehicleListingPanel";
@@ -56,6 +55,7 @@ import { UserProductBitRecordsSection, type ProductOfferTab } from "../_componen
 import { resolveFeaturedListingUi } from "@/lib/featuredVehicleListingStatus";
 import type { SubscriptionItem } from "@/model/services/subscription";
 import { GoogleAdBanner } from "@/components/ads/GoogleAdBanner";
+import { SHOW_ADS } from "@/components/ads/adsConfig";
 
 const MakeOfferModal = dynamic(
   () =>
@@ -104,6 +104,9 @@ export default function UserProductViewPage() {
   const [featuredPlansOpen, setFeaturedPlansOpen] = useState(false);
   const [featuredActivated, setFeaturedActivated] = useState<SubscriptionItem | null>(null);
   const [owner, setOwner] = useState<BuySellOwnerProductsOwner | null>(null);
+
+  const fromParam = useSearchParams().get("from");
+  const from = fromParam === "my-listings" || fromParam === "buy-vehicle" ? fromParam : undefined;
 
   const currentUserId =
     extractId(
@@ -312,7 +315,7 @@ export default function UserProductViewPage() {
         </Alert>
       ) : null}
 
-      <ProductViewBreadcrumbs title={title} onNavigate={(href) => router.push(href)} />
+      <ProductViewBreadcrumbs title={title} from={from} onNavigate={(href) => router.push(href)} />
 
       <Box
         sx={{
@@ -329,7 +332,6 @@ export default function UserProductViewPage() {
 
           <ProductVehicleDetails
             specs={specEntries}
-            bsNumber={getProductBsNumber(item) || undefined}
             vehicleId={getProductVehicleId(item) || undefined}
             address={locationLabel || item.address || undefined}
             description={item.description?.trim() || undefined}
@@ -452,7 +454,7 @@ export default function UserProductViewPage() {
             </Box>
           ) : null}
 
-          <GoogleAdBanner placement="details" format="auto" responsive />
+          {SHOW_ADS && <GoogleAdBanner placement="details" format="auto" responsive />}
 
           {relatedOwnerId ? (
              <UserRelatedProductsSection
@@ -466,20 +468,31 @@ export default function UserProductViewPage() {
                isLoggedIn={isLoggedIn}
                isOwnerView={isOwner}
                onAddVehicle={() => router.push(userProductRoutes.sellVehicle("create"))}
-               onNotify={notify}
-               categoryId={extractId(item.category_id)}
-               categoryName={
-                 typeof item.category_id === "object" && item.category_id
-                   ? (item.category_id as { category_name?: string }).category_name
-                   : undefined
-               }
-               currentSubcategoryId={extractId(item.subcategory_id)}
-               currentSubcategoryName={
-                 typeof item.subcategory_id === "object" && item.subcategory_id
-                   ? (item.subcategory_id as { sub_category_name?: string }).sub_category_name
-                   : undefined
-               }
-             />
+                onNotify={notify}
+                 currentStateId={
+                  item.state_info?._id
+                    ? String(item.state_info._id)
+                    : (item.state_id ? String(item.state_id) : undefined)
+                 }
+                  currentCategoryId={
+                    item.category_id
+                      ? String(
+                          typeof item.category_id === "object"
+                            ? item.category_id._id
+                            : item.category_id,
+                        )
+                      : undefined
+                  }
+                  currentSubcategoryId={
+                    item.subcategory_id
+                      ? String(
+                          typeof item.subcategory_id === "object"
+                            ? item.subcategory_id._id
+                            : item.subcategory_id,
+                        )
+                      : undefined
+                  }
+               />
           ) : null}
         </Box>
 

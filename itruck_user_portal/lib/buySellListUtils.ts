@@ -1,7 +1,7 @@
 import type { BuySellListFilter, BuySellProduct } from "@/model/services/buysellapi";
 import { getBuySellRowId } from "@/model/services/buysellapi";
 import type { FilterState } from "@/app/admin/portal/buysell/_components/interface/buysell_interface";
-import { resolveStateIdByName, INDIA_COUNTRY_ID } from "@/model/services/location";
+import { INDIA_COUNTRY_ID } from "@/model/services/location";
 
 const COUNTRY_ID = INDIA_COUNTRY_ID;
 // Fallback used when only a city is filtered (existing Tamil Nadu behaviour).
@@ -41,11 +41,9 @@ export function toBuySellListPayload(
   const makeYearMax = filters.make_year_max ? Number(filters.make_year_max) : undefined;
 
   const cityId = filters.city_id || undefined;
-  // The State dropdown stores the state NAME (matching the profile city fix
-  // pattern); resolve it back to its id for the server-side filter.
-  const stateId = filters.state_id
-    ? resolveStateIdByName(INDIA_COUNTRY_ID, filters.state_id)
-    : undefined;
+  // The State dropdown stores the state's id (same as category/subcategory), so
+  // it is already in the shape the server-side filter expects.
+  const stateId = filters.state_id || undefined;
 
   return {
     status: filters.status || undefined,

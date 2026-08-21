@@ -20,7 +20,6 @@ import {
   formatVehicleIdDisplay,
   getListingCardCategory,
   getListingCardTitle,
-  getProductBsNumber,
   getProductVehicleId,
 } from "./utils";
 import { VehicleSpecChips } from "./VehicleSpecChips";
@@ -93,7 +92,6 @@ export const VehicleCard = memo(function VehicleCard({
   const title = getListingCardTitle(product);
   const categoryLabel = getListingCardCategory(product);
   const subtitle = categoryLabel;
-  const bsNumberLabel = getProductBsNumber(product);
   const vehicleIdLabel = getProductVehicleId(product);
   const isList = layout === "list";
 
@@ -270,19 +268,6 @@ export const VehicleCard = memo(function VehicleCard({
                 }}
               >
                 {subtitle}
-              </Typography>
-            ) : null}
-            {bsNumberLabel ? (
-              <Typography
-                sx={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: T.color.textMuted,
-                  letterSpacing: "0.02em",
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {bsNumberLabel}
               </Typography>
             ) : null}
             {vehicleIdLabel ? (

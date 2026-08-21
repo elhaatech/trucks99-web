@@ -23,10 +23,8 @@ import {
 
 const STATUS_OPTIONS: SelectOption[] = [
   { value: "", label: "All statuses" },
-  { value: "active", label: "Active" },
   { value: "draft", label: "Draft" },
   { value: "pending", label: "Pending" },
-  { value: "inactive", label: "Inactive" },
 ];
 
 type VehicleFilterPanelProps = {
@@ -101,7 +99,7 @@ function FilterFields({
         value={values.city_id}
         onChange={(v) => onChange({ city_id: v })}
         placeholder="All cities"
-        selectedStateName={values.state_id}
+        selectedStateId={values.state_id}
       />
 
       <SearchableSelect

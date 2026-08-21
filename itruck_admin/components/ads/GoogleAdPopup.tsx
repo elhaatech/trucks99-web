@@ -9,6 +9,7 @@ import Typography from "@mui/material/Typography";
 import CloseIcon from "@mui/icons-material/Close";
 import { GoogleAd, Google_TEST_POPUP_BANNER_ID } from "./GoogleAd";
 import { isGoogleAdEligiblePage } from "./googleAdPages";
+import { SHOW_ADS } from "./adsConfig";
 import {
   markPopupDismissedThisSession,
   preparePopupSession,
@@ -19,7 +20,7 @@ const POPUP_DELAY_MS = 600;
 
 export function GoogleAdPopup() {
   const pathname = usePathname() ?? "";
-  const eligible = isGoogleAdEligiblePage(pathname);
+  const eligible = isGoogleAdEligiblePage(pathname) && SHOW_ADS;
   const [open, setOpen] = useState(false);
   const [adReady, setAdReady] = useState(false);
   const [adKey, setAdKey] = useState(0);

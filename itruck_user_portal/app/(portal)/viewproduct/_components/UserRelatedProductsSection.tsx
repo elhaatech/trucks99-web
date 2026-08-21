@@ -9,7 +9,6 @@ import Skeleton from "@mui/material/Skeleton";
 import Alert from "@mui/material/Alert";
 import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
 
-import { CategorySubcategoriesList, type SubcategoryFilterValue } from "@/components/common";
 import {
   BuySellProduct,
   getBuySellRowId,
@@ -18,13 +17,6 @@ import {
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 import { VehicleCard } from "@/app/common/components/buysell/VehicleCard";
-import { StateFilterDropdown } from "@/app/common/components/buysell/StateFilterDropdown";
-import {
-  getLocationStatesByCountry,
-  cacheLocationStates,
-  resolveStateIdByName,
-  INDIA_COUNTRY_ID,
-} from "@/model/services/location";
 
 type UserRelatedProductsSectionProps = {
   sellerId: string;
@@ -35,10 +27,12 @@ type UserRelatedProductsSectionProps = {
   isOwnerView?: boolean;
   onAddVehicle?: () => void;
   onNotify?: (payload: { type: "success" | "error"; message: string }) => void;
-  categoryId?: string | null;
-  categoryName?: string;
+  /** State id of the currently viewed product; auto-restricts to same-state listings. */
+  currentStateId?: string | null;
+  /** Category id of the currently viewed product; auto-restricts to same-category listings. */
+  currentCategoryId?: string | null;
+  /** Subcategory id of the currently viewed product; auto-restricts to same-subcategory listings. */
   currentSubcategoryId?: string | null;
-  currentSubcategoryName?: string;
 };
 
 function RelatedCardSkeleton() {
@@ -60,27 +54,14 @@ export function UserRelatedProductsSection({
   isLoggedIn,
   isOwnerView = false,
   onAddVehicle,
-  categoryId,
-  categoryName,
+  currentStateId,
+  currentCategoryId,
   currentSubcategoryId,
-  currentSubcategoryName,
 }: UserRelatedProductsSectionProps) {
   const router = useRouter();
   const [products, setProducts] = useState<BuySellProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [subcategoryFilter, setSubcategoryFilter] = useState<SubcategoryFilterValue>(null);
-  const [stateFilter, setStateFilter] = useState("");
-
-  const filteredProducts = subcategoryFilter?.id
-    ? products.filter((product) => {
-        const subId =
-          typeof product.subcategory_id === "object" && product.subcategory_id
-            ? product.subcategory_id._id
-            : String(product.subcategory_id ?? "");
-        return subId === subcategoryFilter.id;
-      })
-    : products;
 
   useEffect(() => {
     if (!isLoggedIn || !sellerId) {
@@ -95,30 +76,15 @@ export function UserRelatedProductsSection({
 
     (async () => {
       try {
-        // Resolve the selected state NAME to its location id, reusing the
-        // cached states list (populated by the State filter dropdown) when
-        // available, otherwise fetch and cache it first.
-        let stateId = stateFilter
-          ? resolveStateIdByName(INDIA_COUNTRY_ID, stateFilter)
-          : "";
-
-        if (stateFilter && !stateId) {
-          const statesRes = await getLocationStatesByCountry(INDIA_COUNTRY_ID, {
-            limit: 2000,
-          });
-          if (cancelled || controller.signal.aborted) return;
-          const states = Array.isArray(statesRes?.items) ? statesRes.items : [];
-          cacheLocationStates(INDIA_COUNTRY_ID, states);
-          stateId = resolveStateIdByName(INDIA_COUNTRY_ID, stateFilter) || "";
-        }
-
         const data = await postBuySellProductsByOwner({
           ownerId: sellerId,
           excludeProductId,
           page: 1,
           limit: 12,
           countryId: "",
-          stateId: stateId || undefined,
+          stateId: currentStateId || undefined,
+          categoryId: currentCategoryId || undefined,
+          subcategoryId: currentSubcategoryId || undefined,
         });
         if (cancelled) return;
         setProducts(data.products ?? []);
@@ -135,7 +101,7 @@ export function UserRelatedProductsSection({
       cancelled = true;
       controller.abort();
     };
-  }, [sellerId, excludeProductId, isLoggedIn, stateFilter]);
+  }, [sellerId, excludeProductId, isLoggedIn, currentStateId, currentCategoryId, currentSubcategoryId]);
 
   if (!sellerId) return null;
 
@@ -153,7 +119,7 @@ export function UserRelatedProductsSection({
       <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: 1, mb: 2 }}>
         <Box>
           <Typography sx={{ fontWeight: 700, fontSize: 17, mb: 0.5 }}>
-            {isOwnerView ? "Your other listings" : `More from ${sellerName ?? "this seller"}`}
+            {isOwnerView ? "Related Vechile Details" : `More from ${sellerName ?? "this seller"}`}
           </Typography>
           <Typography sx={{ fontSize: 13, color: T.color.textSecondary, lineHeight: 1.6 }}>
             {isOwnerView
@@ -172,30 +138,6 @@ export function UserRelatedProductsSection({
           </Button>
         ) : null}
       </Box>
-
-      <Box sx={{ mb: 2 }}>
-        <StateFilterDropdown
-          label="State"
-          value={stateFilter}
-          onChange={setStateFilter}
-          placeholder="All states"
-          sx={{ maxWidth: 240 }}
-        />
-      </Box>
-
-      {categoryId ? (
-        <Box sx={{ mb: 2 }}>
-          <CategorySubcategoriesList
-            compact
-            categoryId={categoryId}
-            categoryName={categoryName}
-            currentSubcategoryId={currentSubcategoryId}
-            currentSubcategoryName={currentSubcategoryName}
-            selectedFilter={subcategoryFilter}
-            onFilterChange={setSubcategoryFilter}
-          />
-        </Box>
-      ) : null}
 
       {!isLoggedIn ? (
         <Alert severity="info" sx={{ borderRadius: T.radius.md }}>
@@ -233,34 +175,14 @@ export function UserRelatedProductsSection({
             </Button>
           ) : null}
         </Box>
-      ) : subcategoryFilter?.id && filteredProducts.length === 0 ? (
-        <Box
-          sx={{
-            textAlign: "center",
-            py: 3,
-            px: 2,
-            bgcolor: T.color.surfaceMuted,
-            borderRadius: T.radius.md,
-            border: `1px dashed ${T.color.border}`,
-          }}
-        >
-          <Typography sx={{ fontWeight: 600, color: T.color.textPrimary, mb: 0.5 }}>
-            No listings in {subcategoryFilter.name}
-          </Typography>
-          <Typography sx={{ fontSize: 13, color: T.color.textSecondary }}>
-            Try &quot;All types&quot; above to see every listing from this seller.
-          </Typography>
-        </Box>
       ) : (
         <>
           <Typography sx={{ fontSize: 12.5, color: T.color.textSecondary, mb: 1.5 }}>
-            Showing {filteredProducts.length} of {products.length} listing
-            {products.length === 1 ? "" : "s"}
-            {subcategoryFilter?.name ? ` in ${subcategoryFilter.name}` : ""}
+            Showing {products.length} listing{products.length === 1 ? "" : "s"}
             {sellerName ? ` from ${sellerName}` : ""}.
           </Typography>
           <Grid container spacing={2}>
-            {filteredProducts.map((product) => {
+            {products.map((product) => {
               const productId = getBuySellRowId(product);
               return (
                 <Grid key={productId} size={{ xs: 12, sm: 6, md: 4 }}>

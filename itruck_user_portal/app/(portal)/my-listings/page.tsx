@@ -53,6 +53,7 @@ import { toErrorMessage } from "@/lib/errors";
 import { MARKETPLACE } from "@/constants/marketplace";
 import { isAbortError } from "@/lib/apiCache";
 import { GoogleAdBanner } from "@/components/ads/GoogleAdBanner";
+import { SHOW_ADS } from "@/components/ads/adsConfig";
 
 const BuySellForm = dynamic(
   () =>
@@ -315,7 +316,7 @@ function SellVehicleContent() {
       currentUser={currentUser}
       onViewListing={(productId) => {
         setFeaturedPrompt(null);
-        router.push(userProductRoutes.view(productId));
+        router.push(userProductRoutes.view(productId, "my-listings"));
       }}
       onPaymentSuccess={(_plan, detail) => {
         notify({
@@ -456,7 +457,7 @@ function SellVehicleContent() {
             <MobileFilterButton onClick={() => setMobileFiltersOpen(true)} />
           </Box>
 
-          <GoogleAdBanner placement="myListing" format="auto" responsive />
+          {SHOW_ADS && <GoogleAdBanner placement="myListing" format="auto" responsive />}
 
           <Box>
             {listError && !loading ? (
@@ -470,7 +471,7 @@ function SellVehicleContent() {
                 products={products}
                 loading={loading}
                 layout="grid"
-                onProductClick={(id) => router.push(userProductRoutes.view(id))}
+                onProductClick={(id) => router.push(userProductRoutes.view(id, "my-listings"))}
                 onEdit={handleEdit}
                 onDelete={handleDeleteRequest}
                 deletingIds={deletingIds}

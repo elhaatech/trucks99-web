@@ -11,12 +11,19 @@ type Crumb = { label: string; href?: string };
 type ProductViewBreadcrumbsProps = {
   title: string;
   onNavigate: (href: string) => void;
+  /** Origin the user navigated from, used for the middle breadcrumb link. */
+  from?: "my-listings" | "buy-vehicle";
 };
 
-export function ProductViewBreadcrumbs({ title, onNavigate }: ProductViewBreadcrumbsProps) {
+export function ProductViewBreadcrumbs({ title, onNavigate, from }: ProductViewBreadcrumbsProps) {
+  const middle =
+    from === "my-listings"
+      ? { label: "My Listings", href: userProductRoutes.sellVehicle() }
+      : { label: "Buy Vehicles", href: userProductRoutes.list() };
+
   const crumbs: Crumb[] = [
     { label: "Home", href: userProductRoutes.dashboard() },
-    { label: "Buy Vehicles", href: userProductRoutes.list() },
+    middle,
     { label: title },
   ];
 

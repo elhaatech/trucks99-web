@@ -935,6 +935,8 @@ export type BuySellOwnerProductsParams = {
   cityId?: string;
   countryId?: string;
   stateId?: string;
+  categoryId?: string;
+  subcategoryId?: string;
 };
 
 export type BuySellOwnerProductsBody = {
@@ -944,6 +946,8 @@ export type BuySellOwnerProductsBody = {
   city_id?: string;
   country_id?: string;
   state_id?: string;
+  category_id?: string;
+  subcategory_id?: string;
 };
 
 /** POST /api/buy-sell/products/owner/:ownerId — seller's other active listings. */
@@ -951,7 +955,7 @@ export async function postBuySellProductsByOwner(
   params: BuySellOwnerProductsParams,
 ): Promise<BuySellOwnerProductsResponse["data"]> {
   try {
-    const { ownerId, excludeProductId, page = 1, limit = 12, cityId, countryId, stateId } = params;
+    const { ownerId, excludeProductId, page = 1, limit = 12, cityId, countryId, stateId, categoryId, subcategoryId } = params;
     const body: BuySellOwnerProductsBody = {
       excludeProductId,
       page,
@@ -959,6 +963,8 @@ export async function postBuySellProductsByOwner(
       ...(cityId ? { city_id: cityId } : {}),
       ...(countryId !== undefined ? { country_id: countryId } : {}),
       ...(stateId ? { state_id: stateId } : {}),
+      ...(categoryId ? { category_id: categoryId } : {}),
+      ...(subcategoryId ? { subcategory_id: subcategoryId } : {}),
     };
 
     const res = await api<BuySellOwnerProductsResponse>(
