@@ -73,7 +73,7 @@ export function RecentActivity({
                     width: 10,
                     height: 10,
                     borderRadius: "50%",
-                    bgcolor: accent.main,
+                    // bgcolor: accent.main,
                     flexShrink: 0,
                   }}
                 />
