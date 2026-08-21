@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
+import { getPlaceAutocomplete, getPlaceDetails } from "@/model/services/places";
 
 export interface LatLng {
   lat: number;
@@ -60,19 +61,14 @@ export default function FormAddressField({
       return;
     }
     const t = setTimeout(() => {
-      fetch(`/api/places/autocomplete?input=${encodeURIComponent(query)}`)
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.status !== "OK" || !Array.isArray(data.predictions)) {
-            setSuggestions([]);
-          } else {
-            setSuggestions(
-              data.predictions.map((p: Suggestion) => ({
-                description: p.description,
-                place_id: p.place_id,
-              }))
-            );
-          }
+      getPlaceAutocomplete(query)
+        .then((predictions) => {
+          setSuggestions(
+            predictions.map((p) => ({
+              description: p.description,
+              place_id: p.place_id,
+            })),
+          );
         })
         .catch(() => setSuggestions([]));
     }, 300);
@@ -82,10 +78,8 @@ export default function FormAddressField({
   const handleSelect = (placeId: string, description: string) => {
     justSelectedRef.current = true;
     setSuggestions([]);
-    fetch(`/api/places/details?placeId=${encodeURIComponent(placeId)}`)
-      .then((r) => r.json())
-      .then((data) => {
-        const result = data.result;
+    getPlaceDetails(placeId)
+      .then((result) => {
         const address = result?.formatted_address || description;
         onChange(address);
         const loc = result?.geometry?.location;

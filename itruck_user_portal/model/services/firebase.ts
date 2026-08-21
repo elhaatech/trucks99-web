@@ -4,6 +4,7 @@ import { doc, getFirestore, onSnapshot } from "firebase/firestore";
 import { getMessaging, getToken, isSupported, onMessage } from "firebase/messaging";
 import { getFirebaseApp } from "@/lib/firebase";
 import { api } from "./common_fixed";
+import { APP_BASE_PATH, withAppBasePath } from "@/lib/appConfig";
 
 export async function registerFcmTokenForCurrentUser(): Promise<void> {
   if (typeof window === "undefined") return;
@@ -30,7 +31,10 @@ export async function registerFcmTokenForCurrentUser(): Promise<void> {
   }
 
   console.log("[FCM][web] registering FCM token (admin)…");
-  const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+  const registration = await navigator.serviceWorker.register(
+    withAppBasePath("/firebase-messaging-sw.js"),
+    { scope: `${APP_BASE_PATH}/` },
+  );
 
   const permission = await Notification.requestPermission();
   console.log("[FCM][web] permission (admin):", permission);

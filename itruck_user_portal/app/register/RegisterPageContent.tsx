@@ -24,6 +24,7 @@ import { AuthTextField } from "@/components/ui/AuthTextField";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { isMarketplaceUserLoggedIn } from "@/lib/requireMarketplaceLogin";
+import { stripAppBasePath } from "@/lib/appConfig";
 
 interface SimpleOption {
   id: string;
@@ -32,7 +33,7 @@ interface SimpleOption {
 
 function resolveReturnTarget(searchParams: URLSearchParams): string | null {
   const fromQuery = searchParams.get("returnTo")?.trim();
-  if (fromQuery && fromQuery.startsWith("/")) return fromQuery;
+  if (fromQuery && fromQuery.startsWith("/")) return stripAppBasePath(fromQuery);
   return null;
 }
 

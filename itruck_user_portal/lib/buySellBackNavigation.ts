@@ -1,4 +1,5 @@
 import { userProductRoutes } from "@/lib/userProductRoutes";
+import { stripAppBasePath } from "@/lib/appConfig";
 
 const DASHBOARD = userProductRoutes.dashboard();
 const LIST = userProductRoutes.list();
@@ -7,31 +8,33 @@ const LIST = userProductRoutes.list();
 const HUB_PATHS = new Set([DASHBOARD, "/", "/dashboard"]);
 
 export function shouldShowBuySellBack(pathname: string): boolean {
-  if (HUB_PATHS.has(pathname)) return false;
-  if (pathname.includes("/viewproduct/")) return false;
+  const path = stripAppBasePath(pathname).split("?")[0];
+  if (HUB_PATHS.has(path)) return false;
+  if (path.includes("/viewproduct/")) return false;
   return true;
 }
 
 /** Safe fallback when browser history / nav stack is empty. */
 export function getBuySellBackFallback(pathname: string): string {
-  if (pathname.includes("/edit/")) {
-    const id = pathname.split("/edit/")[1]?.split("/")[0];
+  const path = stripAppBasePath(pathname).split("?")[0];
+  if (path.includes("/edit/")) {
+    const id = path.split("/edit/")[1]?.split("/")[0];
     return id ? userProductRoutes.view(id) : userProductRoutes.sellVehicle();
   }
-  if (pathname.includes("/viewproduct/")) return LIST;
-  if (pathname.startsWith("/seller/")) return LIST;
-  if (pathname === LIST) return DASHBOARD;
-  if (pathname.startsWith("/my-listings")) return DASHBOARD;
-  if (pathname === userProductRoutes.cart() || pathname === userProductRoutes.favorites()) {
+  if (path.includes("/viewproduct/")) return LIST;
+  if (path.startsWith("/seller/")) return LIST;
+  if (path === LIST) return DASHBOARD;
+  if (path.startsWith("/my-listings")) return DASHBOARD;
+  if (path === userProductRoutes.cart() || path === userProductRoutes.favorites()) {
     return DASHBOARD;
   }
   if (
-    pathname === userProductRoutes.offers() ||
-    pathname === userProductRoutes.purchases() ||
-    pathname === userProductRoutes.emi() ||
-    pathname === userProductRoutes.chat() ||
-    pathname === userProductRoutes.featured() ||
-    pathname === userProductRoutes.featuredVehicles()
+    path === userProductRoutes.offers() ||
+    path === userProductRoutes.purchases() ||
+    path === userProductRoutes.emi() ||
+    path === userProductRoutes.chat() ||
+    path === userProductRoutes.featured() ||
+    path === userProductRoutes.featuredVehicles()
   ) {
     return DASHBOARD;
   }

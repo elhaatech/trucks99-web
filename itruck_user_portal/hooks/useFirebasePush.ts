@@ -6,6 +6,7 @@ import { getFirebaseMessaging } from "@/lib/firebase";
 import { useNotification } from "@/hooks/useNotification";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { APP_BASE_PATH, stripAppBasePath, withAppBasePath } from "@/lib/appConfig";
 
 export function useFirebasePush() {
   const [fcmToken, setFcmToken] = useState<string | null>(null);
@@ -20,7 +21,7 @@ export function useFirebasePush() {
     const handleServiceWorkerMessage = (event: MessageEvent) => {
       if (event.data?.type === "OPEN_ROUTE_FROM_PUSH" && event.data.route) {
         console.log("[FCM][web] navigating from push click:", event.data.route);
-        routerRef.current.push(event.data.route);
+        routerRef.current.push(stripAppBasePath(String(event.data.route)));
       }
     };
 
@@ -55,7 +56,10 @@ export function useFirebasePush() {
           return;
         }
 
-        const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+        const registration = await navigator.serviceWorker.register(
+          withAppBasePath("/firebase-messaging-sw.js"),
+          { scope: `${APP_BASE_PATH}/` },
+        );
         console.log("[FCM][web] service worker registered:", registration.scope);
 
         await navigator.serviceWorker.ready;

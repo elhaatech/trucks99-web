@@ -1,7 +1,12 @@
 /**
  * TRUCK99 user marketplace routes (standalone Next.js portal).
  * Pattern: /{screen}[/:id]
+ *
+ * Paths are without the `/user` `basePath`. `router.push` / `next/link`
+ * add it automatically. Compare against `usePathname()`, not window.location.
  */
+
+import { stripAppBasePath } from "@/lib/appConfig";
 
 const BASE = "";
 
@@ -61,9 +66,10 @@ export function getUserProductBasePath(): string {
 
 /** Paths for sell / listings hub (header + mobile nav active state). */
 export function isSellHubPath(pathname: string): boolean {
+  const path = stripAppBasePath(pathname).split("?")[0];
   return (
-    pathname.startsWith(`${BASE}/my-listings`) ||
-    pathname.startsWith(`${BASE}/create`) ||
-    pathname.startsWith(`${BASE}/edit`)
+    path.startsWith(`${BASE}/my-listings`) ||
+    path.startsWith(`${BASE}/create`) ||
+    path.startsWith(`${BASE}/edit`)
   );
 }

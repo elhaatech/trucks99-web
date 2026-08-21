@@ -1,9 +1,17 @@
 import { resolveApiBase } from "@/lib/apiBase";
+import { APP_BASE_PATH, withAppBasePath } from "@/lib/appConfig";
 
 /** Public fallback used whenever a Buy/Sell vehicle image is missing or fails to load. */
-export const DEFAULT_VEHICLE_IMAGE = "/assets/dtruck.png";
+export const DEFAULT_VEHICLE_IMAGE = withAppBasePath("/assets/dtruck.png");
 
-const LOCAL_STATIC_PREFIXES = ["/assets/", "/images/", "/_next/"];
+const LOCAL_STATIC_PREFIXES = [
+  "/assets/",
+  "/images/",
+  "/_next/",
+  `${APP_BASE_PATH}/assets/`,
+  `${APP_BASE_PATH}/images/`,
+  `${APP_BASE_PATH}/_next/`,
+];
 
 function isLocalStaticPath(path: string): boolean {
   return LOCAL_STATIC_PREFIXES.some(
@@ -46,7 +54,7 @@ export function getBuySellImageUrl(path?: string | null): string {
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
 
   const normalized = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-  if (isLocalStaticPath(normalized)) return normalized;
+  if (isLocalStaticPath(normalized)) return withAppBasePath(normalized);
 
   const base = resolveApiBase().replace(/\/$/, "");
   return `${base}${normalized}`;

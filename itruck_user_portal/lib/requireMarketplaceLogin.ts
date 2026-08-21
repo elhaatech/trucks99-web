@@ -5,16 +5,6 @@ import { hasMarketplaceBearerToken } from "@/lib/marketplaceAuth";
 import { setPendingFavorite } from "@/lib/pendingFavorite";
 
 export function getMarketplaceLoginPath(returnTo?: string): string {
-  const fromEnv =
-    typeof process !== "undefined" ? process.env.NEXT_PUBLIC_LOGIN_PATH : undefined;
-  if (fromEnv?.trim()) {
-    const base = fromEnv.trim();
-    if (returnTo?.trim()) {
-      const sep = base.includes("?") ? "&" : "?";
-      return `${base}${sep}returnTo=${encodeURIComponent(returnTo.trim())}`;
-    }
-    return base;
-  }
   return userProductRoutes.login(returnTo);
 }
 

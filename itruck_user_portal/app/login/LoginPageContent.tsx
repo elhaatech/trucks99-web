@@ -9,13 +9,20 @@ import { consumeReturnUrl, peekReturnUrl } from "@/lib/navigation/navigation";
 import { peekPendingFavorite } from "@/lib/pendingFavorite";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { isMarketplaceUserLoggedIn } from "@/lib/requireMarketplaceLogin";
+import { stripAppBasePath } from "@/lib/appConfig";
+
+function asRouterPath(path: string | null | undefined): string | null {
+  const trimmed = path?.trim();
+  if (!trimmed || !trimmed.startsWith("/")) return null;
+  return stripAppBasePath(trimmed);
+}
 
 function resolveReturnTarget(searchParams: URLSearchParams): string | null {
-  const fromQuery = searchParams.get("returnTo")?.trim();
-  if (fromQuery && fromQuery.startsWith("/")) return fromQuery;
-  const pendingFavorite = peekPendingFavorite();
-  if (pendingFavorite?.returnTo?.startsWith("/")) return pendingFavorite.returnTo;
-  return peekReturnUrl();
+  return (
+    asRouterPath(searchParams.get("returnTo")) ||
+    asRouterPath(peekPendingFavorite()?.returnTo) ||
+    asRouterPath(peekReturnUrl())
+  );
 }
 
 export default function MarketplaceLoginPage() {
@@ -45,10 +52,10 @@ export default function MarketplaceLoginPage() {
   const isMyListingsReturn = Boolean(returnTo?.startsWith("/my-listings"));
 
   const redirectAfterAuth = useCallback(() => {
-    const stored = consumeReturnUrl();
+    const stored = asRouterPath(consumeReturnUrl());
     const target =
       stored ||
-      searchParams.get("returnTo")?.trim() ||
+      asRouterPath(searchParams.get("returnTo")) ||
       userProductRoutes.dashboard();
     router.replace(target.startsWith("/") ? target : userProductRoutes.dashboard());
   }, [router, searchParams]);

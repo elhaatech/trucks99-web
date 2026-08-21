@@ -1,5 +1,7 @@
 "use client";
 
+import { stripAppBasePath } from "@/lib/appConfig";
+
 const NAV_STACK_KEY = "itruck:navStack";
 const SCROLL_KEY_PREFIX = "itruck:scroll:";
 const LIST_STATE_KEY_PREFIX = "itruck:listState:";
@@ -11,7 +13,7 @@ function isBrowser(): boolean {
 
 export function getCurrentPath(): string {
   if (!isBrowser()) return "";
-  return window.location.pathname + window.location.search;
+  return stripAppBasePath(window.location.pathname + window.location.search);
 }
 
 function getNavStack(): string[] {

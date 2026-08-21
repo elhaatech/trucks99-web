@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { APP_BASE_PATH, withAppBasePath } from "@/lib/appConfig";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,8 @@ function buildServiceWorkerScript() {
     messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
   };
+  const iconPath = withAppBasePath("/favicon.ico");
+  const defaultRoute = withAppBasePath("/dashboard");
 
   return `/* Firebase Cloud Messaging service worker — generated at runtime */
 self.addEventListener("install", () => {
@@ -27,6 +30,7 @@ importScripts("https://www.gstatic.com/firebasejs/12.11.0/firebase-app-compat.js
 importScripts("https://www.gstatic.com/firebasejs/12.11.0/firebase-messaging-compat.js");
 
 const firebaseConfig = ${JSON.stringify(config)};
+const APP_BASE_PATH = ${JSON.stringify(APP_BASE_PATH)};
 
 try {
   firebase.initializeApp(firebaseConfig);
@@ -39,11 +43,11 @@ try {
 
     const title = payload.notification?.title || payload.data?.title || "Trucks99";
     const body = payload.notification?.body || payload.data?.body || "";
-    const route = payload.data?.route || "/dashboard";
+    const route = payload.data?.route || ${JSON.stringify(defaultRoute)};
 
     return self.registration.showNotification(title, {
       body,
-      icon: "/favicon.ico",
+      icon: ${JSON.stringify(iconPath)},
       data: { route, ...payload.data },
     });
   });
@@ -53,10 +57,17 @@ try {
   console.error("[FCM][SW] Firebase init failed:", error);
 }
 
+function withBase(route) {
+  if (!route) return APP_BASE_PATH || "/";
+  if (route.startsWith("http://") || route.startsWith("https://")) return route;
+  if (route === APP_BASE_PATH || route.startsWith(APP_BASE_PATH + "/")) return route;
+  return APP_BASE_PATH + (route.startsWith("/") ? route : "/" + route);
+}
+
 self.addEventListener("notificationclick", (event) => {
   console.log("[FCM][SW] notification click:", event.notification?.data);
   event.notification.close();
-  const route = event?.notification?.data?.route || "/dashboard";
+  const route = withBase(event?.notification?.data?.route || ${JSON.stringify(defaultRoute)});
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
       for (const client of clients) {
@@ -77,7 +88,7 @@ export async function GET() {
     headers: {
       "Content-Type": "application/javascript; charset=utf-8",
       "Cache-Control": "no-cache, no-store, must-revalidate",
-      "Service-Worker-Allowed": "/",
+      "Service-Worker-Allowed": `${APP_BASE_PATH}/`,
     },
   });
 }
