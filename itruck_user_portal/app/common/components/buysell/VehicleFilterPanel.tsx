@@ -24,7 +24,6 @@ import {
 const STATUS_OPTIONS: SelectOption[] = [
   { value: "", label: "All statuses" },
   { value: "draft", label: "Draft" },
-  { value: "pending", label: "Pending" },
 ];
 
 type VehicleFilterPanelProps = {
@@ -35,6 +34,7 @@ type VehicleFilterPanelProps = {
   mobileOpen?: boolean;
   onMobileClose?: () => void;
   applyLoading?: boolean;
+  showStatusFilter?: boolean;
 };
 
 function FilterFields({
@@ -43,6 +43,7 @@ function FilterFields({
   onApply,
   onClear,
   applyLoading = false,
+  showStatusFilter = true,
 }: Omit<VehicleFilterPanelProps, "mobileOpen" | "onMobileClose">) {
   const { categoryOptions, subcategoryOptions } = useCategorySubcategories({
     categoryId: values.category_id || "",
@@ -102,13 +103,15 @@ function FilterFields({
         selectedStateId={values.state_id}
       />
 
-      <SearchableSelect
-        label="Status"
-        value={values.status}
-        onChange={(v) => onChange({ status: v })}
-        options={STATUS_OPTIONS}
-        placeholder="All statuses"
-      />
+      {showStatusFilter && (
+        <SearchableSelect
+          label="Status"
+          value={values.status}
+          onChange={(v) => onChange({ status: v })}
+          options={STATUS_OPTIONS}
+          placeholder="All statuses"
+        />
+      )}
 
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
         <TextField

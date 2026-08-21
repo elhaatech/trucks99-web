@@ -51,7 +51,7 @@ function navIcon(label: string) {
     case "Featured":
     case "Featured Vehicles":
       return <StarOutlineRoundedIcon fontSize="small" />;
-    case "My Listings":
+    case "Sell Vehicle":
       return <StorefrontOutlinedIcon fontSize="small" />;
     case "Favorites":
     case "My Favorite List":
@@ -136,7 +136,7 @@ export function BuySellShell({ children }: BuySellShellProps) {
         <List sx={{ px: 1.5, py: 1.5 }}>
           {[...navLinks, ...MOBILE_EXTRA_LINKS].map((link) => {
             const selected =
-              link.label === "My Listings"
+              link.label === "Sell Vehicle"
                 ? isSellHubPath(pathname)
                 : link.label === "Favorites" || link.label === "My Favorite List"
                   ? pathname === link.href
