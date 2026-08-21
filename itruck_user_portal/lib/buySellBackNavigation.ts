@@ -4,7 +4,7 @@ const DASHBOARD = userProductRoutes.dashboard();
 const LIST = userProductRoutes.list();
 
 /** Pages that are top-level hubs — no shell back button. */
-const HUB_PATHS = new Set([DASHBOARD, "/"]);
+const HUB_PATHS = new Set([DASHBOARD, "/", "/dashboard"]);
 
 export function shouldShowBuySellBack(pathname: string): boolean {
   if (HUB_PATHS.has(pathname)) return false;

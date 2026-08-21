@@ -6,7 +6,8 @@
 const BASE = "";
 
 export const userProductRoutes = {
-  dashboard: () => `${BASE}/dashboard`,
+  /** Canonical marketplace home. `/dashboard` is a supported alias of the same UI. */
+  dashboard: () => (BASE ? BASE : "/"),
   list: (query?: Record<string, string>) => {
     const path = `${BASE}/list`;
     if (!query || Object.keys(query).length === 0) return path;
