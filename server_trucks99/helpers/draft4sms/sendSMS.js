@@ -3,18 +3,22 @@
 require("dotenv").config();
 const https = require("https");
 
-const API_BASE = (
-  process.env.DRAFT4SMS_API_URL || "https://text.draft4sms.com/vb/apikey.php"
-).trim();
-const API_KEY = (
-  process.env.DRAFT4SMS_API_KEY || process.env.SMS_API_KEY || ""
-).trim();
-const SENDER_ID = (
-  process.env.DRAFT4SMS_SENDER_ID ||
-  process.env.SMS_SENDER_ID ||
-  "TRUKXX"
-).trim();
-const REQUEST_TIMEOUT_MS = Number(process.env.DRAFT4SMS_TIMEOUT_MS || 10000);
+function getDraft4SmsConfig() {
+  return {
+    apiBase: (
+      process.env.DRAFT4SMS_API_URL || "https://text.draft4sms.com/vb/apikey.php"
+    ).trim(),
+    apiKey: (
+      process.env.DRAFT4SMS_API_KEY || process.env.SMS_API_KEY || ""
+    ).trim(),
+    senderId: (
+      process.env.DRAFT4SMS_SENDER_ID ||
+      process.env.SMS_SENDER_ID ||
+      "TRUKXX"
+    ).trim(),
+    timeoutMs: Number(process.env.DRAFT4SMS_TIMEOUT_MS || 10000),
+  };
+}
 
 function toTenDigitMobile(mobile) {
   const digits = String(mobile || "").replace(/\D/g, "");
@@ -24,10 +28,11 @@ function toTenDigitMobile(mobile) {
 }
 
 function isDraft4SmsConfigured() {
-  return Boolean(API_KEY && SENDER_ID);
+  const { apiKey, senderId } = getDraft4SmsConfig();
+  return Boolean(apiKey && senderId);
 }
 
-function httpGet(url, timeoutMs = REQUEST_TIMEOUT_MS) {
+function httpGet(url, timeoutMs) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, (res) => {
       let data = "";
@@ -59,12 +64,19 @@ function parseDraft4SmsResponse(responseText) {
   try {
     const parsed = JSON.parse(raw);
     const status = parsed.status ?? parsed.Status ?? parsed.success;
+    const errorCode = String(
+      parsed.ErrorCode ?? parsed.errorCode ?? parsed.code ?? "",
+    );
     const ok =
       status === true ||
       status === "true" ||
       status === "success" ||
       status === "Success" ||
-      String(status).toLowerCase() === "ok";
+      status === 1 ||
+      status === "1" ||
+      String(status).toLowerCase() === "ok" ||
+      errorCode === "000" ||
+      errorCode === "0";
 
     if (ok) {
       return {
@@ -99,11 +111,13 @@ function parseDraft4SmsResponse(responseText) {
     if (
       lower.includes("success") ||
       lower.includes("sent") ||
-      lower.includes("submitted")
+      lower.includes("submitted") ||
+      /^\d+$/.test(raw)
     ) {
       return { ok: true, messageId: raw };
     }
-    return { ok: false, error: raw };
+    // HTTP 200 with a non-error gateway message is treated as accepted
+    return { ok: true, messageId: raw };
   }
 }
 
@@ -116,7 +130,8 @@ async function sendSMS(to, body) {
     return { sent: false, error: "Invalid recipient or empty message body" };
   }
 
-  if (!isDraft4SmsConfigured()) {
+  const { apiBase, apiKey, senderId, timeoutMs } = getDraft4SmsConfig();
+  if (!apiKey || !senderId) {
     console.warn(
       "[Draft4SMS] Not configured. Set DRAFT4SMS_API_KEY and DRAFT4SMS_SENDER_ID in .env",
     );
@@ -129,16 +144,16 @@ async function sendSMS(to, body) {
   }
 
   const params = new URLSearchParams({
-    apikey: API_KEY,
-    senderid: SENDER_ID,
+    apikey: apiKey,
+    senderid: senderId,
     number,
     message: String(body).trim(),
   });
 
-  const url = `${API_BASE}?${params.toString()}`;
+  const url = `${apiBase}?${params.toString()}`;
 
   try {
-    const { statusCode, body: responseBody } = await httpGet(url);
+    const { statusCode, body: responseBody } = await httpGet(url, timeoutMs);
     const responseText = String(responseBody || "").trim();
     const parsed = parseDraft4SmsResponse(responseText);
 

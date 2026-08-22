@@ -78,7 +78,7 @@ SignupRouter.post('/', async (req, res) => {
     const payload = {
       message: otpSentToMobile
         ? 'Signup successful. Verify OTP via SMS: POST /api/auth/verify-otp with { mobile, otp }.'
-        : 'Signup successful. Configure Draft4SMS or use dev OTP below to log in.',
+        : 'Signup successful. OTP SMS could not be sent. Use Resend OTP on the login screen.',
       loginType: 'otp_only',
       otpSentToMobile,
       otpSentViaSms: otpSentToMobile,

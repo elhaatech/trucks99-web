@@ -37,10 +37,6 @@ function isDevOtpFallbackEnabled() {
   return process.env.NODE_ENV !== "production";
 }
 
-function isFixedOtpEnabled() {
-  return String(process.env.USE_TEMP_OTP || "").toLowerCase() === "true";
-}
-
 function hashOtp(plainOtp, mobile) {
   return crypto
     .createHash("sha256")
@@ -48,21 +44,7 @@ function hashOtp(plainOtp, mobile) {
     .digest("hex");
 }
 
-function getFixedTestOtp() {
-  const tempOtp = (process.env.TEMP_OTP || "1234").trim();
-  return (
-    String(tempOtp)
-      .replace(/\D/g, "")
-      .slice(-OTP_LENGTH)
-      .padStart(OTP_LENGTH, "0") ||
-    String(10 ** (OTP_LENGTH - 1)).padStart(OTP_LENGTH, "0")
-  );
-}
-
 function generateOtpCode() {
-  if (isFixedOtpEnabled()) {
-    return getFixedTestOtp();
-  }
   const min = 10 ** (OTP_LENGTH - 1);
   const max = 10 ** OTP_LENGTH - 1;
   return randomInt(min, max + 1).toString();
@@ -211,20 +193,15 @@ async function createAndSendOtp(mobileRaw, { isResend = false } = {}) {
     };
   }
 
-  const usingDefaultOtp = isFixedOtpEnabled();
   const payload = {
     ok: true,
     sent: Boolean(sms.sent),
-    message: usingDefaultOtp
-      ? sms.sent
-        ? `OTP sent. If SMS does not arrive, use default OTP ${plainOtp}.`
-        : `SMS not sent. Use default OTP ${plainOtp}.`
-      : sms.sent
-        ? "OTP sent to your mobile number via SMS."
-        : "SMS not sent. Use dev OTP below if enabled.",
+    message: sms.sent
+      ? "OTP sent to your mobile number via SMS."
+      : "SMS not sent. Use the OTP from your SMS or request a new one.",
   };
 
-  // Dev only: expose the random OTP when SMS failed (never a fixed TEMP_OTP unless USE_TEMP_OTP=true)
+  // Dev only: expose the random OTP when SMS failed
   if (isDevOtpFallbackEnabled() && !sms.sent) {
     payload.otpForDev = plainOtp;
   }
@@ -303,8 +280,7 @@ async function verifyOtpCode(mobileRaw, otpRaw) {
     };
   }
 
-  const valid =
-    hashOtp(otp, mobile) === record.otpHash || matchesDefaultOtp(otp);
+  const valid = hashOtp(otp, mobile) === record.otpHash;
   if (!valid) {
     record.attempts = (record.attempts || 0) + 1;
     const remaining = Math.max(0, MAX_VERIFY_ATTEMPTS - record.attempts);

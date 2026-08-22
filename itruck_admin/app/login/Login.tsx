@@ -15,15 +15,7 @@ import { WelcomePanel } from "@/components/layout/WelcomePanel";
 import { AuthTextField } from "@/components/ui/AuthTextField";
 import { GradientButton } from "@/components/ui/GradientButton";
 
-const DEFAULT_OTP = "1234";
 const OTP_LENGTH = 4;
-
-function resolveDevOtp(otpForDev?: string): string {
-  const fromApi = String(otpForDev || "")
-    .replace(/\D/g, "")
-    .slice(0, OTP_LENGTH);
-  return fromApi || DEFAULT_OTP;
-}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -49,14 +41,13 @@ export default function LoginPage() {
       setLoading(true);
 
       const res = await sendOtp(mobile.trim());
-      const nextOtp = resolveDevOtp(res.otpForDev);
 
       setStep("otp");
-      setOtp(nextOtp);
+      setOtp("");
       setInfo(
         res.otpSentViaSms
-          ? `OTP sent to your mobile. If SMS does not arrive, use ${nextOtp}.`
-          : `SMS not sent. Use default OTP ${nextOtp}.`,
+          ? "OTP sent to your mobile number."
+          : res.message || "OTP request accepted. Enter the code from SMS.",
       );
     } catch (err) {
       const message =
@@ -64,9 +55,9 @@ export default function LoginPage() {
       const alreadySent = message.toLowerCase().includes("already sent");
       if (alreadySent) {
         setStep("otp");
-        setOtp(DEFAULT_OTP);
+        setOtp("");
         setError("");
-        setInfo(`OTP was already sent. Enter the SMS code, or use ${DEFAULT_OTP}.`);
+        setInfo("OTP was already sent. Enter the code from your SMS.");
       } else {
         setError(message);
       }
@@ -168,8 +159,7 @@ export default function LoginPage() {
       ) : (
         <form onSubmit={handleVerifyOtp}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            OTP sent to <strong>{mobile}</strong>. Enter the SMS code, or use{" "}
-            <strong>{DEFAULT_OTP}</strong> if SMS does not arrive.
+            OTP sent to <strong>{mobile}</strong>. Enter the code from your SMS.
           </Typography>
 
           {info ? (
@@ -181,7 +171,7 @@ export default function LoginPage() {
           <AuthTextField
             label="Enter OTP"
             type="text"
-            placeholder={DEFAULT_OTP}
+            placeholder={`${OTP_LENGTH}-digit OTP`}
             value={otp}
             onChange={(e) =>
               setOtp(e.target.value.replace(/\D/g, "").slice(0, OTP_LENGTH))
