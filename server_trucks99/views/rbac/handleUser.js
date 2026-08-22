@@ -5,6 +5,7 @@ const Role = require('../../schema/role');
 const { buildModulesResponse, resolvePermissionsToIds } = require('../../helpers/permissions');
 const { findByIdOrUuid, resolveToObjectId, toResponse } = require('../../helpers/uuidHelper');
 const { createAndSendOtp } = require('../../helpers/mobileOtpService');
+const { normalizeMobile, findUserByMobile } = require('../../helpers/otpHelper');
 const { formatUser } = require('../../views/rbac/formatuser');
 
 const userRouter = express.Router();
@@ -29,16 +30,6 @@ function getRoleName(actor) {
   if (typeof actor.role === 'string') return actor.role;
   if (actor.role && typeof actor.role === 'object' && actor.role.name) return actor.role.name;
   return 'unknown';
-}
-
-// Normalize mobile to E.164: 10 digits -> +91, else keep if already +prefix
-function normalizeMobile(mobile) {
-  if (!mobile || typeof mobile !== 'string') return undefined;
-  const trimmed = mobile.trim().replace(/\s/g, '');
-  if (!trimmed) return undefined;
-  if (/^\d{10}$/.test(trimmed)) return `+91${trimmed}`;
-  if (trimmed.startsWith('+')) return trimmed;
-  return `+91${trimmed}`;
 }
 
 // Fetch user by _id, fully populated, and return formatted
@@ -149,7 +140,7 @@ userRouter.post("/add", async (req, res) => {
       return res.status(400).json({ message: "mobile is required" });
     }
 
-    const existingByMobile = await User.findOne({ mobile: mobileNormalized });
+    const existingByMobile = await findUserByMobile(User, mobileNormalized);
     if (existingByMobile) {
       return res.status(400).json({ message: "Mobile number already registered" });
     }

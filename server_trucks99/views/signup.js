@@ -3,7 +3,7 @@ const express = require('express');
 const SignupRouter = express.Router();
 const User = require('../schema/user.js');
 const Role = require('../schema/role.js');
-const { normalizeMobile } = require('../helpers/otpHelper');
+const { normalizeMobile, findUserByMobile } = require('../helpers/otpHelper');
 const { resolveToObjectId } = require('../helpers/uuidHelper');
 const { createAndSendOtp } = require('../helpers/mobileOtpService');
 
@@ -30,7 +30,7 @@ SignupRouter.post('/', async (req, res) => {
       return res.status(400).json({ message: 'mobile is required' });
     }
 
-    const existingMobile = await User.findOne({ mobile: mobileNormalized });
+    const existingMobile = await findUserByMobile(User, mobileNormalized);
     if (existingMobile) {
       return res.status(400).json({ message: 'This mobile number is already registered.' });
     }

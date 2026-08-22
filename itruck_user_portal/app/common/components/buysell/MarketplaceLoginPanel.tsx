@@ -84,15 +84,20 @@ export function MarketplaceLoginPanel({
     message?: string;
     otpSentViaSms?: boolean;
     otpForDev?: string;
+    smsError?: string;
     retryAfterSeconds?: number;
   }) {
     setOtpSentViaSms(Boolean(res.otpSentViaSms));
     setOtp("");
-    setInfo(
-      res.otpSentViaSms
-        ? "OTP sent to your mobile number."
-        : res.message || "OTP request accepted.",
-    );
+    if (res.otpSentViaSms) {
+      setInfo("OTP sent to your mobile number. Enter the code from the SMS.");
+    } else {
+      setInfo(
+        res.smsError
+          ? `SMS could not be delivered (${res.smsError}). Tap Resend OTP.`
+          : res.message || "OTP request accepted.",
+      );
+    }
     startResendCooldown(res.retryAfterSeconds ?? RESEND_COOLDOWN_SEC);
   }
 

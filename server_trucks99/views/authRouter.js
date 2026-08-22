@@ -4,7 +4,7 @@ const express = require('express');
 const User = require('../schema/user');
 const { signToken } = require('../helpers/jwt');
 const { transformRolePermissions } = require('../helpers/rolePermissions');
-const { normalizeMobile } = require('../helpers/otpHelper');
+const { normalizeMobile, findUserByMobile } = require('../helpers/otpHelper');
 const {
   createAndSendOtp,
   verifyOtpCode,
@@ -44,15 +44,18 @@ authRouter.post('/send-otp', async (req, res) => {
       return res.status(400).json({ message: 'Mobile number is required.' });
     }
 
-    const user = await User.findOne({ mobile: normalizedMobile }).exec();
+    const user = await findUserByMobile(User, normalizedMobile);
     if (!user) {
-      return res.status(404).json({ message: 'User not found with this mobile number.' });
+      return res.status(404).json({
+        message: 'No account found for this mobile number. Please register first.',
+      });
     }
 
     const result = await createAndSendOtp(normalizedMobile, { isResend: false });
     if (!result.ok) {
       return res.status(result.error?.includes('Wait') ? 429 : 503).json({
         message: result.error,
+        ...(result.smsError ? { smsError: result.smsError } : {}),
       });
     }
 
@@ -60,6 +63,7 @@ authRouter.post('/send-otp', async (req, res) => {
       message: result.message,
       otpSentViaSms: Boolean(result.sent),
       ...(result.otpForDev ? { otpForDev: result.otpForDev } : {}),
+      ...(result.smsError ? { smsError: result.smsError } : {}),
     });
   } catch (err) {
     console.error('[auth] send-otp error:', err);
@@ -76,15 +80,18 @@ authRouter.post('/resend-otp', async (req, res) => {
       return res.status(400).json({ message: 'Mobile number is required.' });
     }
 
-    const user = await User.findOne({ mobile: normalizedMobile }).exec();
+    const user = await findUserByMobile(User, normalizedMobile);
     if (!user) {
-      return res.status(404).json({ message: 'User not found with this mobile number.' });
+      return res.status(404).json({
+        message: 'No account found for this mobile number. Please register first.',
+      });
     }
 
     const result = await createAndSendOtp(normalizedMobile, { isResend: true });
     if (!result.ok) {
       return res.status(result.error?.includes('wait') ? 429 : 400).json({
         message: result.error,
+        ...(result.smsError ? { smsError: result.smsError } : {}),
       });
     }
 
@@ -92,6 +99,7 @@ authRouter.post('/resend-otp', async (req, res) => {
       message: result.message || 'OTP resent via SMS.',
       otpSentViaSms: Boolean(result.sent),
       ...(result.otpForDev ? { otpForDev: result.otpForDev } : {}),
+      ...(result.smsError ? { smsError: result.smsError } : {}),
     });
   } catch (err) {
     console.error('[auth] resend-otp error:', err);
@@ -108,13 +116,12 @@ authRouter.post('/verify-otp', async (req, res) => {
       return res.status(400).json({ message: 'Mobile number and OTP are required.' });
     }
 
-    const user = await User.findOne({ mobile: normalizedMobile })
-      .populate({ path: 'roleId', populate: { path: 'permissions' } })
-      .populate('permissions')
-      .exec();
+    const user = await findUserByMobile(User, normalizedMobile);
     if (!user) {
       return res.status(404).json({ message: 'User not found.' });
     }
+    await user.populate({ path: 'roleId', populate: { path: 'permissions' } });
+    await user.populate('permissions');
 
     const verification = await verifyOtpCode(normalizedMobile, otp);
     if (!verification.ok) {

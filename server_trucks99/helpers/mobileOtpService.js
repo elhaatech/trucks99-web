@@ -50,13 +50,20 @@ function generateOtpCode() {
   return randomInt(min, max + 1).toString();
 }
 
+function fillOtpPlaceholders(template, otp) {
+  return String(template)
+    .replace(/\{otp\}/gi, otp)
+    .replace(/\{#var#\}/gi, otp)
+    .replace(/\{#number#\}/gi, otp);
+}
+
 function buildOtpSmsMessage(otp) {
   const template = (process.env.OTP_SMS_MESSAGE_TEMPLATE || "").trim();
   if (template) {
-    return template.replace(/\{otp\}/gi, otp);
+    return fillOtpPlaceholders(template, otp);
   }
-  // Must match DLT-approved template used in production (backend.trucks99.in)
-  return `${otp} is the OTP for your Trucks99 Login - Team Trucks99`;
+  // Must match the active Draft4SMS DLT template (template id 1277178714236822028)
+  return `Hi, Your TRUCKS99 verification code is ${otp}. Please don't share this code to anyone. Thanks`;
 }
 
 async function sendOtpViaSms(mobile, plainOtp) {
@@ -190,6 +197,7 @@ async function createAndSendOtp(mobileRaw, { isResend = false } = {}) {
       error:
         sms.error ||
         "Could not send OTP via SMS. Check SMS provider configuration.",
+      smsError: sms.error,
     };
   }
 
@@ -198,8 +206,12 @@ async function createAndSendOtp(mobileRaw, { isResend = false } = {}) {
     sent: Boolean(sms.sent),
     message: sms.sent
       ? "OTP sent to your mobile number via SMS."
-      : "SMS not sent. Use the OTP from your SMS or request a new one.",
+      : "SMS not sent. Request a new OTP.",
   };
+
+  if (sms.error && !sms.sent) {
+    payload.smsError = sms.error;
+  }
 
   // Dev only: expose the random OTP when SMS failed
   if (isDevOtpFallbackEnabled() && !sms.sent) {
