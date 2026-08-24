@@ -1,21 +1,17 @@
+import {
+  LOCAL_BACKEND_PORT,
+  PRODUCTION_API_ORIGIN,
+  PRODUCTION_HOSTS,
+} from "@/lib/appConfig";
+
 /**
  * Backend always runs on port 3003.
  * itruck_admin UI may run on 3004 — never send OTP/API calls to the UI port.
  */
-const BACKEND_PORT = "3003";
-const FRONTEND_PORTS = new Set(["3000", "3001", "3002", "3004", "3005", ""]);
+const BACKEND_PORT = LOCAL_BACKEND_PORT;
 
 function stripSlash(url: string): string {
   return url.trim().replace(/\/$/, "");
-}
-
-function portOf(url: string): string {
-  try {
-    return new URL(url).port;
-  } catch {
-    const m = url.match(/:(\d+)(?:\/|$)/);
-    return m?.[1] || "";
-  }
 }
 
 function isLoopbackHost(hostname: string): boolean {
@@ -52,11 +48,9 @@ export function forceBackendPort(url: string): string {
 
 /**
  * Resolve backend API base URL.
- * Local / LAN always uses :3003. Env values that point at the Next.js UI port are ignored.
+ * Local / LAN always uses :3003. Production uses https://trucks99.elhaa.com.
  */
 export function resolveApiBase(): string {
-  const fromEnv = stripSlash(process.env.NEXT_PUBLIC_API_URL || "");
-
   if (typeof window !== "undefined") {
     const { hostname, protocol } = window.location;
 
@@ -64,26 +58,19 @@ export function resolveApiBase(): string {
       return `${protocol}//${hostname}:${BACKEND_PORT}`;
     }
 
-    const isDeployedHost =
+    if (PRODUCTION_HOSTS.has(hostname)) {
+      return `${protocol}//${hostname}`;
+    }
+
+    const isLegacyHost =
       hostname === "truck.elhaa.com" ||
       hostname === "www.truck.elhaa.com" ||
       hostname === "46.202.176.124";
 
-    if (isDeployedHost) {
-      if (fromEnv) {
-        try {
-          const envHost = new URL(fromEnv).hostname;
-          if (!isLoopbackHost(envHost) && !FRONTEND_PORTS.has(portOf(fromEnv))) {
-            return fromEnv;
-          }
-        } catch {
-          /* ignore invalid env URL */
-        }
-      }
+    if (isLegacyHost) {
       return `${protocol}//${hostname}:${BACKEND_PORT}`;
     }
   }
 
-  if (fromEnv) return forceBackendPort(fromEnv);
-  return `http://localhost:${BACKEND_PORT}`;
+  return PRODUCTION_API_ORIGIN;
 }

@@ -1,26 +1,44 @@
 import type { NextConfig } from "next";
 
-function publicApiUrl(): string {
-  const raw = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003").trim();
-  return raw
-    .replace(/localhost:300[01245]/g, "localhost:3003")
-    .replace(/127\.0\.0\.1:300[01245]/g, "127.0.0.1:3003");
-}
+/**
+ * Local: http://localhost:3004/  (no public prefix)
+ * Production: https://trucks99.elhaa.com/admin/
+ *
+ * Apache already serves JS at /admin/_next/... and strips `/admin` when
+ * forwarding to this process. Do not set `basePath` to `/admin` — App Router
+ * pages already live at `/admin/portal`.
+ */
+const PRODUCTION_API_ORIGIN = "https://trucks99.elhaa.com";
+const PRODUCTION_ASSET_PREFIX = "/admin";
+const INTERNAL_BACKEND = "http://127.0.0.1:3003";
+const isProd = process.env.NODE_ENV === "production";
 
 const nextConfig: NextConfig = {
-  trailingSlash: false,
+  skipTrailingSlashRedirect: true,
+  assetPrefix: isProd ? PRODUCTION_ASSET_PREFIX : undefined,
   env: {
-    NEXT_PUBLIC_API_URL: publicApiUrl(),
+    NEXT_PUBLIC_API_URL: isProd
+      ? PRODUCTION_API_ORIGIN
+      : "http://127.0.0.1:3003",
   },
   /**
-   * Proxy backend API through the Next.js origin.
-   * Backend always runs on port 3003 unless BACKEND_INTERNAL_URL is set.
+   * Proxy backend API through the Next.js origin for local/LAN.
+   * `/portal` rewrites exist because Apache strips `/admin` from
+   * `/admin/portal/...` before the request reaches this process.
    */
   async rewrites() {
-    const backend = (
-      process.env.BACKEND_INTERNAL_URL || "http://127.0.0.1:3003"
-    ).replace(/\/$/, "");
+    const backend = INTERNAL_BACKEND.replace(/\/$/, "");
     return {
+      beforeFiles: [
+        {
+          source: "/portal",
+          destination: "/admin/portal",
+        },
+        {
+          source: "/portal/:path*",
+          destination: "/admin/portal/:path*",
+        },
+      ],
       afterFiles: [
         {
           source: "/api/:path*",
@@ -43,6 +61,8 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "www.truck.elhaa.com", port: "3003", pathname: "/**" },
       { protocol: "http", hostname: "46.202.176.124", port: "3003", pathname: "/**" },
       { protocol: "https", hostname: "46.202.176.124", port: "3003", pathname: "/**" },
+      { protocol: "https", hostname: "trucks99.elhaa.com", pathname: "/**" },
+      { protocol: "http", hostname: "trucks99.elhaa.com", pathname: "/**" },
     ],
   },
 };
