@@ -22,7 +22,6 @@ import {
 } from "@/app/admin/portal/buysell/_components/interface/buysell_interface";
 
 const STATUS_OPTIONS: SelectOption[] = [
-  { value: "", label: "All statuses" },
   { value: "draft", label: "Draft" },
 ];
 

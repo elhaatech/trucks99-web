@@ -37,11 +37,11 @@ export const FOOTER_LINK_GROUPS: FooterLinkGroup[] = [
   {
     title: "Marketplace",
     links: [
-      { label: "Buy Vehicles", href: userProductRoutes.dashboard() },
-      { label: "Sell Vehicles", href: userProductRoutes.dashboard() },
+      { label: "Buy Vehicles", href: userProductRoutes.list() },
+      { label: "Sell Vehicles", href: userProductRoutes.sellVehicle() },
       // { label: "Trucks", href: userProductRoutes.dashboard() },
       // { label: "Loads", href: userProductRoutes.dashboard() },
-      { label: "Featured Vehicles", href: userProductRoutes.dashboard() },
+      { label: "Featured Vehicles", href: userProductRoutes.featuredVehicles() },
       // { label: "Categories", href: userProductRoutes.dashboard() },
       // { label: "Auctions", href: userProductRoutes.dashboard() },
       // { label: "EMI Calculator", href: userProductRoutes.emi() },
