@@ -27,9 +27,9 @@ import {
 } from "@/components/common";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { getVehicleBodyType, type VehicleBodyType } from "@/model/api";
-import { resolveApiBase } from "@/model/services/common";
 import { routes } from "@/lib/routes";
 import { useInvalidIdRedirect } from "@/lib/navigation";
+import { getFileUrl } from "@/lib/fileUrl";
 
 function formatDate(iso?: string) {
   if (!iso) return "Not available";
@@ -40,12 +40,6 @@ function formatDate(iso?: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(iso));
-}
-
-function getFileUrl(path?: string) {
-  if (!path) return "";
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  return `${resolveApiBase()}${path}`;
 }
 
 function CopyableText({ value }: { value: string }) {

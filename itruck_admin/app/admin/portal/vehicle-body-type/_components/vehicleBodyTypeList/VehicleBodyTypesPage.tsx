@@ -13,8 +13,8 @@ import { routes } from "@/lib/routes";
 import { useNotification } from "@/hooks/useNotification";
 import { useFilters } from "@/hooks/useFilters";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
-import { resolveApiBase } from "@/model/services/common";
 import { canAccess } from "@/lib/permissions";
+import { getFileUrl } from "@/lib/fileUrl";
 
 import type { FilterState } from "../interface/vehicleBodyTypeTypes";
 import { EMPTY_FILTERS } from "../interface/vehicleBodyTypeTypes";
@@ -24,12 +24,6 @@ import { useVehicleBodyTypeColumns } from "./VehicleBodyTypeColumns";
 
 type DeleteCtx = { mode: "single"; row: VehicleBodyType } | { mode: "bulk" };
 type BlockCtx = { row: VehicleBodyType; action: "block" | "unblock" };
-
-function getFileUrl(path?: string) {
-  if (!path) return "";
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  return `${resolveApiBase()}${path}`;
-}
 
 export function VehicleBodyTypesPage() {
   const router = useRouter();

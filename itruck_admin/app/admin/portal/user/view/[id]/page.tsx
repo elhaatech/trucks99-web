@@ -55,7 +55,8 @@ import {
   getIncomeExpenseAll,
   type IncomeExpense,
 } from "@/model/services/incomeExpense";
-import { api, resolveApiBase } from "@/model/services/common";
+import { api } from "@/model/services/common";
+import { getFileUrl } from "@/lib/fileUrl";
 import { routes } from "@/lib/routes";
 import { useAppNavigate, useInvalidIdRedirect } from "@/lib/navigation";
 import {
@@ -97,12 +98,6 @@ type BitRecord = {
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function getFileUrl(path?: string | null): string {
-  if (!path) return "";
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  return `${resolveApiBase()}${path}`;
-}
 
 function getRoleInfo(user: User): { name: string; id: string } {
   const roleId = (user as any).roleId;

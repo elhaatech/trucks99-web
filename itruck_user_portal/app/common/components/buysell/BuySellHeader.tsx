@@ -48,6 +48,7 @@ import {
 } from "@/lib/marketplaceAuth";
 import { getBuySellFavoriteCount } from "@/model/services/favoriteapi";
 import { NotificationDropdown } from "@/components/common/NotificationDropdown";
+import { withAppBasePath } from "@/lib/appConfig";
 
 const NAV_LINKS = [
   { label: "Buy Vehicle", href: userProductRoutes.list() },

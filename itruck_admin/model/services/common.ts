@@ -2,9 +2,10 @@ import {
   persistMarketplaceUserId,
 } from "@/lib/marketplaceUser";
 import { forceBackendPort, resolveApiBase } from "@/lib/apiBase";
+import { PRODUCTION_API_ORIGIN } from "@/lib/appConfig";
 
-/** Deprecated snapshot — prefer resolveApiBase(). Local backend is always :3003. */
-export const API_BASE = "http://localhost:3003";
+/** Deprecated snapshot — prefer resolveApiBase(). */
+export const API_BASE = PRODUCTION_API_ORIGIN;
 export { resolveApiBase };
 
 const TOKEN_KEY = "itruck_token";

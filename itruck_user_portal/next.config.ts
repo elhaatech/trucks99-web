@@ -1,16 +1,20 @@
 import type { NextConfig } from "next";
 
 /**
- * User portal is served at the host root on port 3002:
- *   http://localhost:3002/
+ * Local: http://localhost:3002/  (no public prefix)
+ * Production: https://trucks99.elhaa.com/user/
  *
- * Production reverse proxy should strip `/user` when forwarding here,
- * e.g. proxy_pass http://127.0.0.1:3002/;  (trailing slash on the target).
+ * Apache already serves JS at /user/_next/... and strips `/user` when
+ * forwarding here. Do not also set `basePath` to `/user` — Next.js would
+ * 404 the homepage after Apache strips the prefix.
  */
 const INTERNAL_BACKEND = "http://127.0.0.1:3003";
+const PRODUCTION_ASSET_PREFIX = "/user";
+const isProd = process.env.NODE_ENV === "production";
 
 const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
+  assetPrefix: isProd ? PRODUCTION_ASSET_PREFIX : undefined,
   turbopack: {
     root: import.meta.dirname,
   },
@@ -34,6 +38,11 @@ const nextConfig: NextConfig = {
     };
   },
   images: {
+    /**
+     * Apache strips `/user`, so `/_next/image` at the domain root 404s and
+     * `/user/_next/image` can 400. Serve public files directly from `/user/images`.
+     */
+    unoptimized: isProd,
     remotePatterns: [
       { protocol: "http", hostname: "localhost", port: "3003", pathname: "/**" },
       { protocol: "http", hostname: "127.0.0.1", port: "3003", pathname: "/**" },
@@ -56,8 +65,8 @@ const nextConfig: NextConfig = {
         permanent: false,
       },
       {
-        source: "/user/:path*",
-        destination: "/:path*",
+        source: "/user/",
+        destination: "/",
         permanent: false,
       },
       {

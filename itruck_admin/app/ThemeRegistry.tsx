@@ -11,12 +11,14 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { ToastProvider } from "@/lib/toast";
 import { AdsenseScript } from "@/components/ads/AdsenseScript";
 import { appTheme } from "@/lib/createAppTheme";
+import { useKeepPublicPrefix } from "@/lib/keepPublicPrefix";
 
 export default function ThemeRegistry({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  useKeepPublicPrefix();
   const [{ cache, flush }] = React.useState(() => {
     const cache = createCache({ key: "mui" });
     cache.compat = true;

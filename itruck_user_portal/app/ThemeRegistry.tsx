@@ -10,6 +10,7 @@ import { ToastProvider } from "@/lib/toast";
 import { appTheme } from "@/lib/createAppTheme";
 import { AppErrorBoundary } from "@/providers/AppErrorBoundary";
 import { FirebasePushProvider } from "@/providers/FirebasePushProvider";
+import { useKeepPublicPrefix } from "@/lib/keepPublicPrefix";
 
 /**
  * Root MUI + Emotion + toast providers.
@@ -21,6 +22,7 @@ export default function ThemeRegistry({
 }: {
   children: React.ReactNode;
 }) {
+  useKeepPublicPrefix();
   const [{ cache, flush }] = React.useState(() => {
     const cache = createCache({ key: "mui" });
     cache.compat = true;

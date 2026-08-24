@@ -35,17 +35,12 @@ import { useNotification } from "@/hooks/useNotification";
 import type { FormState } from "../interface/vehicleTypeTypes";
 import { EMPTY_FORM } from "../interface/vehicleTypeTypes";
 import { routes } from "@/lib/routes";
+import { getFileUrl } from "@/lib/fileUrl";
 
 export interface VehicleTypeFormProps {
   vehicleType?: VehicleType;
   mode?: "create" | "edit";
   onSuccess?: () => void;
-}
-
-function getFileUrl(path?: string) {
-  if (!path) return "";
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  return `${resolveApiBase()}${path}`;
 }
 
 async function uploadImage(file: File): Promise<string> {

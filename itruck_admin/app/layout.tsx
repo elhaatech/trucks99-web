@@ -18,6 +18,8 @@ export const metadata: Metadata = {
   description: "iTruck – Login, Register, OTP verify. Roles: Buy/Sell, Agent, Loader, Shipper.",
 };
 
+const googleMapsKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -26,10 +28,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <Script
-          src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_API_KEY}&libraries=places`}
-          strategy="afterInteractive"
-        />
+        {googleMapsKey ? (
+          <Script
+            src={`https://maps.googleapis.com/maps/api/js?key=${googleMapsKey}&libraries=places`}
+            strategy="afterInteractive"
+          />
+        ) : null}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

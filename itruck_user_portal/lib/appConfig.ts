@@ -1,18 +1,25 @@
 /**
  * Public deployment path and production API origin for the User Portal.
  *
- * This app is served at the host root on port 3002:
- *   http://localhost:3002/
+ * Apache serves this app at https://trucks99.elhaa.com/user/ and strips `/user`
+ * before forwarding to port 3002, so Next.js pages stay at `/` internally.
+ * Do not set Next.js `basePath` to `/user` — Apache would then 404 the homepage.
  *
- * Production reverse proxy should strip `/user` when forwarding to this
- * process (proxy_pass http://127.0.0.1:3002/ with a trailing slash).
- *
- * Keep this in sync with `basePath` in next.config.ts.
+ * `assetPrefix` in next.config.ts makes `/_next` assets load from `/user/_next`.
+ * Keep APP_BASE_PATH in sync with that public prefix for raw `<img>` / SW URLs.
  * Do not use .env for these values.
  */
 
-/** Next.js `basePath` — empty so pages and `/_next` assets live at `/`. */
-export const APP_BASE_PATH: string = "";
+/** Public URL prefix. Empty in `next dev` so localhost:3002 stays at `/`. */
+export const APP_BASE_PATH: string =
+  process.env.NODE_ENV === "production" ? "/user" : "";
+
+export const PUBLIC_URL_PREFIX = "/user";
+
+export const PRODUCTION_HOSTS = new Set([
+  "trucks99.elhaa.com",
+  "www.trucks99.elhaa.com",
+]);
 
 /**
  * Existing production backend origin used by this portal.
@@ -30,9 +37,10 @@ function splitPathAndSearch(path: string): { pathname: string; search: string } 
 }
 
 /**
- * Prefix a same-origin public path with the app base path for raw `<img>`,
- * fetch, and service-worker URLs. `next/link`, `next/image`, and `router.push`
- * already apply `basePath` — do not wrap those.
+ * Prefix a same-origin public path (`/images`, `/assets`) with `/user` in
+ * production. Apache only serves those files under `/user/...`. `next/link`
+ * and `router.push` stay unprefixed because Apache strips `/user` before
+ * Next.js. `next/image` srcs MUST be prefixed because `basePath` is unset.
  */
 export function withAppBasePath(path: string): string {
   if (!path) return APP_BASE_PATH || "/";
