@@ -1,12 +1,8 @@
-import { resolveApiBase } from "@/lib/apiBase";
+import { resolvePublicFileUrl } from "@/lib/fileUrl";
 import type { AdvertisementAdType } from "@/model/api";
 
 export function resolveMediaUrl(url: string): string {
-  if (!url) return "";
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  const base = resolveApiBase().replace(/\/+$/, "");
-  const path = url.startsWith("/") ? url : `/${url}`;
-  return `${base}${path}`;
+  return resolvePublicFileUrl(url);
 }
 
 export function isVideoMedia(

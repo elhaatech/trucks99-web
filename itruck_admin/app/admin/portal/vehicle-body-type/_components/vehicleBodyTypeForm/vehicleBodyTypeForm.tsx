@@ -31,6 +31,7 @@ import {
 } from "@/model/api";
 import { useNotification } from "@/hooks/useNotification";
 import { resolveApiBase, getAuthHeaders } from "@/model/services/common";
+import { getFileUrl } from "@/lib/fileUrl";
 import type { FormState } from "../interface/vehicleBodyTypeTypes";
 import { EMPTY_FORM } from "../interface/vehicleBodyTypeTypes";
 import { routes } from "@/lib/routes";
@@ -63,12 +64,6 @@ const STEPS = [
   { label: "Capacity", icon: <StraightenOutlinedIcon sx={{ fontSize: 18 }} /> },
   { label: "Review", icon: <ListAltOutlinedIcon sx={{ fontSize: 18 }} /> },
 ];
-
-function getFileUrl(path?: string) {
-  if (!path) return "";
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  return `${resolveApiBase()}${path}`;
-}
 
 async function uploadImage(file: File): Promise<string> {
   const formData = new FormData();

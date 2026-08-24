@@ -3,7 +3,7 @@ import type {
   AdvertisementDisplayLocation,
   AdvertisementStatus,
 } from "@/model/api";
-import { resolveApiBase } from "@/lib/apiBase";
+import { resolvePublicFileUrl } from "@/lib/fileUrl";
 
 export interface FilterState {
   status: "" | AdvertisementStatus;
@@ -88,15 +88,8 @@ export const ALLOWED_VIDEO_MIME_TYPES = [
   "video/quicktime",
 ] as const;
 
-export function resolveMediaUrl(url: string, apiBase?: string): string {
-  if (!url) return "";
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  const base = (apiBase || resolveApiBase()).replace(
-    /\/+$/,
-    "",
-  );
-  const path = url.startsWith("/") ? url : `/${url}`;
-  return `${base}${path}`;
+export function resolveMediaUrl(url: string): string {
+  return resolvePublicFileUrl(url);
 }
 
 export function isVideoMedia(

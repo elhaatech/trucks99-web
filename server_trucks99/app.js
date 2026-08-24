@@ -230,7 +230,9 @@ app.use(bodyParser.urlencoded({ extended: true })); //to read the post request f
 app.use(express.json()); //to interpret json
 
 // Static files for uploaded assets (truck images, documents)
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+const uploadsDir = path.join(__dirname, "uploads");
+app.use("/uploads", express.static(uploadsDir));
+app.use("/api/uploads", express.static(uploadsDir));
 var store = new MongoDBStore({ //setup to store the session in DB
   uri: process.env.MONGODB_ATLAS,
   collection: process.env.MONGODB_SESSION,

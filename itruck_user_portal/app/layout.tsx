@@ -3,6 +3,7 @@ import { Inter, Sora } from "next/font/google";
 import ThemeRegistry from "./ThemeRegistry";
 import { AdsenseScript } from "@/components/ads/AdsenseScript";
 import { GOOGLE_ADS_CLIENT } from "@/components/ads/adsConfig";
+import { withAppBasePath } from "@/lib/appConfig";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -22,8 +23,8 @@ export const metadata: Metadata = {
   title: "TRUCKS99 Marketplace",
   description: "Buy and sell commercial vehicles on TRUCKS99.",
   icons: {
-    icon: "/images/trucks99-logo.png",
-    apple: "/images/trucks99-logo.png",
+    icon: withAppBasePath("/images/trucks99-logo.png"),
+    apple: withAppBasePath("/images/trucks99-logo.png"),
   },
   other: {
     "google-adsense-account": GOOGLE_ADS_CLIENT,

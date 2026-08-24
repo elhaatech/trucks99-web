@@ -26,6 +26,7 @@ import {
   FormGridFull,
 } from "@/components/common";
 import { resolveApiBase, getAuthHeaders } from "@/model/services/common";
+import { getFileUrl } from "@/lib/fileUrl";
 import type { FormState } from "../interface/userTypes";
 import { EMPTY_FORM } from "../interface/userTypes";
 
@@ -66,13 +67,6 @@ function extractRoleId(user: User): string {
     if (val && String(val).trim()) return String(val).trim();
   }
   return "";
-}
-
-// Resolve DB-stored relative path → full URL for display
-function getFileUrl(path?: string | null): string {
-  if (!path) return "";
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  return `${resolveApiBase()}${path}`;
 }
 
 // Upload image to backend — same pattern as VehicleBodyTypeForm

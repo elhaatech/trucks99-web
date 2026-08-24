@@ -1,13 +1,9 @@
 // app/(dashboard)/trucks/_components/truckUtils.ts
 import type { VehicleType, VehicleBodyType } from "@/model/api";
 import { getRowId } from "@/model/api";
-import { resolveApiBase } from "@/model/services/common";
+import { getFileUrl } from "@/lib/fileUrl";
 
-export const getFileUrl = (path?: string): string => {
-  if (!path) return "";
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  return `${resolveApiBase()}${path}`;
-};
+export { getFileUrl };
 
 // likely current broken code
 

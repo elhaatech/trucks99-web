@@ -28,16 +28,10 @@ import { EMPTY_FILTERS } from "../interface/vehicleTypeTypes";
 import { VehicleTypeFilters } from "./VehicleTypeFilters";
 import { useVehicleTypeColumns } from "./VehicleTypeColumns";
 
-import { resolveApiBase } from "@/model/services/common";
+import { getFileUrl } from "@/lib/fileUrl";
 
 type DeleteCtx = { mode: "single"; row: VehicleType } | { mode: "bulk" };
 type BlockCtx = { row: VehicleType; action: "block" | "unblock" };
-
-function getFileUrl(path?: string) {
-  if (!path) return "";
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  return `${resolveApiBase()}${path}`;
-}
 
 export function VehicleTypesPage() {
   const router = useRouter();

@@ -12,6 +12,10 @@
 
 export const PUBLIC_URL_PREFIX = "/admin";
 
+/** Public URL prefix for raw `/images` and `/assets` paths. Empty in `next dev`. */
+export const APP_BASE_PATH: string =
+  process.env.NODE_ENV === "production" ? "/admin" : "";
+
 export const PRODUCTION_API_ORIGIN = "https://trucks99.elhaa.com";
 
 export const LOCAL_BACKEND_PORT = "3003";
@@ -20,3 +24,28 @@ export const PRODUCTION_HOSTS = new Set([
   "trucks99.elhaa.com",
   "www.trucks99.elhaa.com",
 ]);
+
+function splitPathAndSearch(path: string): { pathname: string; search: string } {
+  const q = path.indexOf("?");
+  if (q === -1) return { pathname: path, search: "" };
+  return { pathname: path.slice(0, q), search: path.slice(q) };
+}
+
+export function withAppBasePath(path: string): string {
+  if (!path) return APP_BASE_PATH || "/";
+  if (
+    path.startsWith("http://") ||
+    path.startsWith("https://") ||
+    path.startsWith("blob:") ||
+    path.startsWith("data:")
+  ) {
+    return path;
+  }
+  const { pathname, search } = splitPathAndSearch(path);
+  const normalized = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  if (!APP_BASE_PATH) return `${normalized}${search}`;
+  if (normalized === APP_BASE_PATH || normalized.startsWith(`${APP_BASE_PATH}/`)) {
+    return `${normalized}${search}`;
+  }
+  return `${APP_BASE_PATH}${normalized}${search}`;
+}
