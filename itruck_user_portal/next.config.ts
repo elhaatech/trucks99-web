@@ -1,15 +1,24 @@
 import type { NextConfig } from "next";
 
 /**
- * User portal is served at the host root on port 3002:
- *   http://localhost:3002/
+ * Local: http://localhost:3002/  (no prefix — leave NEXT_PUBLIC_ASSET_PREFIX empty)
+ * Production: https://trucks99.elhaa.com/user/
  *
- * Production reverse proxy should strip `/user` when forwarding here,
- * e.g. proxy_pass http://127.0.0.1:3002/;  (trailing slash on the target).
+ * Apache already serves JS at /user/_next/... . assetPrefix makes HTML request
+ * those URLs instead of /_next/... at the domain root (which 404s).
+ *
+ * Do not also set basePath to /user — that would double-prefix assets.
  */
+function publicAssetPrefix(): string | undefined {
+  const raw = (process.env.NEXT_PUBLIC_ASSET_PREFIX || "").trim().replace(/\/$/, "");
+  return raw || undefined;
+}
+
 const INTERNAL_BACKEND = "http://127.0.0.1:3003";
+const assetPrefix = publicAssetPrefix();
 
 const nextConfig: NextConfig = {
+  assetPrefix,
   skipTrailingSlashRedirect: true,
   turbopack: {
     root: import.meta.dirname,
@@ -50,16 +59,6 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      {
-        source: "/user",
-        destination: "/",
-        permanent: false,
-      },
-      {
-        source: "/user/:path*",
-        destination: "/:path*",
-        permanent: false,
-      },
       {
         source: "/usear/product",
         destination: "/dashboard",

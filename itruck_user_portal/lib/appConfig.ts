@@ -1,17 +1,13 @@
 /**
  * Public deployment path and production API origin for the User Portal.
  *
- * This app is served at the host root on port 3002:
- *   http://localhost:3002/
- *
- * Production reverse proxy should strip `/user` when forwarding to this
- * process (proxy_pass http://127.0.0.1:3002/ with a trailing slash).
- *
- * Keep this in sync with `basePath` in next.config.ts.
- * Do not use .env for these values.
+ * Local pages stay at http://localhost:3002/ (no `/user` prefix).
+ * Production assets are prefixed via NEXT_PUBLIC_ASSET_PREFIX=/user in
+ * `.env.production` (see next.config.ts). Page routes stay host-root
+ * because Apache already maps /user/* onto this process.
  */
 
-/** Next.js `basePath` — empty so pages and `/_next` assets live at `/`. */
+/** Next.js `basePath` — empty so pages stay at `/` internally. */
 export const APP_BASE_PATH: string = "";
 
 /**
