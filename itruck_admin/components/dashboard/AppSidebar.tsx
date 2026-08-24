@@ -665,7 +665,11 @@ export function AppSidebar({
             item.key === "incomeExpenseCategory" ||
             item.key === "incomeExpense" ||
             item.key === "reports" ||
-            item.key === "cms"
+            item.key === "cms" ||
+            item.key === "advertisement" ||
+            item.key === "findLoad" ||
+            item.key === "findTruck" ||
+            item.key === "matching"
           ) {
             return false;
           }
