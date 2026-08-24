@@ -8,6 +8,7 @@ function publicApiUrl(): string {
 }
 
 const nextConfig: NextConfig = {
+  trailingSlash: false,
   env: {
     NEXT_PUBLIC_API_URL: publicApiUrl(),
   },

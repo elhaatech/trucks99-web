@@ -2,7 +2,7 @@
  * Public deployment path and production API origin for the User Portal.
  *
  * This app is served at the host root on port 3002:
- *   http://localhost:3002/
+ *   http://localhost:3002
  *
  * Production reverse proxy should strip `/user` when forwarding to this
  * process (proxy_pass http://127.0.0.1:3002/ with a trailing slash).

@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 /**
  * User portal is served at the host root on port 3002:
- *   http://localhost:3002/
+ *   http://localhost:3002
  *
  * Production reverse proxy should strip `/user` when forwarding here,
  * e.g. proxy_pass http://127.0.0.1:3002/;  (trailing slash on the target).
@@ -10,7 +10,7 @@ import type { NextConfig } from "next";
 const INTERNAL_BACKEND = "http://127.0.0.1:3003";
 
 const nextConfig: NextConfig = {
-  skipTrailingSlashRedirect: true,
+  trailingSlash: false,
   turbopack: {
     root: import.meta.dirname,
   },
@@ -52,6 +52,11 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/user",
+        destination: "/",
+        permanent: false,
+      },
+      {
+        source: "/user/",
         destination: "/",
         permanent: false,
       },

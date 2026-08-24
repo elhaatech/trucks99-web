@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import createCache from "@emotion/cache";
-import { useServerInsertedHTML } from "next/navigation";
+import { usePathname, useServerInsertedHTML } from "next/navigation";
 import { CacheProvider } from "@emotion/react";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -17,11 +17,21 @@ export default function ThemeRegistry({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
   const [{ cache, flush }] = React.useState(() => {
     const cache = createCache({ key: "mui" });
     cache.compat = true;
     return { cache, flush: () => Object.entries(cache.inserted) };
   });
+
+  React.useEffect(() => {
+    if (pathname !== "/") return;
+    const { search, hash, origin } = window.location;
+    const next = `${origin}${search}${hash}`;
+    if (window.location.href !== next) {
+      window.history.replaceState(window.history.state, "", next);
+    }
+  }, [pathname]);
 
   useServerInsertedHTML(() => {
     const entries = flush();
