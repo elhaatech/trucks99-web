@@ -27,6 +27,7 @@ import { ensureLoggedInToViewProduct } from "@/lib/requireMarketplaceLogin";
 import {
   getBuySellListPage,
   type BuySellProduct,
+  type BuySellListFilter,
 } from "@/model/services/buysellapi";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { useNotification } from "@/hooks/useNotification";
@@ -131,7 +132,7 @@ export default function UserProductListContent() {
           usear_type: isLoggedIn ? "buy" : "all",
         }),
         search: filters.search.trim() || undefined,
-        sort: sortBy,
+        sort: (sortBy === "newest" ? "" : sortBy) as unknown as BuySellListFilter["sort"],
         page,
         limit: VEHICLE_PAGE_SIZE,
       };
