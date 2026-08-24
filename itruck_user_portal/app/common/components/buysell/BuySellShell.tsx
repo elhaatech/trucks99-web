@@ -13,6 +13,7 @@ import Divider from "@mui/material/Divider";
 import { useRouter, usePathname } from "next/navigation";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import DirectionsCarOutlinedIcon from "@mui/icons-material/DirectionsCarOutlined";
+import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import StarOutlineRoundedIcon from "@mui/icons-material/StarOutlineRounded";
 import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
@@ -46,6 +47,8 @@ type BuySellShellProps = {
 
 function navIcon(label: string) {
   switch (label) {
+    case "Marketplace":
+      return <HomeOutlinedIcon fontSize="small" />;
     case "Buy Vehicle":
       return <DirectionsCarOutlinedIcon fontSize="small" />;
     case "Featured":
@@ -70,6 +73,15 @@ export function BuySellShell({ children }: BuySellShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
   const navLinks = getBuySellNavLinks(isLoggedIn);
+
+  // Mobile menu only: a "Marketplace" entry pinned above "Buy Vehicle". Tapping
+  // it jumps to the home page's Explore All Vehicles section via the same
+  // `/#explore-all-vehicles` anchor the desktop logo uses. This list is used
+  // solely by the mobile Drawer, so the desktop nav bar is left untouched.
+  const mobileNavLinks = [
+    { label: "Marketplace", href: "/#explore-all-vehicles" },
+    ...navLinks,
+  ];
 
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0, behavior: "auto" });
@@ -118,7 +130,7 @@ export function BuySellShell({ children }: BuySellShellProps) {
           <Box>
             <BrandLogo height={36} />
             <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: "block", mt: 0.75 }}>
-              Marketplace navigation
+              Marketplace 
             </Typography>
           </Box>
           <IconButton
@@ -134,7 +146,7 @@ export function BuySellShell({ children }: BuySellShellProps) {
         </Box>
         <Divider />
         <List sx={{ px: 1.5, py: 1.5 }}>
-          {[...navLinks, ...MOBILE_EXTRA_LINKS].map((link) => {
+          {[...mobileNavLinks, ...MOBILE_EXTRA_LINKS].map((link) => {
             const selected =
               link.label === "Sell Vehicle"
                 ? isSellHubPath(pathname)
@@ -150,6 +162,24 @@ export function BuySellShell({ children }: BuySellShellProps) {
                 selected={selected}
                 onClick={() => {
                   setMobileOpen(false);
+                  if (link.label === "Marketplace") {
+                    // Reuse the existing Explore All Vehicles anchor. When
+                    // already on the home page, scroll in place (no reload);
+                    // otherwise navigate home with the hash so the home page's
+                    // own hash-scroll logic lands on the section.
+                    if (pathname === "/") {
+                      if (window.location.hash !== "#explore-all-vehicles") {
+                        window.location.hash = "explore-all-vehicles";
+                      } else {
+                        document
+                          .getElementById("explore-all-vehicles")
+                          ?.scrollIntoView({ behavior: "smooth" });
+                      }
+                      return;
+                    }
+                    router.push("/#explore-all-vehicles");
+                    return;
+                  }
                   router.push(resolveBuySellNavHref(link, isLoggedIn));
                 }}
                 sx={{

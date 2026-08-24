@@ -64,7 +64,12 @@ export async function getLocationCitiesByState(stateId: number | string, options
   });
 }
 
-export const INDIA_COUNTRY_ID = "69c60d5a50d03d49adb72bc3";
+// India's stable external id (numeric `id` from the location dataset, = 101).
+// The seeded country document's Mongo `_id` is auto-generated, so the previously
+// hardcoded ObjectId was unresolvable: the server's location endpoints resolve a
+// country via its numeric externalId / name, returning 400 for an unknown `_id`
+// and leaving the State/City dropdowns empty. 101 resolves correctly everywhere.
+export const INDIA_COUNTRY_ID = "101";
 
 // Module-level cache of states per country so dependent dropdowns and the
 // filter payload can resolve a selected state NAME back to its id without

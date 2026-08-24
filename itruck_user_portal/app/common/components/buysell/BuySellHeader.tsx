@@ -29,6 +29,7 @@ import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined
 import ContactSupportOutlinedIcon from "@mui/icons-material/ContactSupportOutlined";
 import { alpha } from "@mui/material/styles";
 import Image from "next/image";
+import Link from "next/link";
 import {
   INFO,
   LAYOUT,
@@ -181,67 +182,79 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
           <MenuIcon />
         </IconButton>
 
-        <Box
-          sx={{
+        <Link
+          href="/"
+          aria-label="TRUCKS99 — Home"
+          style={{
+            textDecoration: "none",
             display: "flex",
             alignItems: "center",
-            gap: 1.25,
-            cursor: "pointer",
             flexShrink: 0,
-            transition: `opacity ${TRANSITION.fast}`,
-            "&:hover": { opacity: 0.85 },
           }}
-          onClick={() => router.push(userProductRoutes.dashboard())}
         >
           <Box
             sx={{
-              width: { xs: 72, md: 90 },
-              height: { xs: 48, md: 60 },
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
               flexShrink: 0,
-              lineHeight: 0,
+              transition: `opacity ${TRANSITION.fast}`,
+              "&:hover": { opacity: 0.85 },
             }}
           >
-            <Image
-              src={withAppBasePath("/assets/logo.png")}
-              alt="TRUCKS99"
-              width={60}
-              height={40}
-              priority
-              unoptimized
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-                display: "block",
-              }}
-            />
-          </Box>
-          <Box sx={{ display: { xs: "none", sm: "block" } }}>
-            <Typography
+            <Box
               sx={{
-                fontSize: 11,
-                fontWeight: 600,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: T.color.textMuted,
-                lineHeight: 1.2,
+                width: { xs: 72, md: 90 },
+                height: { xs: 48, md: 60 },
+                flexShrink: 0,
+                lineHeight: 0,
               }}
             >
-              Marketplace
-            </Typography>
+              <Image
+                src="/assets/logo.png"
+                alt="TRUCKS99"
+                width={60}
+                height={40}
+                priority
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  display: "block",
+                }}
+              />
+            </Box>
           </Box>
-        </Box>
+        </Link>
 
         <Box sx={{ display: { xs: "none", lg: "flex" }, gap: 0.5, ml: 1.5 }}>
-          {navLinks.map((link) => {
+          {[{ label: "Marketplace", href: "/#explore-all-vehicles" }, ...navLinks].map(
+            (link) => {
             const active = isLinkActive(link);
             const showFavoriteBadge =
               (link.label === "Favorites" || link.label === "My Favorite List") &&
               favoriteCount > 0;
+            const isMarketplaceTab = link.label === "Marketplace";
             return (
               <Button
                 key={link.href}
-                onClick={() => router.push(resolveBuySellNavHref(link, isLoggedIn))}
+                onClick={() => {
+                  if (isMarketplaceTab) {
+                    if (pathname === "/") {
+                      if (window.location.hash !== "#explore-all-vehicles") {
+                        window.location.hash = "explore-all-vehicles";
+                      } else {
+                        document
+                          .getElementById("explore-all-vehicles")
+                          ?.scrollIntoView({ behavior: "smooth" });
+                      }
+                      return;
+                    }
+                    router.push("/#explore-all-vehicles");
+                    return;
+                  }
+                  router.push(resolveBuySellNavHref(link, isLoggedIn));
+                }}
                 sx={{
                   textTransform: "none",
                   fontWeight: active ? 700 : 500,

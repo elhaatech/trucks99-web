@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Alert from "@mui/material/Alert";
@@ -39,6 +39,7 @@ import { toErrorMessage } from "@/lib/errors";
 import { isAbortError } from "@/lib/apiCache";
 import { GoogleAdBanner } from "@/components/ads/GoogleAdBanner";
 import { SHOW_ADS } from "@/components/ads/adsConfig";
+import { SearchableSelect, type SelectOption } from "@/components/common/SearchableSelect";
 
 const EMPTY_STATS: MarketplaceStats = {
   totalListings: 0,
@@ -69,6 +70,7 @@ export default function UserProductDashboard() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [featuredLoading, setFeaturedLoading] = useState(true);
   const [recentVehiclesLoading, setRecentVehiclesLoading] = useState(true);
+  const [exploreSort, setExploreSort] = useState("newest");
 
   const loadExplorePage = useCallback(
     async (page: number, signal: AbortSignal) => {
@@ -91,6 +93,55 @@ export default function UserProductDashboard() {
   );
 
   const exploreList = useInfiniteScroll(loadExplorePage);
+
+  const pathname = usePathname();
+  const exploreResyncRef = useRef(false);
+
+  useEffect(() => {
+    if (exploreResyncRef.current) {
+      exploreList.reset();
+    } else {
+      exploreResyncRef.current = true;
+    }
+  }, [pathname, exploreList.reset]);
+
+  const scrolledForHashRef = useRef(false);
+  const exploreStateRef = useRef(exploreList);
+  const tryScrollToExploreRef = useRef<() => void>(() => {});
+
+  const tryScrollToExplore = useCallback(() => {
+    if (scrolledForHashRef.current) return;
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#explore-all-vehicles") return;
+    const el = document.getElementById("explore-all-vehicles");
+    if (!el) {
+      window.setTimeout(() => tryScrollToExploreRef.current(), 100);
+      return;
+    }
+    const { loading, items } = exploreStateRef.current;
+    if (loading && items.length === 0) {
+      window.setTimeout(() => tryScrollToExploreRef.current(), 100);
+      return;
+    }
+    el.scrollIntoView({ behavior: "smooth" });
+    scrolledForHashRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    exploreStateRef.current = exploreList;
+    tryScrollToExploreRef.current = tryScrollToExplore;
+  }, [exploreList, tryScrollToExplore]);
+
+  useEffect(() => {
+    tryScrollToExplore();
+  }, [tryScrollToExplore, exploreList.loading, exploreList.items.length]);
+
+  useEffect(() => {
+    const onHashChange = () => tryScrollToExplore();
+    window.addEventListener("hashchange", onHashChange);
+    return () =>
+      window.removeEventListener("hashchange", onHashChange);
+  }, [tryScrollToExplore]);
 
   useEffect(() => {
     if (
@@ -206,6 +257,37 @@ export default function UserProductDashboard() {
     }
     return null;
   }, [dashboardData]);
+
+  const exploreSortOptions: SelectOption[] = [
+    
+    { value: "price_asc", label: "Price: Low to High" },
+    { value: "price_desc", label: "Price: High to Low" },
+  ];
+
+  const sortedExploreItems = useMemo(() => {
+    const items = exploreList.items ?? [];
+    if (exploreSort === "newest") {
+      return [...items].sort(
+        (a, b) =>
+          new Date(b.createdAt ?? 0).getTime() -
+          new Date(a.createdAt ?? 0).getTime(),
+      );
+    }
+    if (exploreSort === "oldest") {
+      return [...items].sort(
+        (a, b) =>
+          new Date(a.createdAt ?? 0).getTime() -
+          new Date(b.createdAt ?? 0).getTime(),
+      );
+    }
+    if (exploreSort === "price_asc") {
+      return [...items].sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+    }
+    if (exploreSort === "price_desc") {
+      return [...items].sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+    }
+    return items;
+  }, [exploreList.items, exploreSort]);
 
   const handleSearch = () => {
     router.push(
@@ -371,7 +453,10 @@ export default function UserProductDashboard() {
           emptyDescription="No recent vehicles yet. Check back soon for newly listed trucks."
         />
       </Box>
-      <Box sx={{ mt: 5 }}>
+      <Box
+        id="explore-all-vehicles"
+        sx={{ mt: 5, scrollMarginTop: "88px" }}
+      >
         <Box
           sx={{
             display: "flex",
@@ -391,12 +476,27 @@ export default function UserProductDashboard() {
           >
             Explore All Vehicles
           </Typography>
-          <Button
-            onClick={() => router.push(userProductRoutes.list())}
-            sx={{ textTransform: "none", fontWeight: 700, color: "primary.main" }}
-          >
-            View all →
-          </Button>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "nowrap" }}>
+            <SearchableSelect
+              value={exploreSort}
+              onChange={setExploreSort}
+              options={exploreSortOptions}
+              aria-label="Sort Explore All Vehicles"
+              sx={{ minWidth: { xs: 140, sm: 180 } }}
+            />
+            <Button
+              onClick={() => router.push(userProductRoutes.list())}
+              sx={{
+                textTransform: "none",
+                fontWeight: 700,
+                color: "primary.main",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+            >
+              View all →
+            </Button>
+          </Box>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Browse every active listing on TRUCKS99
@@ -414,7 +514,7 @@ export default function UserProductDashboard() {
           </Alert>
         ) : null}
         <VehicleGrid
-          products={exploreList.items}
+          products={sortedExploreItems}
           loading={exploreList.loading}
           hasMore={exploreList.hasMore}
           sentinelRef={exploreList.sentinelRef}
