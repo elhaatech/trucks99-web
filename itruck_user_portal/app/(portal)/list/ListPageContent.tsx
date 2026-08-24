@@ -126,7 +126,10 @@ export default function UserProductListContent() {
     async (page: number, signal: AbortSignal) => {
       const filters = urlFiltersRef.current;
       const payload = {
-        ...toBuySellListPayload(filters),
+        ...toBuySellListPayload({
+          ...filters,
+          usear_type: isLoggedIn ? "buy" : "all",
+        }),
         search: filters.search.trim() || undefined,
         sort: sortBy,
         page,
