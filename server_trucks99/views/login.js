@@ -54,16 +54,19 @@ loginRouter.post("/", async (req, res) => {
     delete raw.hash;
     delete raw.salt;
     const safeUser = formatUser(raw);
+    const payload = {
+      message: "Login successful.",
+      token,
+      user: safeUser,
+    };
 
+    // JWT is the Admin API credential. Session cookies are best-effort so a
+    // production session-store failure cannot block a valid login.
     req.logIn(user, (err) => {
       if (err) {
-        return res.status(500).json({ message: "Login failed." });
+        console.error("[login] session not created; JWT still issued:", err.message || err);
       }
-      return res.status(200).json({
-        message: "Login successful.",
-        token,
-        user: safeUser,
-      });
+      return res.status(200).json(payload);
     });
   } catch (err) {
     console.error("[login] admin email/password error:", err);

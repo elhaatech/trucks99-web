@@ -108,18 +108,7 @@ export function useBuySellColumns({
   return useMemo<Array<DataTableColumn<BuySellProduct>>>(
     () => [
       // ── BS Number ───────────────────────────────────────────────────────
-      {
-        id: "bsNumber",
-        label: "BS No",
-        minWidth: 180,
-        render: (row: BuySellProduct) =>
-          renderNumberColumn(
-            row,
-            row.bsNumber,
-            routes.buysell.view(getBuySellRowId(row)),
-            renderClickableName,
-          ),
-      },
+   
       {
         id: "vehicleId",
         label: "Vehicle ID",

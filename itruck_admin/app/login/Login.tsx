@@ -7,6 +7,8 @@ import Box from "@mui/material/Box";
 import Alert from "@mui/material/Alert";
 
 import { getCurrentUser, loginWithPassword } from "@/model/api";
+import { PRODUCTION_HOSTS } from "@/lib/appConfig";
+import { isAdminLikeRole } from "@/lib/permissions";
 import { routes } from "@/lib/routes";
 
 import { AuthLayout } from "@/components/layout/AuthLayout";
@@ -15,6 +17,15 @@ import { AuthTextField } from "@/components/ui/AuthTextField";
 import { GradientButton } from "@/components/ui/GradientButton";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function goToAdminDashboard(router: ReturnType<typeof useRouter>) {
+  const dest = routes.dashboard();
+  if (typeof window !== "undefined" && PRODUCTION_HOSTS.has(window.location.hostname)) {
+    window.location.replace(dest);
+    return;
+  }
+  router.replace(dest);
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,7 +37,7 @@ export default function LoginPage() {
   useEffect(() => {
     getCurrentUser()
       .then((user) => {
-        if (user) router.replace(routes.dashboard());
+        if (user && isAdminLikeRole(user.role)) goToAdminDashboard(router);
       })
       .catch(() => undefined);
   }, [router]);
@@ -52,7 +63,7 @@ export default function LoginPage() {
       setLoading(true);
       const res = await loginWithPassword(email.trim(), password);
       if (res.user) {
-        router.replace(routes.dashboard());
+        goToAdminDashboard(router);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
