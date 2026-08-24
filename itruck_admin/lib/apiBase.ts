@@ -64,15 +64,12 @@ export function resolveApiBase(): string {
       return `${protocol}//${hostname}:${BACKEND_PORT}`;
     }
 
-    const isPublicHost =
-      hostname === "trucks99.elhaa.com" || hostname === "www.trucks99.elhaa.com";
-
-    const isLegacyHost =
+    const isDeployedHost =
       hostname === "truck.elhaa.com" ||
       hostname === "www.truck.elhaa.com" ||
       hostname === "46.202.176.124";
 
-    if (isPublicHost || isLegacyHost) {
+    if (isDeployedHost) {
       if (fromEnv) {
         try {
           const envHost = new URL(fromEnv).hostname;
@@ -83,7 +80,6 @@ export function resolveApiBase(): string {
           /* ignore invalid env URL */
         }
       }
-      if (isPublicHost) return `${protocol}//${hostname}`;
       return `${protocol}//${hostname}:${BACKEND_PORT}`;
     }
   }
