@@ -20,7 +20,7 @@ export const IS_GOOGLE_ADS_TEST_MODE =
  * Master switch for rendering advertisement blocks across the whole site.
  * Set to `true` to re-enable all ad banners, slots, and popups.
  */
-export const SHOW_ADS = true;
+export const SHOW_ADS = false;
 
 export function isLocalDevelopmentHost(hostname?: string): boolean {
   const host =
