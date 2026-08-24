@@ -182,13 +182,12 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
         </IconButton>
 
         <Link
-          href="/#explore-all-vehicles"
-          aria-label="TRUCKS99 Marketplace — Explore All Vehicles"
+          href="/"
+          aria-label="TRUCKS99 — Home"
           style={{
             textDecoration: "none",
             display: "flex",
             alignItems: "center",
-            gap: 1.25,
             flexShrink: 0,
           }}
         >
@@ -196,7 +195,6 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
             sx={{
               display: "flex",
               alignItems: "center",
-              gap: 1.25,
               cursor: "pointer",
               flexShrink: 0,
               transition: `opacity ${TRANSITION.fast}`,
@@ -225,33 +223,37 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                 }}
               />
             </Box>
-            <Box sx={{ display: { xs: "none", sm: "block" } }}>
-              <Typography
-                sx={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: T.color.textMuted,
-                  lineHeight: 1.2,
-                }}
-              >
-                Marketplace
-              </Typography>
-            </Box>
           </Box>
         </Link>
 
         <Box sx={{ display: { xs: "none", lg: "flex" }, gap: 0.5, ml: 1.5 }}>
-          {navLinks.map((link) => {
+          {[{ label: "Marketplace", href: "/#explore-all-vehicles" }, ...navLinks].map(
+            (link) => {
             const active = isLinkActive(link);
             const showFavoriteBadge =
               (link.label === "Favorites" || link.label === "My Favorite List") &&
               favoriteCount > 0;
+            const isMarketplaceTab = link.label === "Marketplace";
             return (
               <Button
                 key={link.href}
-                onClick={() => router.push(resolveBuySellNavHref(link, isLoggedIn))}
+                onClick={() => {
+                  if (isMarketplaceTab) {
+                    if (pathname === "/") {
+                      if (window.location.hash !== "#explore-all-vehicles") {
+                        window.location.hash = "explore-all-vehicles";
+                      } else {
+                        document
+                          .getElementById("explore-all-vehicles")
+                          ?.scrollIntoView({ behavior: "smooth" });
+                      }
+                      return;
+                    }
+                    router.push("/#explore-all-vehicles");
+                    return;
+                  }
+                  router.push(resolveBuySellNavHref(link, isLoggedIn));
+                }}
                 sx={{
                   textTransform: "none",
                   fontWeight: active ? 700 : 500,
