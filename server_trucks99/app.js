@@ -267,7 +267,9 @@ app.use(passport.session());
 
 const { jwtAuth } = require("./helpers/jwtAuth");
 const { requireAuthUnlessPublic } = require("./helpers/requireAuth");
+const { restoreStrippedApiPrefix } = require("./helpers/restoreStrippedApiPrefix");
 
+app.use(restoreStrippedApiPrefix);
 app.use(jwtAuth);
 app.use(requireAuthUnlessPublic);
 
