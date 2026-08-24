@@ -71,6 +71,10 @@ const userSchema = new Schema({
     company_name: { type: String },
     profileImage: { type: String },
     email: { type: String },
+    // Optional local password (Admin email/password login).
+    // Same field names as passport-local-mongoose; excluded from queries by default.
+    hash: { type: String, select: false },
+    salt: { type: String, select: false },
     mobile: { type: String },
     city: { type: String },
     state: { type: String },

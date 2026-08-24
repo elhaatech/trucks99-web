@@ -3,6 +3,7 @@ const Permission = require('./schema/permission');
 const Role = require('./schema/role');
 const User = require('./schema/user');
 const { seedLocationData } = require('./location/seedLocationData');
+const { ensureDedicatedAdminAccount } = require('./helpers/ensureAdminAccount');
 
 const ACCESS_ALL = { create: true, view: true, edit: true, delete: true, list: true };
 const ACCESS_VIEW = { create: false, view: true, edit: false, delete: false, list: true };
@@ -164,6 +165,12 @@ async function seedDatabase() {
       console.log('📍 Location seeding result:', locationResult?.seeded ? locationResult : locationResult?.reason);
     } catch (e) {
       console.error('❌ Location seeding failed:', e?.message || String(e));
+    }
+
+    try {
+      await ensureDedicatedAdminAccount();
+    } catch (e) {
+      console.error('❌ Dedicated admin account seed failed:', e?.message || String(e));
     }
 
     console.log('🎉 Database seeding completed!\n');

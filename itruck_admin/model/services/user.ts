@@ -71,6 +71,22 @@ function normalizeUserRoleEmbedded(user: User): User {
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
+/** POST /api/login — Admin email + password */
+export async function loginWithPassword(email: string, password: string) {
+  const trimmedEmail = email.trim();
+  if (!trimmedEmail) throw new Error("Email is required.");
+  if (!password) throw new Error("Password is required.");
+
+  const res = await publicApi<{ message: string; token?: string; user: User }>("/api/login", {
+    method: "POST",
+    body: JSON.stringify({ email: trimmedEmail, password }),
+  });
+  if (res.token) setToken(res.token);
+  const uid = res.user?.id ?? res.user?._id;
+  if (uid != null) persistMarketplaceUserId(String(uid));
+  return { ...res, user: normalizeUserRoleEmbedded(res.user) };
+}
+
 /** POST /api/otp/send — body: { mobile, optional profile for new users } */
 export type SendOtpProfile = {
   name?: string;

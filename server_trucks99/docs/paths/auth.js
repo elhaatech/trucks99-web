@@ -22,28 +22,25 @@
  *   post:
  *     tags:
  *       - Auth
- *     summary: Username/password login (legacy disabled)
- *     description: Returns 400; use OTP or OAuth instead.
+ *     summary: Admin email/password login
+ *     description: Authenticates an Admin/Super Admin account and returns the same JWT/session as OTP login. Marketplace users continue to use OTP.
  *     requestBody:
+ *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
  *             properties:
- *               username: { type: string }
+ *               email: { type: string, format: email }
  *               password: { type: string, format: password }
- *           example:
- *             username: "user@example.com"
- *             password: "secret"
+ *             required: [email, password]
  *     responses:
+ *       200:
+ *         description: Login successful
+ *       401:
+ *         description: Invalid email or password
  *       400:
- *         description: Email/password login disabled
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message: { type: string }
+ *         description: Missing email or password
  *       500:
  *         description: Server error
  */

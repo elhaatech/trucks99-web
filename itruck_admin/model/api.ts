@@ -26,6 +26,7 @@ export {
 
 export type { ApiUser, User } from "./services/user";
 export {
+  loginWithPassword,
   sendOtp,
   verifyOtp,
   signup,
