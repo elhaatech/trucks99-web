@@ -76,7 +76,10 @@ export default function UserProductDashboard() {
     async (page: number, signal: AbortSignal) => {
       const result = await getBuySellListPage(
         {
-          ...toBuySellListPayload({ ...EMPTY_FILTERS, usear_type: "all" }),
+          ...toBuySellListPayload({
+            ...EMPTY_FILTERS,
+            usear_type: isLoggedIn ? "buy" : "all",
+          }),
           page,
           limit: MARKETPLACE.VEHICLE_PAGE_SIZE,
         },
@@ -89,7 +92,7 @@ export default function UserProductDashboard() {
         page: result.page ?? page,
       };
     },
-    [],
+    [isLoggedIn],
   );
 
   const exploreList = useInfiniteScroll(loadExplorePage);
