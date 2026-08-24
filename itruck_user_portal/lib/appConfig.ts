@@ -37,9 +37,10 @@ function splitPathAndSearch(path: string): { pathname: string; search: string } 
 }
 
 /**
- * Prefix a same-origin public path with the app base path for raw `<img>`,
- * fetch, and service-worker URLs. `next/link`, `next/image`, and `router.push`
- * already apply `basePath` — do not wrap those.
+ * Prefix a same-origin public path (`/images`, `/assets`) with `/user` in
+ * production. Apache only serves those files under `/user/...`. `next/link`
+ * and `router.push` stay unprefixed because Apache strips `/user` before
+ * Next.js. `next/image` srcs MUST be prefixed because `basePath` is unset.
  */
 export function withAppBasePath(path: string): string {
   if (!path) return APP_BASE_PATH || "/";

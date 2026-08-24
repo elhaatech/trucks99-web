@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Box from "@mui/material/Box";
 import type { SxProps, Theme } from "@mui/material/styles";
+import { withAppBasePath } from "@/lib/appConfig";
 
 export const BRAND_LOGO_SRC = "/images/trucks99-logo.png";
 
@@ -45,11 +46,12 @@ export function BrandLogo({
       }}
     >
       <Image
-        src={BRAND_LOGO_SRC}
+        src={withAppBasePath(BRAND_LOGO_SRC)}
         alt={alt}
         width={w}
         height={height}
         priority={priority}
+        unoptimized
         style={{
           width: w,
           height,

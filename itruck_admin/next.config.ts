@@ -52,6 +52,11 @@ const nextConfig: NextConfig = {
     };
   },
   images: {
+    /**
+     * Apache strips `/admin`, so `/_next/image` at the domain root 404s.
+     * Serve public files directly from `/admin/images`.
+     */
+    unoptimized: isProd,
     remotePatterns: [
       { protocol: "http", hostname: "localhost", port: "3003", pathname: "/**" },
       { protocol: "http", hostname: "127.0.0.1", port: "3003", pathname: "/**" },

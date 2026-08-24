@@ -38,6 +38,11 @@ const nextConfig: NextConfig = {
     };
   },
   images: {
+    /**
+     * Apache strips `/user`, so `/_next/image` at the domain root 404s and
+     * `/user/_next/image` can 400. Serve public files directly from `/user/images`.
+     */
+    unoptimized: isProd,
     remotePatterns: [
       { protocol: "http", hostname: "localhost", port: "3003", pathname: "/**" },
       { protocol: "http", hostname: "127.0.0.1", port: "3003", pathname: "/**" },

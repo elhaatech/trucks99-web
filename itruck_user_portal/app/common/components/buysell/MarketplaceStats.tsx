@@ -502,6 +502,7 @@ function HeroTruckBackground({
               fill
               priority={index === 0}
               sizes="100vw"
+              unoptimized
               style={{ objectFit: "cover", objectPosition: "center" }}
             />
           </Box>
@@ -558,7 +559,7 @@ function HeroTruckBackground({
               "&:hover": { opacity: 1 },
             }}
           >
-            <Image src={image.src} alt="" fill sizes="80px" style={{ objectFit: "cover" }} />
+            <Image src={image.src} alt="" fill sizes="80px" unoptimized style={{ objectFit: "cover" }} />
           </Box>
         ))}
       </Box>
