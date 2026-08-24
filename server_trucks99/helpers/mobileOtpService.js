@@ -37,10 +37,6 @@ function isDevOtpFallbackEnabled() {
   return process.env.NODE_ENV !== "production";
 }
 
-function isFixedOtpEnabled() {
-  return String(process.env.USE_TEMP_OTP || "").toLowerCase() === "true";
-}
-
 function hashOtp(plainOtp, mobile) {
   return crypto
     .createHash("sha256")
@@ -48,33 +44,26 @@ function hashOtp(plainOtp, mobile) {
     .digest("hex");
 }
 
-function getFixedTestOtp() {
-  const tempOtp = (process.env.TEMP_OTP || "1234").trim();
-  return (
-    String(tempOtp)
-      .replace(/\D/g, "")
-      .slice(-OTP_LENGTH)
-      .padStart(OTP_LENGTH, "0") ||
-    String(10 ** (OTP_LENGTH - 1)).padStart(OTP_LENGTH, "0")
-  );
-}
-
 function generateOtpCode() {
-  if (isFixedOtpEnabled()) {
-    return getFixedTestOtp();
-  }
   const min = 10 ** (OTP_LENGTH - 1);
   const max = 10 ** OTP_LENGTH - 1;
   return randomInt(min, max + 1).toString();
 }
 
+function fillOtpPlaceholders(template, otp) {
+  return String(template)
+    .replace(/\{otp\}/gi, otp)
+    .replace(/\{#var#\}/gi, otp)
+    .replace(/\{#number#\}/gi, otp);
+}
+
 function buildOtpSmsMessage(otp) {
   const template = (process.env.OTP_SMS_MESSAGE_TEMPLATE || "").trim();
   if (template) {
-    return template.replace(/\{otp\}/gi, otp);
+    return fillOtpPlaceholders(template, otp);
   }
-  // Must match DLT-approved template used in production (backend.trucks99.in)
-  return `${otp} is the OTP for your Trucks99 Login - Team Trucks99`;
+  // Must match the active Draft4SMS DLT template (template id 1277178714236822028)
+  return `Hi, Your TRUCKS99 verification code is ${otp}. Please don't share this code to anyone. Thanks`;
 }
 
 async function sendOtpViaSms(mobile, plainOtp) {
@@ -208,23 +197,23 @@ async function createAndSendOtp(mobileRaw, { isResend = false } = {}) {
       error:
         sms.error ||
         "Could not send OTP via SMS. Check SMS provider configuration.",
+      smsError: sms.error,
     };
   }
 
-  const usingDefaultOtp = isFixedOtpEnabled();
   const payload = {
     ok: true,
     sent: Boolean(sms.sent),
-    message: usingDefaultOtp
-      ? sms.sent
-        ? `OTP sent. If SMS does not arrive, use default OTP ${plainOtp}.`
-        : `SMS not sent. Use default OTP ${plainOtp}.`
-      : sms.sent
-        ? "OTP sent to your mobile number via SMS."
-        : "SMS not sent. Use dev OTP below if enabled.",
+    message: sms.sent
+      ? "OTP sent to your mobile number via SMS."
+      : "SMS not sent. Request a new OTP.",
   };
 
-  // Dev only: expose the random OTP when SMS failed (never a fixed TEMP_OTP unless USE_TEMP_OTP=true)
+  if (sms.error && !sms.sent) {
+    payload.smsError = sms.error;
+  }
+
+  // Dev only: expose the random OTP when SMS failed
   if (isDevOtpFallbackEnabled() && !sms.sent) {
     payload.otpForDev = plainOtp;
   }
@@ -303,8 +292,7 @@ async function verifyOtpCode(mobileRaw, otpRaw) {
     };
   }
 
-  const valid =
-    hashOtp(otp, mobile) === record.otpHash || matchesDefaultOtp(otp);
+  const valid = hashOtp(otp, mobile) === record.otpHash;
   if (!valid) {
     record.attempts = (record.attempts || 0) + 1;
     const remaining = Math.max(0, MAX_VERIFY_ATTEMPTS - record.attempts);

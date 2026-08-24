@@ -3,7 +3,7 @@ const express = require('express');
 const SignupRouter = express.Router();
 const User = require('../schema/user.js');
 const Role = require('../schema/role.js');
-const { normalizeMobile } = require('../helpers/otpHelper');
+const { normalizeMobile, findUserByMobile } = require('../helpers/otpHelper');
 const { resolveToObjectId } = require('../helpers/uuidHelper');
 const { createAndSendOtp } = require('../helpers/mobileOtpService');
 
@@ -30,7 +30,7 @@ SignupRouter.post('/', async (req, res) => {
       return res.status(400).json({ message: 'mobile is required' });
     }
 
-    const existingMobile = await User.findOne({ mobile: mobileNormalized });
+    const existingMobile = await findUserByMobile(User, mobileNormalized);
     if (existingMobile) {
       return res.status(400).json({ message: 'This mobile number is already registered.' });
     }
@@ -78,7 +78,7 @@ SignupRouter.post('/', async (req, res) => {
     const payload = {
       message: otpSentToMobile
         ? 'Signup successful. Verify OTP via SMS: POST /api/auth/verify-otp with { mobile, otp }.'
-        : 'Signup successful. Configure Draft4SMS or use dev OTP below to log in.',
+        : 'Signup successful. OTP SMS could not be sent. Use Resend OTP on the login screen.',
       loginType: 'otp_only',
       otpSentToMobile,
       otpSentViaSms: otpSentToMobile,

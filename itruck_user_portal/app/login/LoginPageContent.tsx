@@ -44,7 +44,7 @@ export default function MarketplaceLoginPage() {
   const smsFailedOnRegister = searchParams.get("smsFailed") === "1";
   const registeredSuccess = isPostRegistration
     ? smsFailedOnRegister
-      ? "Account created but SMS could not be sent. Use default OTP 1234, or tap Resend OTP."
+      ? "Account created but SMS could not be sent. Tap Resend OTP to receive a new code."
       : "Account created. Enter the OTP sent to your mobile to sign in."
     : undefined;
 

@@ -53,10 +53,18 @@ export type ApiUser = { name?: string; role?: { name?: string } | string };
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function normalizeMobileInput(mobile: string): string {
-  const trimmed = String(mobile).trim().replace(/\s/g, "");
-  if (/^\d{10}$/.test(trimmed)) return `+91${trimmed}`;
-  if (trimmed.startsWith("+")) return trimmed;
-  return `+91${trimmed}`;
+  const digits = String(mobile).trim().replace(/\D/g, "");
+  const ten =
+    digits.length === 10
+      ? digits
+      : digits.length === 11 && digits.startsWith("0")
+        ? digits.slice(1)
+        : digits.length === 12 && digits.startsWith("91")
+          ? digits.slice(2)
+          : digits.length > 10
+            ? digits.slice(-10)
+            : "";
+  return /^\d{10}$/.test(ten) ? `+91${ten}` : "";
 }
 
 function normalizeUserRoleEmbedded(user: User): User {
@@ -146,6 +154,7 @@ export async function sendOtp(mobile: string) {
     message: string;
     otpForDev?: string;
     otpSentViaSms?: boolean;
+    smsError?: string;
     retryAfterSeconds?: number;
   }>("/api/otp/send", { mobile: normalized });
 }
@@ -159,6 +168,7 @@ export async function resendOtp(mobile: string) {
     message: string;
     otpForDev?: string;
     otpSentViaSms?: boolean;
+    smsError?: string;
     retryAfterSeconds?: number;
   }>("/api/otp/resend", { mobile: normalized });
 }

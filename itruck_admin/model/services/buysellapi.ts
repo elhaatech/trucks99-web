@@ -102,6 +102,15 @@ export type BuySellProduct = {
   description: string;
   images: string[];
   specifications: BuySellSpecification[];
+  /** Resolved highlight fields from list enrichment (preferred for cards). */
+  listing_highlights?: {
+    makeYear?: string | null;
+    mileage?: string | null;
+    fuelType?: string | null;
+    owners?: string | null;
+    brand?: string | null;
+    listingId?: string | null;
+  } | null;
   country_id?: string;
   state_id?: string;
   city_id?: string;
