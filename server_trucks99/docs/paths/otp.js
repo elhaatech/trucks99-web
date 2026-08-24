@@ -5,7 +5,7 @@
  *     tags:
  *       - OTP
  *     summary: Send OTP to mobile
- *     description: Public. Sends OTP to an existing user's mobile. In dev may return otpForDev.
+ *     description: Public. Common register/login OTP. Creates a user if the mobile is new, then sends OTP. Response includes isNewUser. In dev may return otpForDev.
  *     requestBody:
  *       required: true
  *       content:
@@ -14,6 +14,15 @@
  *             type: object
  *             properties:
  *               mobile: { type: string, example: "9876543210" }
+ *               name: { type: string, example: "Ravi Kumar" }
+ *               email: { type: string, example: "ravi@example.com" }
+ *               roleId: { type: string }
+ *               company_name: { type: string }
+ *               city: { type: string }
+ *               state: { type: string }
+ *               country: { type: string }
+ *               profileImage: { type: string }
+ *               termsAccepted: { type: boolean }
  *             required: [mobile]
  *     responses:
  *       200:
@@ -25,11 +34,12 @@
  *               properties:
  *                 message: { type: string }
  *                 otpSentViaSms: { type: boolean }
+ *                 isNewUser: { type: boolean }
  *                 otpForDev: { type: string, description: "Dev only" }
  *       400:
  *         description: Mobile number is required
- *       404:
- *         description: User not found with this mobile
+ *       429:
+ *         description: Resend cooldown
  *       500:
  *         description: Failed to send OTP
  */

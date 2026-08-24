@@ -54,6 +54,41 @@ async function ensureTestUser() {
   return user;
 }
 
+async function testEnsureUserForMobileAuth() {
+  const User = require("../schema/user");
+  const { ensureUserForMobileAuth } = require("../helpers/ensureOtpUser");
+
+  const unique = `9${Date.now().toString().slice(-9)}`;
+  const mobile = normalizeMobile(unique);
+  if (!mobile) {
+    fail("ensureUserForMobileAuth", "could not normalize test mobile");
+    return;
+  }
+
+  await User.deleteMany({ mobile: { $in: [mobile, unique, `91${unique}`] } });
+
+  const first = await ensureUserForMobileAuth(mobile, { name: "OTP Test User" });
+  if (!first.isNewUser || !first.user) {
+    fail("ensureUserForMobileAuth create", `isNewUser=${first.isNewUser}`);
+    await User.deleteMany({ mobile });
+    return;
+  }
+
+  const second = await ensureUserForMobileAuth(mobile, { name: "Should Not Duplicate" });
+  const count = await User.countDocuments({ mobile });
+  if (second.isNewUser) {
+    fail("ensureUserForMobileAuth duplicate", "second call created another user");
+  } else if (String(second.user._id) !== String(first.user._id)) {
+    fail("ensureUserForMobileAuth duplicate", "second call returned a different user");
+  } else if (count !== 1) {
+    fail("ensureUserForMobileAuth duplicate", `expected 1 user, found ${count}`);
+  } else {
+    pass("ensureUserForMobileAuth duplicate", "same mobile did not create a second user");
+  }
+
+  await User.deleteOne({ _id: first.user._id });
+}
+
 async function testSendOtp() {
   await clearOtp();
   const result = await createAndSendOtp(TEST_MOBILE);
@@ -445,7 +480,12 @@ async function testHttpEndpoints() {
       fail("HTTP POST /api/otp/send", `status ${sendRes.status}: ${JSON.stringify(sendRes.body)}`);
       return;
     }
-    pass("HTTP POST /api/otp/send", JSON.stringify(sendRes.body).slice(0, 120));
+    pass("HTTP POST /api/otp/send", JSON.stringify(sendRes.body).slice(0, 160));
+    if (typeof sendRes.body.isNewUser !== "boolean") {
+      fail("HTTP POST /api/otp/send isNewUser", "isNewUser missing from response");
+    } else {
+      pass("HTTP POST /api/otp/send isNewUser", `isNewUser=${sendRes.body.isNewUser}`);
+    }
 
     const bad = await request("POST", "/api/otp/verify", {
       mobile: TEST_MOBILE,
@@ -493,6 +533,7 @@ async function main() {
   await ensureRedisConnected();
 
   await ensureTestUser();
+  await testEnsureUserForMobileAuth();
   await testSendOtp();
   await testRandomOtpGeneration();
   await testCorrectVerifyAndDelete();

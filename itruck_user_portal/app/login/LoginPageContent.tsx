@@ -41,12 +41,16 @@ export default function MarketplaceLoginPage() {
 
   const initialMobile = searchParams.get("mobile")?.trim() ?? "";
   const isPostRegistration = searchParams.get("registered") === "1";
+  const isExistingOnRegister = searchParams.get("existing") === "1";
   const smsFailedOnRegister = searchParams.get("smsFailed") === "1";
+  const isNewUser = isPostRegistration && !isExistingOnRegister;
   const registeredSuccess = isPostRegistration
     ? smsFailedOnRegister
       ? "Account created but SMS could not be sent. Tap Resend OTP to receive a new code."
       : "Account created. Enter the OTP sent to your mobile to sign in."
-    : undefined;
+    : isExistingOnRegister
+      ? "This mobile number is already registered. Enter the OTP to sign in."
+      : undefined;
 
   const isViewProductReturn = Boolean(returnTo?.startsWith("/viewproduct/"));
   const isMyListingsReturn = Boolean(returnTo?.startsWith("/my-listings"));
@@ -95,18 +99,21 @@ export default function MarketplaceLoginPage() {
           subtitle={
             isPostRegistration
               ? "Verify your mobile number with the OTP we sent you."
+              : isExistingOnRegister
+                ? "This number is already registered. Enter the OTP to sign in."
               : isViewProductReturn
                 ? "Please log in to view vehicle details, photos, and make an offer."
                 : isMyListingsReturn
                   ? "Log in to create, edit, and manage your vehicle listings."
-                  : "Enter your mobile number to receive a one-time password."
+                  : "Enter your name, email, and mobile number to receive a one-time password."
           }
           onSuccess={redirectAfterAuth}
           onCancel={handleCancel}
           registerHref={registerHref}
           initialMobile={initialMobile}
           successMessage={registeredSuccess}
-          startOnOtpStep={isPostRegistration && Boolean(initialMobile)}
+          startOnOtpStep={(isPostRegistration || isExistingOnRegister) && Boolean(initialMobile)}
+          isNewUser={isNewUser}
         />
       }
     />

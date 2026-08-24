@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Typography from "@mui/material/Typography";
@@ -16,22 +16,58 @@ import { AuthTextField } from "@/components/ui/AuthTextField";
 import { GradientButton } from "@/components/ui/GradientButton";
 
 const OTP_LENGTH = 4;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginPage() {
   const router = useRouter();
   const [mobile, setMobile] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<"mobile" | "otp">("mobile");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
+  const [isNewUser, setIsNewUser] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const initialMobile = params.get("mobile")?.trim() ?? "";
+    const registered = params.get("registered") === "1";
+    const existing = params.get("existing") === "1";
+    const smsFailed = params.get("smsFailed") === "1";
+    if (initialMobile) setMobile(initialMobile);
+    if ((registered || existing) && initialMobile) {
+      setStep("otp");
+      setIsNewUser(registered && !existing);
+      if (smsFailed) {
+        setInfo("Account ready but SMS could not be sent. Request a new OTP from this screen.");
+      } else if (existing) {
+        setInfo("This mobile number is already registered. Enter the OTP to sign in.");
+      } else {
+        setInfo("OTP sent. Enter the code to complete registration and sign in.");
+      }
+    }
+  }, []);
 
   async function handleSendOtp(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setInfo("");
 
+    if (!name.trim()) {
+      setError("Enter your name");
+      return;
+    }
+    if (!email.trim()) {
+      setError("Enter your email");
+      return;
+    }
+    if (!EMAIL_PATTERN.test(email.trim())) {
+      setError("Enter a valid email address");
+      return;
+    }
     if (!mobile.trim()) {
       setError("Enter mobile number");
       return;
@@ -40,14 +76,19 @@ export default function LoginPage() {
     try {
       setLoading(true);
 
-      const res = await sendOtp(mobile.trim());
-
+      const res = await sendOtp(mobile.trim(), {
+        name: name.trim(),
+        email: email.trim(),
+      });
+      setIsNewUser(Boolean(res.isNewUser));
       setStep("otp");
       setOtp("");
       setInfo(
-        res.otpSentViaSms
-          ? "OTP sent to your mobile number."
-          : res.message || "OTP request accepted. Enter the code from SMS.",
+        res.isNewUser
+          ? "OTP sent. Enter the code to complete registration and sign in."
+          : res.otpSentViaSms
+            ? "OTP sent to your mobile number."
+            : res.message || "OTP request accepted. Enter the code from SMS.",
       );
     } catch (err) {
       const message =
@@ -113,13 +154,41 @@ export default function LoginPage() {
       {step === "mobile" ? (
         <form onSubmit={handleSendOtp}>
           <AuthTextField
+            label="Name"
+            placeholder="Your full name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={loading}
+            autoComplete="name"
+          />
+
+          <AuthTextField
+            label="Email"
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
+            autoComplete="email"
+          />
+
+          <AuthTextField
             label="Mobile Number"
             type="tel"
             placeholder="9876543210"
             value={mobile}
             onChange={(e) => setMobile(e.target.value)}
             disabled={loading}
+            autoComplete="tel"
           />
+
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: "block", mt: 0.5 }}
+          >
+            New accounts are created with your name and email. Existing users can still sign in with the same mobile number.
+          </Typography>
 
           {error && (
             <Alert severity="error" sx={{ mt: 2 }}>
@@ -159,7 +228,8 @@ export default function LoginPage() {
       ) : (
         <form onSubmit={handleVerifyOtp}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            OTP sent to <strong>{mobile}</strong>. Enter the code from your SMS.
+            OTP sent to <strong>{mobile}</strong>
+            {isNewUser ? " to complete registration" : ""}. Enter the code from your SMS.
           </Typography>
 
           {info ? (
@@ -208,6 +278,7 @@ export default function LoginPage() {
               setOtp("");
               setInfo("");
               setError("");
+              setIsNewUser(false);
             }}
             sx={{
               display: "block",

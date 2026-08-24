@@ -10,7 +10,7 @@ import MenuItem from "@mui/material/MenuItem";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import {
-  createUser,
+  sendOtp,
   getLocationCountriesAll,
   getLocationStatesByCountry,
   getLocationCitiesByState,
@@ -47,6 +47,7 @@ const [termsAccepted, setTermsAccepted] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
+    email: "",
     mobile: "",
     roleId: "",
     company_name: "",
@@ -192,6 +193,14 @@ const [termsAccepted, setTermsAccepted] = useState(false);
       setError("Name is required");
       return;
     }
+    if (!form.email.trim()) {
+      setError("Email is required");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      setError("Enter a valid email address");
+      return;
+    }
     if (!form.mobile.trim()) {
       setError("Mobile number is required");
       return;
@@ -203,9 +212,9 @@ const [termsAccepted, setTermsAccepted] = useState(false);
     try {
       setLoading(true);
 
-      await createUser({
+      const result = await sendOtp(form.mobile.trim(), {
         name: form.name.trim(),
-        mobile: form.mobile.trim(),
+        email: form.email.trim(),
         roleId: form.roleId,
         company_name: form.company_name.trim() || undefined,
         city: form.city || undefined,
@@ -214,12 +223,14 @@ const [termsAccepted, setTermsAccepted] = useState(false);
         ...(termsAccepted ? { termsAccepted: true } : {}),
       });
 
-      setSuccess("Account created successfully. Redirecting to login...");
-      setTimeout(() => {
-        router.replace("/");
-      }, 1500);
+      const params = new URLSearchParams();
+      params.set("mobile", form.mobile.trim());
+      if (result.isNewUser) params.set("registered", "1");
+      else params.set("existing", "1");
+      if (!result.otpSentViaSms && !result.otpForDev) params.set("smsFailed", "1");
+      router.replace(`/?${params.toString()}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create account");
+      setError(err instanceof Error ? err.message : "Failed to send OTP");
     } finally {
       setLoading(false);
     }
@@ -246,6 +257,19 @@ const [termsAccepted, setTermsAccepted] = useState(false);
             setForm((prev) => ({ ...prev, name: e.target.value }))
           }
           disabled={loading}
+          autoComplete="name"
+        />
+
+        <AuthTextField
+          label="Email"
+          type="email"
+          placeholder="you@example.com"
+          value={form.email}
+          onChange={(e) =>
+            setForm((prev) => ({ ...prev, email: e.target.value }))
+          }
+          disabled={loading}
+          autoComplete="email"
         />
 
         <AuthTextField
@@ -257,6 +281,7 @@ const [termsAccepted, setTermsAccepted] = useState(false);
             setForm((prev) => ({ ...prev, mobile: e.target.value }))
           }
           disabled={loading}
+          autoComplete="tel"
         />
 
         <AuthTextField
@@ -394,7 +419,7 @@ const [termsAccepted, setTermsAccepted] = useState(false);
             type="submit"
             disabled={loading || loadingRoles || loadingCountries}
           >
-            {loading ? "Creating..." : "Create Account"}
+            {loading ? "Sending OTP..." : "Send OTP"}
           </GradientButton>
         </Box>
 

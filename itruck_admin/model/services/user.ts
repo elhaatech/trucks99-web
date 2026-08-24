@@ -71,17 +71,43 @@ function normalizeUserRoleEmbedded(user: User): User {
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
-/** POST /api/otp/send — body: { mobile } */
-export async function sendOtp(mobile: string) {
+/** POST /api/otp/send — body: { mobile, optional profile for new users } */
+export type SendOtpProfile = {
+  name?: string;
+  email?: string;
+  roleId?: string;
+  company_name?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  profileImage?: string;
+  termsAccepted?: boolean;
+};
+
+export async function sendOtp(mobile: string, profile?: SendOtpProfile) {
   const normalized = normalizeMobileInput(mobile);
   if (!normalized) throw new Error("Mobile number is required.");
+  const payload: Record<string, unknown> = { mobile: normalized };
+  if (profile?.name?.trim()) payload.name = profile.name.trim();
+  if (profile?.email?.trim()) payload.email = profile.email.trim();
+  if (profile?.roleId) payload.roleId = profile.roleId;
+  if (profile?.company_name?.trim()) payload.company_name = profile.company_name.trim();
+  if (profile?.city?.trim()) payload.city = profile.city.trim();
+  if (profile?.state?.trim()) payload.state = profile.state.trim();
+  if (profile?.country?.trim()) payload.country = profile.country.trim();
+  if (profile?.profileImage?.trim()) payload.profileImage = profile.profileImage.trim();
+  if (profile?.termsAccepted === true) payload.termsAccepted = true;
+
   return publicApi<{
     message: string;
     otpForDev?: string;
     otpSentViaSms?: boolean;
+    isNewUser?: boolean;
+    smsError?: string;
+    retryAfterSeconds?: number;
   }>("/api/otp/send", {
     method: "POST",
-    body: JSON.stringify({ mobile: normalized }),
+    body: JSON.stringify(payload),
   });
 }
 

@@ -19,6 +19,11 @@ import { userProductRoutes } from "@/lib/userProductRoutes";
 
 const OTP_LENGTH = 4;
 const RESEND_COOLDOWN_SEC = 60;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function isValidEmail(value: string) {
+  return EMAIL_PATTERN.test(value.trim());
+}
 
 type MarketplaceLoginPanelProps = {
   title?: string;
@@ -30,19 +35,24 @@ type MarketplaceLoginPanelProps = {
   successMessage?: string;
   /** After signup, OTP is already sent — show OTP entry immediately */
   startOnOtpStep?: boolean;
+  /** From POST /otp/send — true when this mobile was just registered */
+  isNewUser?: boolean;
 };
 
 export function MarketplaceLoginPanel({
   title = "Sign in to TRUCK99",
-  subtitle = "Enter your mobile number to receive a one-time password.",
+  subtitle = "Enter your name, email, and mobile number to receive a one-time password.",
   onSuccess,
   onCancel,
   registerHref,
   initialMobile = "",
   successMessage,
   startOnOtpStep = false,
+  isNewUser: isNewUserFromFlow = false,
 }: MarketplaceLoginPanelProps) {
   const [mobile, setMobile] = useState(initialMobile);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<"mobile" | "otp">(
     startOnOtpStep && initialMobile.trim() ? "otp" : "mobile",
@@ -52,6 +62,7 @@ export function MarketplaceLoginPanel({
   const [info, setInfo] = useState("");
   const [otpSentViaSms, setOtpSentViaSms] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [isNewUser, setIsNewUser] = useState(isNewUserFromFlow);
 
   useEffect(() => {
     if (initialMobile.trim()) {
@@ -60,13 +71,21 @@ export function MarketplaceLoginPanel({
   }, [initialMobile]);
 
   useEffect(() => {
+    setIsNewUser(isNewUserFromFlow);
+  }, [isNewUserFromFlow]);
+
+  useEffect(() => {
     if (!startOnOtpStep || !initialMobile.trim()) return;
     setStep("otp");
     setOtpSentViaSms(true);
     setOtp("");
-    setInfo("Enter the OTP sent to your mobile number.");
+    setInfo(
+      isNewUserFromFlow
+        ? "Enter the OTP sent to your mobile to complete registration and sign in."
+        : "Enter the OTP sent to your mobile number.",
+    );
     startResendCooldown(RESEND_COOLDOWN_SEC);
-  }, [startOnOtpStep, initialMobile]);
+  }, [startOnOtpStep, initialMobile, isNewUserFromFlow]);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -86,11 +105,18 @@ export function MarketplaceLoginPanel({
     otpForDev?: string;
     smsError?: string;
     retryAfterSeconds?: number;
+    isNewUser?: boolean;
   }) {
+    const newUser = res.isNewUser ?? isNewUser;
+    setIsNewUser(newUser);
     setOtpSentViaSms(Boolean(res.otpSentViaSms));
     setOtp("");
     if (res.otpSentViaSms) {
-      setInfo("OTP sent to your mobile number. Enter the code from the SMS.");
+      setInfo(
+        newUser
+          ? "OTP sent. Enter the code to complete registration and sign in."
+          : "OTP sent to your mobile number. Enter the code from the SMS.",
+      );
     } else {
       setInfo(
         res.smsError
@@ -109,9 +135,24 @@ export function MarketplaceLoginPanel({
       setError("Enter your mobile number.");
       return;
     }
+    if (!name.trim()) {
+      setError("Enter your name.");
+      return;
+    }
+    if (!email.trim()) {
+      setError("Enter your email.");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError("Enter a valid email address.");
+      return;
+    }
     try {
       setLoading(true);
-      const res = await sendOtp(mobile.trim());
+      const res = await sendOtp(mobile.trim(), {
+        name: name.trim(),
+        email: email.trim(),
+      });
       setStep("otp");
       setOtp("");
       applySendResponse(res);
@@ -219,14 +260,45 @@ export function MarketplaceLoginPanel({
 
       {step === "mobile" ? (
         <form onSubmit={handleSendOtp}>
-          <AuthTextField
-            label="Mobile number"
-            type="tel"
-            placeholder="9876543210"
-            value={mobile}
-            onChange={(e) => setMobile(e.target.value)}
-            disabled={loading}
-          />
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+            <AuthTextField
+              label="Name"
+              placeholder="Your full name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={loading}
+              autoComplete="name"
+              sx={{ m: 0 }}
+            />
+            <AuthTextField
+              label="Email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+              autoComplete="email"
+              sx={{ m: 0 }}
+            />
+            <AuthTextField
+              label="Mobile number"
+              type="tel"
+              placeholder="9876543210"
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
+              disabled={loading}
+              autoComplete="tel"
+              sx={{ m: 0 }}
+            />
+          </Box>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: "block", mt: 1.25, lineHeight: 1.5 }}
+          >
+            New accounts are created with your name and email. Existing users
+            can still sign in with the same mobile number.
+          </Typography>
           {error ? (
             <Alert severity="error" sx={{ mt: 2 }}>
               {error}
@@ -243,8 +315,9 @@ export function MarketplaceLoginPanel({
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {otpSentViaSms ? (
               <>
-                OTP sent to <strong>{mobile}</strong>. Enter the code from your
-                SMS.
+                OTP sent to <strong>{mobile}</strong>
+                {isNewUser ? " to complete registration" : ""}. Enter the code
+                from your SMS.
               </>
             ) : (
               <>
@@ -301,6 +374,7 @@ export function MarketplaceLoginPanel({
                 setInfo("");
                 setResendCooldown(0);
                 setOtpSentViaSms(false);
+                setIsNewUser(false);
               }}
               sx={{
                 display: "block",

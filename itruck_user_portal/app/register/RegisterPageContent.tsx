@@ -11,7 +11,7 @@ import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import CameraAltOutlinedIcon from "@mui/icons-material/CameraAltOutlined";
 import { SearchableSelect, type SelectOption } from "@/components/common/SearchableSelect";
-import { registerMarketplaceUser,
+import { sendOtp,
   getLocationCountriesAll,
   getLocationStatesByCountry,
   getLocationCitiesByState,
@@ -62,6 +62,7 @@ export default function MarketplaceRegisterPage() {
 
   const [form, setForm] = useState({
     name: "",
+    email: "",
     mobile: "",
     company_name: "",
     countryId: "",
@@ -231,6 +232,14 @@ export default function MarketplaceRegisterPage() {
       setError("Name is required.");
       return;
     }
+    if (!form.email.trim()) {
+      setError("Email is required.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      setError("Enter a valid email address.");
+      return;
+    }
     if (!form.mobile.trim()) {
       setError("Mobile number is required.");
       return;
@@ -257,9 +266,9 @@ export default function MarketplaceRegisterPage() {
         }
       }
 
-      const result = await registerMarketplaceUser({
+      const result = await sendOtp(form.mobile.trim(), {
         name: form.name.trim(),
-        mobile: form.mobile.trim(),
+        email: form.email.trim(),
         company_name: form.company_name.trim() || undefined,
         city: form.city || undefined,
         state: form.state || undefined,
@@ -269,15 +278,19 @@ export default function MarketplaceRegisterPage() {
       });
 
       const params = new URLSearchParams();
-      params.set("registered", "1");
       params.set("mobile", form.mobile.trim());
-      if (!result.otpSentToMobile && !result.otpSentViaSms) {
+      if (result.isNewUser) {
+        params.set("registered", "1");
+      } else {
+        params.set("existing", "1");
+      }
+      if (!result.otpSentViaSms && !result.otpForDev) {
         params.set("smsFailed", "1");
       }
       if (returnTo) params.set("returnTo", returnTo);
       router.replace(`${userProductRoutes.login()}?${params.toString()}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create account.");
+      setError(err instanceof Error ? err.message : "Failed to send OTP.");
     } finally {
       setLoading(false);
     }
@@ -394,6 +407,18 @@ export default function MarketplaceRegisterPage() {
                 value={form.name}
                 onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                 disabled={loading}
+                autoComplete="name"
+                sx={{ m: 0 }}
+              />
+
+              <AuthTextField
+                label="Email"
+                type="email"
+                placeholder="you@example.com"
+                value={form.email}
+                onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+                disabled={loading}
+                autoComplete="email"
                 sx={{ m: 0 }}
               />
 
@@ -404,6 +429,7 @@ export default function MarketplaceRegisterPage() {
                 value={form.mobile}
                 onChange={(e) => setForm((prev) => ({ ...prev, mobile: e.target.value }))}
                 disabled={loading}
+                autoComplete="tel"
                 sx={{ m: 0 }}
               />
 
@@ -482,8 +508,8 @@ export default function MarketplaceRegisterPage() {
                  {loading
                    ? uploadingPhoto
                      ? "Uploading photo…"
-                     : "Creating account…"
-                   : "Create account"}
+                     : "Sending OTP…"
+                   : "Send OTP"}
                </GradientButton>
              </Box>
            </form>

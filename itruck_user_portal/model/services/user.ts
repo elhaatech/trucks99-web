@@ -98,7 +98,7 @@ export class OtpError extends Error {
 
 async function postOtpJson<T>(
   path: string,
-  body: Record<string, string>,
+  body: Record<string, string | boolean>,
   timeoutMs = 30000,
 ): Promise<T> {
   const controller = new AbortController();
@@ -145,18 +145,44 @@ async function postOtpJson<T>(
   }
 }
 
-/** POST /api/otp/send — body: { mobile } */
-export async function sendOtp(mobile: string) {
+export type SendOtpProfile = {
+  name?: string;
+  email?: string;
+  roleId?: string;
+  company_name?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  profileImage?: string;
+  termsAccepted?: boolean;
+};
+
+export type SendOtpResponse = {
+  message: string;
+  otpForDev?: string;
+  otpSentViaSms?: boolean;
+  smsError?: string;
+  retryAfterSeconds?: number;
+  isNewUser?: boolean;
+};
+
+/** POST /api/otp/send — body: { mobile, optional profile for new users } */
+export async function sendOtp(mobile: string, profile?: SendOtpProfile) {
   const normalized = normalizeMobileInput(mobile);
   if (!normalized) throw new Error("Mobile number is required.");
 
-  return postOtpJson<{
-    message: string;
-    otpForDev?: string;
-    otpSentViaSms?: boolean;
-    smsError?: string;
-    retryAfterSeconds?: number;
-  }>("/api/otp/send", { mobile: normalized });
+  const body: Record<string, string | boolean> = { mobile: normalized };
+  if (profile?.name?.trim()) body.name = profile.name.trim();
+  if (profile?.email?.trim()) body.email = profile.email.trim();
+  if (profile?.roleId) body.roleId = profile.roleId;
+  if (profile?.company_name?.trim()) body.company_name = profile.company_name.trim();
+  if (profile?.city?.trim()) body.city = profile.city.trim();
+  if (profile?.state?.trim()) body.state = profile.state.trim();
+  if (profile?.country?.trim()) body.country = profile.country.trim();
+  if (profile?.profileImage?.trim()) body.profileImage = profile.profileImage.trim();
+  if (profile?.termsAccepted === true) body.termsAccepted = true;
+
+  return postOtpJson<SendOtpResponse>("/api/otp/send", body);
 }
 
 /** POST /api/otp/resend — body: { mobile } */
