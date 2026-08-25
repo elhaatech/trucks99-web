@@ -46,6 +46,15 @@ export type RequestOptions = RequestInit & { params?: Record<string, string> };
 
 const inFlightGet = new Map<string, Promise<unknown>>();
 
+function throwIfNetworkError(err: unknown): never {
+  if (err instanceof TypeError) {
+    throw new Error(
+      "Cannot reach the API. Start server_trucks99 on port 3003, then try again.",
+    );
+  }
+  throw err;
+}
+
 export async function api<T = unknown>(
   path: string,
   options: RequestOptions = {}
@@ -66,11 +75,16 @@ export async function api<T = unknown>(
       ...(init.headers as Record<string, string>),
     };
 
-    const res = await fetch(urlKey, {
-      ...init,
-      credentials: "include",
-      headers,
-    });
+    let res: Response;
+    try {
+      res = await fetch(urlKey, {
+        ...init,
+        credentials: "include",
+        headers,
+      });
+    } catch (err) {
+      throwIfNetworkError(err);
+    }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       if (res.status === 401) {
@@ -120,11 +134,16 @@ export async function publicApi<T = unknown>(
       ...(init.headers as Record<string, string>),
     };
 
-    const res = await fetch(urlKey, {
-      ...init,
-      credentials: "include",
-      headers,
-    });
+    let res: Response;
+    try {
+      res = await fetch(urlKey, {
+        ...init,
+        credentials: "include",
+        headers,
+      });
+    } catch (err) {
+      throwIfNetworkError(err);
+    }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       throw new Error(data?.message || res.statusText || "Request failed");
