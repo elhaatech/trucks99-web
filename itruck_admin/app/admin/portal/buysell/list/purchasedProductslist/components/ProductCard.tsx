@@ -145,9 +145,9 @@ export function ProductCard({
             gap: 1,
           }}
         >
-          <Typography variant="subtitle2" color="text.secondary" noWrap>
+          {/* <Typography variant="subtitle2" color="text.secondary" noWrap>
             {product.bsNumber || "—"}
-          </Typography>
+          </Typography> */}
           {product.vehicleId ? (
             <Typography variant="subtitle2" color="text.secondary" noWrap>
               Vehicle ID: {product.vehicleId}

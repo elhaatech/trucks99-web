@@ -121,9 +121,7 @@ export default function BuySellCartPage() {
                           <Typography variant="subtitle1" fontWeight={700}>
                             {product.description || product.bsNumber || "Vehicle"}
                           </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-                            {product.bsNumber}
-                          </Typography>
+                  
                           {product.vehicleId ? (
                             <Typography variant="body2" color="text.secondary">
                               Vehicle ID: {product.vehicleId}

@@ -254,7 +254,7 @@ function pullFuelType(
  * List-card highlights aligned with Vehicle Details:
  * Make Year, Fuel Type, No. of Owners.
  *
- * Vehicle ID is shown separately on the card as `Vehicle ID: YYMM######`.
+ * Vehicle ID is shown separately on the card as `Vehicle ID: YYMMDD####`.
  *
  * When `all` is true, always returns all four spec chips with a fallback
  * label ("N/A") when the underlying value is missing, so the card info
