@@ -21,6 +21,8 @@ export const LOCAL_BACKEND_PORT = "3003";
 export const PRODUCTION_HOSTS = new Set([
   "trucks99.elhaa.com",
   "www.trucks99.elhaa.com",
+  "trucks99.com",
+  "www.trucks99.com",
 ]);
 
 function splitPathAndSearch(path: string): { pathname: string; search: string } {
