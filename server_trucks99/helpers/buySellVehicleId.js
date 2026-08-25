@@ -2,7 +2,7 @@
 
 const mongoose = require("mongoose");
 
-const VEHICLE_ID_TZ = "Asia/Kolkata";
+const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
 const NEW_VEHICLE_ID_RE = /^(\d{6})(\d{4})$/;
 const COUNTER_PREFIX = "buysell_vehicle_";
 const BS_COUNTER_ID = "buysell_bs";
@@ -21,14 +21,16 @@ function yymmddFromDate(date = new Date()) {
   if (Number.isNaN(d.getTime())) {
     throw new Error("Invalid creation date for vehicle ID");
   }
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: VEHICLE_ID_TZ,
-    year: "2-digit",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(d);
-  const get = (type) => parts.find((p) => p.type === type)?.value ?? "";
-  return `${pad2(get("year"))}${pad2(get("month"))}${pad2(get("day"))}`;
+  // Asia/Kolkata is UTC+5:30 year-round (no DST).
+  const ist = new Date(d.getTime() + IST_OFFSET_MS);
+  const yy = pad2(ist.getUTCFullYear() % 100);
+  const mm = pad2(ist.getUTCMonth() + 1);
+  const dd = pad2(ist.getUTCDate());
+  const yymmdd = `${yy}${mm}${dd}`;
+  if (!/^\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$/.test(yymmdd)) {
+    throw new Error(`Invalid vehicle ID date prefix: ${yymmdd}`);
+  }
+  return yymmdd;
 }
 
 /** @deprecated Use yymmddFromDate. Kept so older callers still resolve. */
@@ -215,16 +217,35 @@ async function generateNextBsNumber(createdAt = new Date()) {
   return id;
 }
 
+/**
+ * API presentation for Vehicle ID.
+ * Older rows were stored as YYMM + 6-digit seq (day slot is "00").
+ * Those are shown as YYMMDD + last 4 digits using createdAt, without rewriting the document.
+ */
+function formatVehicleIdWithDate(vehicleId, createdAt) {
+  const raw = String(vehicleId || "").trim();
+  if (!raw) return null;
+  if (!/^\d{10}$/.test(raw)) return raw;
+  if (raw.slice(4, 6) !== "00") return raw;
+  if (!createdAt) return raw;
+  try {
+    return `${yymmddFromDate(createdAt)}${raw.slice(6, 10)}`;
+  } catch {
+    return raw;
+  }
+}
+
 /** Prefer dedicated vehicleId; fall back if an earlier create stored YYMMDD#### in bsNumber. */
 function resolveVehicleId(item) {
   if (!item) return null;
+  let raw = null;
   if (item.vehicleId && String(item.vehicleId).trim()) {
-    return String(item.vehicleId).trim();
+    raw = String(item.vehicleId).trim();
+  } else if (isNewVehicleIdFormat(item.bsNumber)) {
+    raw = String(item.bsNumber).trim();
   }
-  if (isNewVehicleIdFormat(item.bsNumber)) {
-    return String(item.bsNumber).trim();
-  }
-  return null;
+  if (!raw) return null;
+  return formatVehicleIdWithDate(raw, item.createdAt) || raw;
 }
 
 /**
@@ -266,5 +287,6 @@ module.exports = {
   generateNextVehicleId,
   generateNextBsNumber,
   resolveVehicleId,
+  formatVehicleIdWithDate,
   formatBsNumberWithDate,
 };

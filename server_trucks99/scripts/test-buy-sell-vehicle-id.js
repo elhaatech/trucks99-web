@@ -16,6 +16,8 @@ const {
   formatBsNumberWithDate,
   generateNextVehicleId,
   seqFromFindOneAndUpdate,
+  formatVehicleIdWithDate,
+  resolveVehicleId,
 } = require("../helpers/buySellVehicleId");
 
 const results = [];
@@ -96,6 +98,24 @@ function runFormatTests() {
     "seq from driver 4 wrapper",
     seqFromFindOneAndUpdate({ value: { seq: 9 } }),
     9,
+  );
+  assertEqual(
+    "legacy stored ID gets listing day in response",
+    formatVehicleIdWithDate("2608000030", new Date("2026-08-25T09:57:52.956Z")),
+    "2608250030",
+  );
+  assertEqual(
+    "already dated ID is left unchanged",
+    formatVehicleIdWithDate("2608250001", new Date("2026-08-25T09:57:52.956Z")),
+    "2608250001",
+  );
+  assertEqual(
+    "resolveVehicleId fills day from createdAt",
+    resolveVehicleId({
+      vehicleId: "2608000030",
+      createdAt: "2026-08-25T09:57:52.956Z",
+    }),
+    "2608250030",
   );
 
   try {
