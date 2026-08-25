@@ -1,5 +1,5 @@
 import { api } from "./common";
-import { resolveApiBase } from "@/lib/apiBase";
+import { joinApiUrl } from "@/src/config/BASE_URL";
 
 export type ContactEnquiryStatus = "new" | "read" | "closed";
 
@@ -45,9 +45,7 @@ function unwrapEnquiry(payload: unknown): ContactEnquiry {
 export function resolveContactAttachmentUrl(url?: string | null): string {
   if (!url) return "";
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  const base = resolveApiBase().replace(/\/+$/, "");
-  const path = url.startsWith("/") ? url : `/${url}`;
-  return `${base}${path}`;
+  return joinApiUrl(url);
 }
 
 /** POST /api/contact/list — admin enquiry list (filters in JSON body). */

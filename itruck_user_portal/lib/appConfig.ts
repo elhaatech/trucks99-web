@@ -21,15 +21,6 @@ export const PRODUCTION_HOSTS = new Set([
   "www.trucks99.elhaa.com",
 ]);
 
-/**
- * Existing production backend origin used by this portal.
- * Backend routes stay at `/api/...` on this host.
- */
-export const PRODUCTION_API_ORIGIN = "https://trucks99.elhaa.com";
-
-/** Local `server_trucks99` port (browser on localhost / LAN only). */
-export const LOCAL_BACKEND_PORT = "3003";
-
 function splitPathAndSearch(path: string): { pathname: string; search: string } {
   const q = path.indexOf("?");
   if (q === -1) return { pathname: path, search: "" };

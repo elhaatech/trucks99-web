@@ -1,5 +1,5 @@
 import axios from "axios";
-import { forceBackendPort, resolveApiBase } from "@/lib/apiBase";
+import { joinApiUrl } from "@/src/config/BASE_URL";
 
 const TOKEN_KEY = "itruck_token";
 
@@ -9,12 +9,15 @@ function getToken(): string | null {
 }
 
 export const axiosClient = axios.create({
-  baseURL: forceBackendPort(resolveApiBase()),
   withCredentials: true,
 });
 
 axiosClient.interceptors.request.use((config) => {
-  config.baseURL = forceBackendPort(resolveApiBase());
+  if (config.url && !/^https?:\/\//i.test(config.url)) {
+    config.url = joinApiUrl(config.url);
+    config.baseURL = "";
+  }
+
   const token = getToken();
   const headers = config.headers || {};
 

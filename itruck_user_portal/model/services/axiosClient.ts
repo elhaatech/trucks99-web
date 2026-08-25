@@ -1,5 +1,5 @@
 import axios from "axios";
-import { resolveApiBase } from "@/lib/apiBase";
+import { joinApiUrl } from "@/src/config/BASE_URL";
 import { STORAGE_KEYS } from "@/constants/storageKeys";
 import { clearMarketplaceAuthStorage } from "@/lib/marketplaceUser";
 import { notifyMarketplaceAuthChanged } from "@/lib/marketplaceAuth";
@@ -10,13 +10,14 @@ function getToken(): string | null {
 }
 
 export const axiosClient = axios.create({
-  baseURL: resolveApiBase(),
   withCredentials: true,
 });
 
 axiosClient.interceptors.request.use((config) => {
-  // Re-resolve on every request so deploy host never stays stuck on localhost
-  config.baseURL = resolveApiBase();
+  if (config.url && !/^https?:\/\//i.test(config.url)) {
+    config.url = joinApiUrl(config.url);
+    config.baseURL = "";
+  }
 
   const token = getToken();
   const headers = config.headers || {};

@@ -1,4 +1,4 @@
-import { api, publicApi, resolveApiBase } from "./common_fixed";
+import { api, publicApi, joinApiUrl } from "./common_fixed";
 import { getAuthHeaders } from "@/services";
 import type { ApiUser } from "./user";
 
@@ -54,7 +54,7 @@ async function submitAdvertisementFormData(
   path: string,
   formData: FormData,
 ): Promise<{ message: string; advertisement: Advertisement }> {
-  const res = await fetch(`${resolveApiBase()}${path}`, {
+  const res = await fetch(joinApiUrl(path), {
     method,
     body: formData,
     credentials: "include",

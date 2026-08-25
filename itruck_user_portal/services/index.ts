@@ -12,6 +12,7 @@ export {
   setToken,
   clearToken,
   resolveApiBase,
+  joinApiUrl,
   API_BASE,
   getRowId,
   blockUnblock,

@@ -1,4 +1,4 @@
-import { api, publicApi, resolveApiBase, getAuthHeaders } from "./common";
+import { api, publicApi, joinApiUrl, getAuthHeaders } from "./common";
 import type { ApiUser } from "./user";
 
 export const AD_TYPES = ["Text", "Banner", "Image", "Video"] as const;
@@ -53,7 +53,7 @@ async function submitAdvertisementFormData(
   path: string,
   formData: FormData,
 ): Promise<{ message: string; advertisement: Advertisement }> {
-  const res = await fetch(`${resolveApiBase()}${path}`, {
+  const res = await fetch(joinApiUrl(path), {
     method,
     body: formData,
     credentials: "include",

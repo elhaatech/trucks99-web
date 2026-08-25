@@ -1,5 +1,5 @@
 import { api } from "./common";
-import { resolveApiBase } from "@/lib/apiBase";
+import { joinApiUrl } from "@/src/config/BASE_URL";
 
 // ——— Shared filter body ———
 export type ReportFilters = {
@@ -524,9 +524,8 @@ export async function downloadReport(
     "buysell-category-sold":    "download/buysell-category-sold",
   };
 
-  const base  = resolveApiBase().replace(/\/$/, "");
   const token = typeof window !== "undefined" ? localStorage.getItem("itruck_token") : null;
-  const url   = `${base}/api/reports/${endpointMap[type]}`;
+  const url   = joinApiUrl(`/api/reports/${endpointMap[type]}`);
 
   // ── 1. Raw fetch (NOT api()) ──────────────────────────────────────────────
   const res = await fetch(url, {

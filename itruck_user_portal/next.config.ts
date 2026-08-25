@@ -19,8 +19,8 @@ const nextConfig: NextConfig = {
     root: import.meta.dirname,
   },
   /**
-   * Backend `/api` and `/uploads` stay at the site root on purpose
-   * (`https://trucks99.elhaa.com/api/...`).
+   * Backend `/api` and `/uploads` stay at the site root on purpose for the
+   * Apache reverse proxy. Browser API calls use src/config/BASE_URL.ts.
    */
   async rewrites() {
     const backend = INTERNAL_BACKEND.replace(/\/$/, "");
@@ -54,6 +54,9 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "46.202.176.124", port: "3003", pathname: "/**" },
       { protocol: "https", hostname: "trucks99.elhaa.com", pathname: "/**" },
       { protocol: "http", hostname: "trucks99.elhaa.com", pathname: "/**" },
+      { protocol: "https", hostname: "trucks99.com", pathname: "/**" },
+      { protocol: "http", hostname: "trucks99.com", pathname: "/**" },
+      { protocol: "https", hostname: "www.trucks99.com", pathname: "/**" },
       { protocol: "https", hostname: "firebasestorage.googleapis.com", pathname: "/**" },
     ],
   },
