@@ -37,10 +37,14 @@ function requireAdmin(req, res, next) {
   return next();
 }
 
+function currentUserIdRaw(req, extra) {
+  return extra || req.user?._id || req.user?.id || null;
+}
+
 // GET /api/notification — list in-app notifications for current user
 notificationRouter.get('/', async (req, res) => {
   try {
-    const userIdRaw = req.query.userId || (req.isAuthenticated() && req.user?._id);
+    const userIdRaw = currentUserIdRaw(req, req.query.userId);
     if (!userIdRaw) {
       return res.status(401).json({ message: 'User must be logged in or userId required.' });
     }
@@ -195,7 +199,7 @@ notificationRouter.post('/send', requireAdmin, async (req, res) => {
 // PUT /api/notification/read-all
 notificationRouter.put('/read-all', async (req, res) => {
   try {
-    const userIdRaw = req.body.userId || (req.isAuthenticated() && req.user?._id);
+    const userIdRaw = currentUserIdRaw(req, req.body.userId);
     if (!userIdRaw) {
       return res.status(401).json({ message: 'User must be logged in or userId required.' });
     }

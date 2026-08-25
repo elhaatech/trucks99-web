@@ -1,5 +1,6 @@
 'use strict';
 
+const mongoose = require('mongoose');
 const Notification = require('../schema/notification');
 const NotificationLog = require('../schema/notificationLog');
 const NotificationTemplate = require('../schema/notificationTemplate');
@@ -8,7 +9,16 @@ const sendSMS = require('../helpers/sendSMS');
 const sendWhatsApp = require('../helpers/sendWhatsApp');
 const sendEmail = require('../helpers/email/sendEmail');
 const { sendPushToUser } = require('./fcmPushService');
-const { resolveToObjectId } = require('../helpers/uuidHelper');
+const { resolveToObjectId, isObjectId } = require('../helpers/uuidHelper');
+
+/** Notification.loadId / productId / senderId are ObjectId refs — UUIDs must not be written there. */
+function toMongoIdOrUndefined(value) {
+  if (value == null || value === '') return undefined;
+  if (value instanceof mongoose.Types.ObjectId) return value;
+  const s = String(value).trim();
+  if (isObjectId(s)) return new mongoose.Types.ObjectId(s);
+  return undefined;
+}
 
 /** Canonical business events */
 const NOTIFICATION_EVENTS = {
@@ -603,15 +613,15 @@ async function notify({
     try {
       const doc = await Notification.create({
         userId: userOid,
-        senderId: metadata.senderId || undefined,
+        senderId: toMongoIdOrUndefined(metadata.senderId),
         title,
         message,
         event,
         type: event,
         read: false,
         isRead: false,
-        loadId: metadata.loadId || undefined,
-        productId: metadata.productId || undefined,
+        loadId: toMongoIdOrUndefined(metadata.loadMongoId || metadata.loadId),
+        productId: toMongoIdOrUndefined(metadata.productMongoId || metadata.productId),
         postId: metadata.postId || metadata.productId || metadata.loadId || metadata.truckId || undefined,
         requestId: metadata.requestId || metadata.bitRecordId || undefined,
         postType: metadata.postType || undefined,
