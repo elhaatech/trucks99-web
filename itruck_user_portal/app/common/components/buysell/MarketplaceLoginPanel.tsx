@@ -16,6 +16,7 @@ import { AuthTextField } from "@/components/ui/AuthTextField";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { PRODUCT_THEME as T } from "@/lib/theme";
 import { userProductRoutes } from "@/lib/userProductRoutes";
+import { persistMarketplaceSignInName } from "@/lib/marketplaceAuth";
 
 const OTP_LENGTH = 4;
 const RESEND_COOLDOWN_SEC = 60;
@@ -135,15 +136,7 @@ export function MarketplaceLoginPanel({
       setError("Enter your mobile number.");
       return;
     }
-    if (!name.trim()) {
-      setError("Enter your name.");
-      return;
-    }
-    if (!email.trim()) {
-      setError("Enter your email.");
-      return;
-    }
-    if (!isValidEmail(email)) {
+    if (email.trim() && !isValidEmail(email)) {
       setError("Enter a valid email address.");
       return;
     }
@@ -209,6 +202,7 @@ export function MarketplaceLoginPanel({
     try {
       setLoading(true);
       await verifyOtp(mobile.trim(), otp.trim());
+      persistMarketplaceSignInName(name);
       onSuccess();
     } catch (err) {
       if (err instanceof OtpError) {
@@ -291,19 +285,8 @@ export function MarketplaceLoginPanel({
               sx={{ m: 0 }}
             />
           </Box>
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ display: "block", mt: 1.25, lineHeight: 1.5 }}
-          >
-            New accounts are created with your name and email. Existing users
-            can still sign in with the same mobile number.
-          </Typography>
-          {error ? (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {error}
-            </Alert>
-          ) : null}
+         
+          
           <Box sx={{ mt: 3 }}>
             <GradientButton type="submit" disabled={loading}>
               {loading ? "Sending…" : "Send OTP"}
@@ -393,26 +376,8 @@ export function MarketplaceLoginPanel({
         </form>
       )}
 
-      {onCancel ? (
-        <Button
-          fullWidth
-          variant="text"
-          onClick={onCancel}
-          sx={{ mt: 2, textTransform: "none", color: T.color.textSecondary }}
-        >
-          Continue browsing without signing in
-        </Button>
-      ) : null}
-
-      <Typography variant="body2" sx={{ textAlign: "center", mt: 2 }}>
-        Don&apos;t have an account?{" "}
-        <Link
-          href={registerHref ?? userProductRoutes.register()}
-          style={{ fontWeight: 600, textDecoration: "none" }}
-        >
-          Register
-        </Link>
-      </Typography>
+     
+    
 
       <Typography
         variant="caption"
