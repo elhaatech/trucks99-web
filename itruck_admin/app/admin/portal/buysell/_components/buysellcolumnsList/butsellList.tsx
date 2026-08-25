@@ -391,7 +391,9 @@ export function BuySellListPage() {
       onErrorClose={() => setError("")}
       action={
         canCreate ? (
-       <></>
+          <Button variant="contained" onClick={() => navigate(routes.buysell.create())}>
+            Add Listing
+          </Button>
         ) : undefined
       }
     >

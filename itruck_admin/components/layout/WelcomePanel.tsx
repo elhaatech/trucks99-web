@@ -43,7 +43,7 @@ export function WelcomePanel({
           variant="h6"
           sx={{ color: "#fff", fontWeight: 700, letterSpacing: "0.06em" }}
         >
-          iTruck
+          TRUCKS99
         </Typography>
       </Box>
 

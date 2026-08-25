@@ -45,7 +45,7 @@ export function PageHeader({
           gap: 2,
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, minWidth: 0 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
           {backButton}
           <Box sx={{ minWidth: 0 }}>
             <Typography
@@ -53,7 +53,7 @@ export function PageHeader({
               color="primary"
               sx={{ fontWeight: 700, letterSpacing: 1.2, fontSize: 11, display: "block" }}
             >
-              iTruck
+             TRUCKS99
             </Typography>
             <Typography
               variant="h4"

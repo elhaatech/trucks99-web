@@ -15,6 +15,7 @@ import Step from "@mui/material/Step";
 import StepLabel from "@mui/material/StepLabel";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CloseIcon from "@mui/icons-material/Close";
+import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import ArrowBackIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForwardIos";
 import { useRouter } from "next/navigation";
@@ -36,10 +37,10 @@ import {
   FormSelectField,
   type SelectOption,
   CategorySubcategorySelector,
-  FormPageLayout,
   FormGrid,
   FormGridFull,
 } from "@/components/common";
+import { PageContainer, PageHeader, PageSection, type BreadcrumbItem } from "@/components/ui";
 import { SearchableSelect } from "@/components/common/SearchableSelect";
 import { useForm } from "@/hooks/useForm";
 import { useNotification } from "@/hooks/useNotification";
@@ -88,9 +89,27 @@ const STEPS = [
   "Photos & Status",
 ];
 
+const MIN_PHOTOS = 4;
+const MAX_PHOTOS = 10;
+
+const PHOTO_SLOT_LABELS = ["Front", "Back", "Left Side", "Right Side"] as const;
+
+/** Gracefully hide a broken image so the placeholder box stays clean. */
+function handleBuySellImageError(event: {
+  currentTarget?: HTMLImageElement;
+}): void {
+  const img = event.currentTarget;
+  if (!img || img.dataset.fallbackApplied === "1") return;
+  img.dataset.fallbackApplied = "1";
+  img.style.visibility = "hidden";
+}
+
 type ImageEntry =
   | { kind: "existing"; url: string }
   | { kind: "new"; file: File; preview: string };
+
+/** A single failed required-field check for one step. */
+type FieldError = { field: string; message: string };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -124,6 +143,52 @@ function isFuelSpec(spec: Specification): boolean {
 
 function isOwnerSpec(spec: Specification): boolean {
   return /\bowners?\b/.test(normalizeSpecName(spec.specification_name));
+}
+
+function isInsuranceSpec(spec: Specification): boolean {
+  return /\binsurance\b/.test(normalizeSpecName(spec.specification_name));
+}
+
+function isKmDrivenSpec(spec: Specification): boolean {
+  const n = normalizeSpecName(spec.specification_name);
+  return /\bkms?\b/.test(n) || /kilomet/.test(n);
+}
+
+/** "Make Year" / "Manufacture Year" — never "Brand"/"Make" (handled above). */
+function isMakeYearSpec(spec: Specification): boolean {
+  return /\byear\b/.test(normalizeSpecName(spec.specification_name));
+}
+
+/**
+ * Vehicle Details specs the user must fill before leaving the step:
+ * Insurance, No. of Owners, Fuel Type, KM Driven and Make Year.
+ */
+function isRequiredVehicleSpec(spec: Specification): boolean {
+  return (
+    isInsuranceSpec(spec) ||
+    isOwnerSpec(spec) ||
+    isFuelSpec(spec) ||
+    isKmDrivenSpec(spec) ||
+    isMakeYearSpec(spec)
+  );
+}
+
+const CURRENT_YEAR = new Date().getFullYear();
+const MAKE_YEAR_START = 1990;
+
+/** Year dropdown options, newest first, plus any saved value outside the range. */
+function makeYearOptions(selected?: string): { value: string; label: string }[] {
+  const years: { value: string; label: string }[] = [];
+  for (let y = CURRENT_YEAR; y >= MAKE_YEAR_START; y--) {
+    years.push({ value: String(y), label: String(y) });
+  }
+  if (selected) {
+    const n = Number(selected);
+    if (Number.isFinite(n) && !years.some((o) => o.value === selected)) {
+      years.push({ value: selected, label: selected });
+    }
+  }
+  return years;
 }
 
 const FUEL_FALLBACK_OPTIONS = [
@@ -246,6 +311,8 @@ function SpecField({
   values,
   loading,
   disabled,
+  required,
+  error,
 }: {
   spec: Specification;
   value: string;
@@ -253,7 +320,25 @@ function SpecField({
   values: SpecificationValue[];
   loading: boolean;
   disabled?: boolean;
+  required?: boolean;
+  /** Inline "X is required" message shown under the field. */
+  error?: string;
 }) {
+  // Make Year is stored as a number spec but is shown as a year dropdown,
+  // matching the other Vehicle Details selects.
+  if (isMakeYearSpec(spec)) {
+    return (
+      <FormSelectField
+        label={spec.specification_name}
+        value={value}
+        onChange={onChange}
+        options={makeYearOptions(value)}
+        disabled={disabled}
+        required={required}
+      />
+    );
+  }
+
   const isSelectable = spec.type === "selectable";
 
   if (isSelectable) {
@@ -270,6 +355,7 @@ function SpecField({
           onChange={(v) => onChange(typeof v === "string" ? v : ((v as any)?.value ?? ""))}
           options={options}
           disabled={disabled || loading}
+          required={required}
         />
         {loading && (
           <CircularProgress
@@ -283,6 +369,15 @@ function SpecField({
             }}
           />
         )}
+        {error && (
+          <Typography
+            variant="caption"
+            color="error"
+            sx={{ display: "block", mt: 0.5, ml: 1.75 }}
+          >
+            {error}
+          </Typography>
+        )}
       </Box>
     );
   }
@@ -293,6 +388,10 @@ function SpecField({
       value={value}
       onChange={onChange}
       disabled={disabled}
+      required={required}
+      error={!!error}
+      helperText={error || undefined}
+      digitsOnly={spec.type === "number"}
     />
   );
 }
@@ -332,6 +431,9 @@ export function BuySellForm({
   // ── Image state ───────────────────────────────────────────────────────────
   const [imageEntries, setImageEntries] = useState<ImageEntry[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  // Tracks which required slot (0-3) a freshly picked file should fill.
+  // null = append as an additional photo ("Add more").
+  const pendingSlotRef = useRef<number | null>(null);
 
   // ── Reference data ────────────────────────────────────────────────────────
   const [specifications, setSpecifications] = useState<Specification[]>([]);
@@ -606,14 +708,58 @@ export function BuySellForm({
   // ── Image handlers ────────────────────────────────────────────────────────
   const handleImageFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    if (!files.length) return;
-    const newEntries: ImageEntry[] = files.map((file) => ({
-      kind: "new" as const,
-      file,
-      preview: URL.createObjectURL(file),
-    }));
-    setImageEntries((prev) => [...prev, ...newEntries]);
+    // Reset immediately so the same file can be re-picked later.
     e.target.value = "";
+    if (!files.length) return;
+
+    const target = pendingSlotRef.current;
+    pendingSlotRef.current = null;
+
+    if (target != null) {
+      // Assign / replace a specific required angle slot (Front/Back/Left/Right).
+      const file = files[0];
+      const newEntry: ImageEntry = {
+        kind: "new",
+        file,
+        preview: URL.createObjectURL(file),
+      };
+      setImageEntries((prev) => {
+        const next = [...prev];
+        const pos = Math.min(target, MAX_PHOTOS - 1);
+        if (pos < next.length) {
+          if (next[pos].kind === "new") URL.revokeObjectURL(next[pos].preview);
+          next[pos] = newEntry;
+        } else {
+          next.push(newEntry);
+        }
+        return next;
+      });
+      setError("");
+      return;
+    }
+
+    // No specific slot → append as additional photos ("Add more"), capped at max.
+    setImageEntries((prev) => {
+      const remaining = MAX_PHOTOS - prev.length;
+      if (remaining <= 0) {
+        setError(`You can upload a maximum of ${MAX_PHOTOS} images.`);
+        return prev;
+      }
+      const filesToAdd = files.slice(0, remaining);
+      if (files.length > remaining) {
+        setError(
+          `Only ${remaining} more image(s) can be added (max ${MAX_PHOTOS} total).`,
+        );
+      } else {
+        setError("");
+      }
+      const newEntries: ImageEntry[] = filesToAdd.map((file) => ({
+        kind: "new" as const,
+        file,
+        preview: URL.createObjectURL(file),
+      }));
+      return [...prev, ...newEntries];
+    });
   };
 
   const handleRemoveImage = (idx: number) => {
@@ -651,24 +797,74 @@ export function BuySellForm({
   }, [isAdmin, users, values.userid]);
 
   // ── Step validation ────────────────────────────────────────────────────────
-  const validateStep = useCallback(
-    (step: number): string | null => {
+  // Every required field returns a { field, message } pair so the same
+  // "X is required" text can be shown both in the top alert and inline on
+  // the field itself (exactly how State / City already behave).
+  const collectStepErrors = useCallback(
+    (step: number): FieldError[] => {
+      const errors: FieldError[] = [];
+
       if (step === 0) {
         if (isAdmin && !isEdit && !values.userid)
-          return "Please select a user to post this listing";
-        if (!values.category_id) return "Category is required";
-        if (!values.subcategory_id) return "Sub category is required";
+          errors.push({
+            field: "userid",
+            message: "Please select a user to post this listing",
+          });
+        if (!values.category_id)
+          errors.push({ field: "category_id", message: "Category is required" });
+        if (!values.subcategory_id)
+          errors.push({
+            field: "subcategory_id",
+            message: "Sub category is required",
+          });
         if (!values.price || isNaN(Number(values.price)))
-          return "Valid price is required";
-        return null;
+          errors.push({ field: "price", message: "Valid price is required" });
+        return errors;
       }
+
+      if (step === 1) {
+        // Keep the display order so the alert always names the first
+        // empty field the user can see on screen.
+        vehicleDetailSpecs.forEach((spec) => {
+          if (!isRequiredVehicleSpec(spec)) return;
+          const id = specId(spec);
+
+          // A dropdown with no configured values can never be filled —
+          // don't dead-end the form on it. Values that haven't loaded yet
+          // (undefined) still count as required.
+          if (spec.type === "selectable") {
+            const loaded = specValueMap[id];
+            if (loaded !== undefined && optionsForSpec(spec, loaded).length === 0) {
+              return;
+            }
+          }
+
+          const val = String(getSpecEntry(id).value ?? "").trim();
+          if (!val) {
+            errors.push({
+              field: id,
+              message: `${spec.specification_name} is required`,
+            });
+          }
+        });
+        return errors;
+      }
+
       if (step === 2) {
-        if (!location.countryId) return "Country is required";
-        if (!location.stateId) return "State is required";
-        if (!location.cityId) return "City is required";
-        return null;
+        if (!location.countryId)
+          errors.push({ field: "country", message: "Country is required" });
+        if (!location.stateId)
+          errors.push({ field: "state", message: "State is required" });
+        if (!location.cityId)
+          errors.push({ field: "city", message: "City is required" });
+        if (!String(values.address ?? "").trim())
+          errors.push({ field: "address", message: "Address is required" });
+        if (!String(values.pincode ?? "").trim())
+          errors.push({ field: "pincode", message: "Pincode is required" });
+        return errors;
       }
-      return null;
+
+      return errors;
     },
     [
       isAdmin,
@@ -677,16 +873,56 @@ export function BuySellForm({
       values.category_id,
       values.subcategory_id,
       values.price,
+      values.address,
+      values.pincode,
+      vehicleDetailSpecs,
+      specValueMap,
+      getSpecEntry,
       location.countryId,
       location.stateId,
       location.cityId,
     ],
   );
 
+  // Fields the user has already tried to skip — only these show inline
+  // errors, and they clear themselves as soon as the field is filled.
+  const [flaggedFields, setFlaggedFields] = useState<Record<string, boolean>>({});
+
+  const flagFields = useCallback((errors: FieldError[]) => {
+    setFlaggedFields((prev) => {
+      const next = { ...prev };
+      errors.forEach((e) => {
+        next[e.field] = true;
+      });
+      return next;
+    });
+  }, []);
+
+  const activeStepErrors = useMemo(
+    () => collectStepErrors(activeStep),
+    [collectStepErrors, activeStep],
+  );
+
+  const fieldErrors = useMemo(() => {
+    const map: Record<string, string> = {};
+    activeStepErrors.forEach((e) => {
+      if (flaggedFields[e.field]) map[e.field] = e.message;
+    });
+    return map;
+  }, [activeStepErrors, flaggedFields]);
+
+  const visibleError = error || activeStepErrors.find((e) => flaggedFields[e.field])?.message || "";
+
+  const dismissErrors = () => {
+    setError("");
+    setFlaggedFields({});
+  };
+
   const handleNext = () => {
-    const err = validateStep(activeStep);
-    if (err) {
-      setError(err);
+    const errs = collectStepErrors(activeStep);
+    if (errs.length > 0) {
+      flagFields(errs);
+      setError("");
       return;
     }
     setError("");
@@ -701,8 +937,10 @@ export function BuySellForm({
   const goToStep = (step: number) => {
     // Only allow jumping to a step already reachable (all prior steps valid)
     for (let i = 0; i < step; i++) {
-      if (validateStep(i)) {
-        setError(validateStep(i) as string);
+      const errs = collectStepErrors(i);
+      if (errs.length > 0) {
+        flagFields(errs);
+        setError("");
         setActiveStep(i);
         return;
       }
@@ -723,15 +961,31 @@ export function BuySellForm({
       return;
     }
 
-    const stepZeroErr = validateStep(0);
-    if (stepZeroErr) {
-      setActiveStep(0);
-      return setError(stepZeroErr);
+    // Re-check every step so a required field can never slip through by
+    // jumping straight to the last step.
+    for (const step of [0, 1, 2]) {
+      const errs = collectStepErrors(step);
+      if (errs.length > 0) {
+        flagFields(errs);
+        setActiveStep(step);
+        return;
+      }
     }
-    const stepTwoErr = validateStep(2);
-    if (stepTwoErr) {
-      setActiveStep(2);
-      return setError(stepTwoErr);
+
+    // Photos: enforce the min 4 / max 10 rule (same as the user-side flow).
+    if (imageEntries.length < MIN_PHOTOS) {
+      const msg = `Upload at least ${MIN_PHOTOS} photos (Front, Back, Left Side and Right Side).`;
+      setError(msg);
+      notify({ type: "error", message: msg });
+      setActiveStep(3);
+      return;
+    }
+    if (imageEntries.length > MAX_PHOTOS) {
+      const msg = `You can upload a maximum of ${MAX_PHOTOS} images.`;
+      setError(msg);
+      notify({ type: "error", message: msg });
+      setActiveStep(3);
+      return;
     }
 
     setSubmitting(true);
@@ -897,24 +1151,25 @@ export function BuySellForm({
   }
 
   return (
-    <FormPageLayout
-      title={isEdit ? "Edit Listing" : "Create Listing"}
-      subtitle={
-        isEdit
-          ? product?.description || "Update your buy/sell listing."
-          : isAdmin
-            ? "Select a user, then post a new buy/sell listing."
-            : "Post a new buy/sell listing."
-      }
-      breadcrumbs={[
-        { label: "Dashboard", href: routes.dashboard() },
-        { label: "Buy / Sell", href: routes.buysell.list() },
-        { label: isEdit ? "Edit" : "Create" },
-      ]}
-      backButton={<BackButton fallback={cancelTarget} label={backButtonLabel} />}
-      footer={stepFooter}
-    >
-      <Stepper
+    <PageContainer maxWidth={960}>
+      <PageHeader
+        title={isEdit ? "Edit Listing" : "Create Listing"}
+        subtitle={
+          isEdit
+            ? product?.description || "Update your buy/sell listing."
+            : isAdmin
+              ? "Select a user, then post a new buy/sell listing."
+              : "Post a new buy/sell listing."
+        }
+        breadcrumbs={[
+          { label: "Dashboard", href: routes.dashboard() },
+          { label: "Buy / Sell", href: routes.buysell.list() },
+          { label: isEdit ? "Edit" : "Create" },
+        ] as BreadcrumbItem[]}
+        action={<BackButton fallback={cancelTarget} label={backButtonLabel} />}
+      />
+      <PageSection>
+        <Stepper
         activeStep={activeStep}
         sx={{ mb: 3, cursor: "pointer" }}
         nonLinear
@@ -928,9 +1183,9 @@ export function BuySellForm({
         ))}
       </Stepper>
 
-      {error && (
-        <Alert severity="error" onClose={() => setError("")} sx={{ mb: 2.5 }}>
-          {error}
+      {visibleError && (
+        <Alert severity="error" onClose={dismissErrors} sx={{ mb: 2.5 }}>
+          {visibleError}
         </Alert>
       )}
 
@@ -997,6 +1252,7 @@ export function BuySellForm({
                   value={values.price}
                   onChange={(v) => setFieldValue("price", v)}
                   required
+                  digitsOnly
                 />
 
                 <FormGridFull>
@@ -1017,7 +1273,7 @@ export function BuySellForm({
             <Box>
               <StepIntro
                 title="Vehicle Details"
-                subtitle="Fill in the details you know — you can leave the rest blank."
+                subtitle="All vehicle details are required — buyers rely on them to compare listings."
               />
               {vehicleDetailSpecs.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
@@ -1033,6 +1289,8 @@ export function BuySellForm({
                       onChange={(v) => updateSpecValue(specId(spec), v)}
                       values={specValueMap[specId(spec)] ?? []}
                       loading={!!specValueLoadingMap[specId(spec)]}
+                      required={isRequiredVehicleSpec(spec)}
+                      error={fieldErrors[specId(spec)]}
                     />
                   ))}
                 </FormGrid>
@@ -1060,6 +1318,9 @@ export function BuySellForm({
                     label="Address"
                     value={values.address}
                     onChange={(v) => setFieldValue("address", v)}
+                    required
+                    error={!!fieldErrors.address}
+                    helperText={fieldErrors.address || undefined}
                   />
                 </FormGridFull>
 
@@ -1067,6 +1328,10 @@ export function BuySellForm({
                   label="Pincode"
                   value={values.pincode}
                   onChange={(v) => setFieldValue("pincode", v)}
+                  required
+                  digitsOnly
+                  error={!!fieldErrors.pincode}
+                  helperText={fieldErrors.pincode || undefined}
                 />
               </FormGrid>
             </Box>
@@ -1076,8 +1341,8 @@ export function BuySellForm({
           {activeStep === 3 && (
             <Box>
               <StepIntro
-                title="Photos & Listing Status"
-                subtitle="Add a few photos and choose whether to publish now or save as a draft."
+                title="Photos"
+                subtitle="Upload Front, Back, Left Side and Right Side (min 4, max 10)."
               />
 
               <input
@@ -1089,26 +1354,128 @@ export function BuySellForm({
                 onChange={handleImageFilePick}
               />
 
-              <Button
-                variant="outlined"
-                startIcon={<CloudUploadIcon />}
-                disabled={submitting}
-                onClick={() => imageInputRef.current?.click()}
-                sx={{ mb: 2 }}
+              {/* Required 2x2 angle grid: Front / Back / Left Side / Right Side */}
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, minmax(0, 150px))",
+                  gap: 1.5,
+                  mb: 2,
+                }}
               >
-                {imageEntries.length === 0 ? "Upload Images" : "Add More Images"}
-              </Button>
+                {PHOTO_SLOT_LABELS.map((label, slotIdx) => {
+                  const entry = imageEntries[slotIdx];
+                  const filled = !!entry;
+                  const src =
+                    entry?.kind === "existing"
+                      ? getBuySellImageUrl(entry.url)
+                      : entry?.preview;
+                  return (
+                    <Box
+                      key={label}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
+                        if (submitting) return;
+                        pendingSlotRef.current = slotIdx;
+                        imageInputRef.current?.click();
+                      }}
+                      onKeyDown={(e) => {
+                        if (submitting) return;
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          pendingSlotRef.current = slotIdx;
+                          imageInputRef.current?.click();
+                        }
+                      }}
+                      sx={{
+                        position: "relative",
+                        height: 150,
+                        borderRadius: 2,
+                        border: "2px dashed",
+                        borderColor: filled ? "primary.main" : "divider",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 0.25,
+                        cursor: submitting ? "default" : "pointer",
+                        bgcolor: filled ? "transparent" : "grey.50",
+                        overflow: "hidden",
+                        transition: "border-color 0.15s, background 0.15s",
+                        "&:hover": {
+                          borderColor: submitting ? "divider" : "primary.main",
+                        },
+                      }}
+                    >
+                      {filled ? (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={src}
+                            alt={label}
+                            onError={handleBuySellImageError}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                              padding: 12,
+                              boxSizing: "border-box",
+                              borderRadius: 8,
+                              display: "block",
+                            }}
+                          />
+                          <IconButton
+                            size="small"
+                            disabled={submitting}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveImage(slotIdx);
+                            }}
+                            sx={{
+                              position: "absolute",
+                              top: 6,
+                              right: 6,
+                              bgcolor: "rgba(0,0,0,0.55)",
+                              color: "#fff",
+                              p: 0.25,
+                              borderRadius: "50%",
+                              "&:hover": { bgcolor: "error.main" },
+                            }}
+                          >
+                            <CloseIcon sx={{ fontSize: 14 }} />
+                          </IconButton>
+                        </>
+                      ) : (
+                        <>
+                          <PhotoCameraIcon
+                            sx={{ fontSize: 24, color: "text.disabled" }}
+                          />
+                          <Typography variant="subtitle2" fontWeight={600}>
+                            {label}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Required
+                          </Typography>
+                        </>
+                      )}
+                    </Box>
+                  );
+                })}
+              </Box>
 
-              {imageEntries.length > 0 ? (
+              {/* Additional (optional) photos beyond the 4 required angles */}
+              {imageEntries.length > MIN_PHOTOS && (
                 <Box
                   sx={{
                     display: "grid",
                     gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
                     gap: 1.5,
-                    mb: 3,
+                    mb: 2,
                   }}
                 >
-                  {imageEntries.map((entry, idx) => {
+                  {imageEntries.slice(MIN_PHOTOS).map((entry, i) => {
+                    const idx = i + MIN_PHOTOS;
                     const src =
                       entry.kind === "existing"
                         ? getBuySellImageUrl(entry.url)
@@ -1119,18 +1486,19 @@ export function BuySellForm({
                         key={idx}
                         sx={{
                           position: "relative",
-                          borderRadius: 1,
+                          borderRadius: 2,
                           overflow: "hidden",
-                          border: "1px solid",
+                          border: "2px dashed",
                           borderColor: isNew ? "primary.main" : "divider",
                           aspectRatio: "1 / 1",
-                          bgcolor: "grey.100",
+                          bgcolor: "grey.50",
                         }}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={src}
                           alt={`Image ${idx + 1}`}
+                          onError={handleBuySellImageError}
                           style={{
                             width: "100%",
                             height: "100%",
@@ -1176,11 +1544,21 @@ export function BuySellForm({
                     );
                   })}
                 </Box>
-              ) : (
-                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 3 }}>
-                  No images added yet. Click "Upload Images" to pick files from
-                  your device.
-                </Typography>
+              )}
+
+              {imageEntries.length < MAX_PHOTOS && (
+                <Button
+                  variant="outlined"
+                  startIcon={<CloudUploadIcon />}
+                  disabled={submitting}
+                  onClick={() => {
+                    pendingSlotRef.current = null;
+                    imageInputRef.current?.click();
+                  }}
+                  sx={{ mb: 3 }}
+                >
+                  {`Add more photos (${imageEntries.length}/${MAX_PHOTOS})`}
+                </Button>
               )}
 
               <Typography
@@ -1252,19 +1630,14 @@ export function BuySellForm({
                   <Typography variant="body2" fontWeight={isDraft ? 600 : 400}>
                     Save as Draft
                   </Typography>
-                  <Chip
-                    label={isDraft ? "Draft" : "Pending"}
-                    size="small"
-                    color={isDraft ? "default" : "warning"}
-                    variant="filled"
-                    sx={{ fontSize: 11, height: 20, pointerEvents: "none" }}
-                  />
                 </Box>
               )}
             </Box>
           )}
         </Box>
-    </FormPageLayout>
+      </PageSection>
+      {stepFooter}
+    </PageContainer>
   );
 }
 
