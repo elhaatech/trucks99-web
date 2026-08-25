@@ -37,6 +37,7 @@ type ProductViewSummaryProps = {
   onFavoriteToggle?: () => void;
   shareUrl?: string;
   productTitle?: string;
+  vehicleIdLabel?: string;
 };
 
 function StatPill({ label, value }: { label: string; value: string | number }) {
@@ -62,6 +63,7 @@ export function ProductViewSummary({
   onFavoriteToggle,
   shareUrl,
   productTitle,
+  vehicleIdLabel,
 }: ProductViewSummaryProps) {
   const { notify } = useNotification();
   const [shareAnchor, setShareAnchor] = useState<null | HTMLElement>(null);
@@ -156,6 +158,18 @@ export function ProductViewSummary({
         borderBottom: `1px solid ${T.color.border}`,
       }}
     >
+      {vehicleIdLabel ? (
+        <Typography
+          sx={{
+            color: T.color.textSecondary,
+            fontSize: 14,
+            mb: 0.5,
+          }}
+        >
+          {vehicleIdLabel}
+        </Typography>
+      ) : null}
+
       <Typography
         sx={{
           fontWeight: 800,
