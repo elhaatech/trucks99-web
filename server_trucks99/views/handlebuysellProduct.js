@@ -3524,6 +3524,9 @@ buySellRouter.post("/add", upload.array("images", 10), async (req, res) => {
       specifications,
       // Client sends "draft" | "pending" — normalised via resolveCreateStatus
       status,
+      userid: bodyUserid,
+      userId: bodyUserId,
+      ownerId: bodyOwnerId,
     } = req.body;
 
     if (!category_id || !subcategory_id) {
@@ -3592,6 +3595,22 @@ buySellRouter.post("/add", upload.array("images", 10), async (req, res) => {
       });
     }
 
+    // Regular users always own their own listing. If an admin sends a user
+    // id, post the vehicle under that account instead of the admin.
+    let listingUserId = actor.id;
+    let listingCreatedBy = actor.name;
+    if (isAdminActor(actor)) {
+      const requestedUserId = bodyUserid || bodyUserId || bodyOwnerId;
+      if (requestedUserId) {
+        const ownerUser = await findUserByEitherId(String(requestedUserId));
+        if (!ownerUser?._id) {
+          return res.status(400).json({ message: "Selected user not found." });
+        }
+        listingUserId = ownerUser._id;
+        listingCreatedBy = ownerUser.name || actor.name;
+      }
+    }
+
     let item;
     let lastError;
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -3610,8 +3629,8 @@ buySellRouter.post("/add", upload.array("images", 10), async (req, res) => {
           address: address || "",
           pincode: pincode || "",
           specifications: Array.isArray(parsedSpecs) ? parsedSpecs : [],
-          userid: actor.id,
-          created_by: actor.name,
+          userid: listingUserId,
+          created_by: listingCreatedBy,
           updated_by: actor.name,
           // ── Honour client's draft/pending choice; fall back to "pending" ──────
           status: resolveCreateStatus(status, isAdminActor(actor)),

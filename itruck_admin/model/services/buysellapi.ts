@@ -251,6 +251,8 @@ export type BuySellCreatePayload = {
   address: string;
   pincode: string;
   status?: string;
+  /** Admin create only — listing is posted under this user. Ignored for non-admins. */
+  userid?: string;
 };
 // ── Add these types near your other exported types ──────────────────────────
 

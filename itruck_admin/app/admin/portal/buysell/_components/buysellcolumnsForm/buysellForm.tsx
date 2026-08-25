@@ -19,7 +19,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForwardIos";
 import { useRouter } from "next/navigation";
 
-import { getCurrentUser, type User } from "@/model/api";
+import { getCurrentUser, getUserAll, type User } from "@/model/api";
 import {
   getSpecifications,
   getSpecificationValues,
@@ -27,17 +27,20 @@ import {
   type SpecificationValue,
 } from "@/model/api";
 import { routes } from "@/lib/routes";
+import { isAdminLikeRole } from "@/lib/permissions";
 import { getBuySellImageUrl } from "@/lib/buysellUtils";
 import {
   BackButton,
   FormFooter,
   FormTextField,
   FormSelectField,
+  type SelectOption,
   CategorySubcategorySelector,
   FormPageLayout,
   FormGrid,
   FormGridFull,
 } from "@/components/common";
+import { SearchableSelect } from "@/components/common/SearchableSelect";
 import { useForm } from "@/hooks/useForm";
 import { useNotification } from "@/hooks/useNotification";
 import {
@@ -171,6 +174,27 @@ function optionsForSpec(
   return [];
 }
 
+function getUserRowId(u: User | null | undefined): string {
+  if (!u) return "";
+  return String(u._id || u.id || "");
+}
+
+function userOptionLabel(u: User): string {
+  const name = u.name?.trim() || "User";
+  const mobile = String(u.mobile || "").trim();
+  return mobile ? `${name} (${mobile})` : name;
+}
+
+function extractProductUserId(product: BuySellProduct | undefined): string {
+  if (!product?.userid) return "";
+  const raw = product.userid as unknown;
+  if (typeof raw === "object" && raw) {
+    const obj = raw as { _id?: unknown; id?: unknown };
+    return String(obj._id || obj.id || "");
+  }
+  return String(raw);
+}
+
 function ensureCoreVehicleSpecs(specs: Specification[]): Specification[] {
   const list = [...specs];
   if (!list.some(isFuelSpec)) {
@@ -297,7 +321,9 @@ export function BuySellForm({
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
   const [authReady, setAuthReady] = useState(false);
+  const isAdmin = isAdminLikeRole(currentUser?.role ?? null);
 
   const cancelTarget = cancelHref ?? routes.buysell.list();
   const backButtonLabel = backLabel ?? "Back to list";
@@ -365,7 +391,17 @@ export function BuySellForm({
   // ── Bootstrap data on mount ───────────────────────────────────────────────
   useEffect(() => {
     getCurrentUser()
-      .then((u) => setCurrentUser(u as User))
+      .then(async (u) => {
+        const user = u as User;
+        setCurrentUser(user);
+        if (isAdminLikeRole(user?.role ?? null)) {
+          try {
+            setUsers((await getUserAll()) ?? []);
+          } catch {
+            setUsers([]);
+          }
+        }
+      })
       .catch(() => setCurrentUser(null))
       .finally(() => setAuthReady(true));
 
@@ -524,6 +560,7 @@ export function BuySellForm({
     );
     setFieldValue("address", product.address ?? "");
     setFieldValue("pincode", product.pincode ?? "");
+    setFieldValue("userid", extractProductUserId(product));
 
     // Seed the LocationSelector with whatever ids the product has — it will
     // resolve the matching country/state/city and their display names once
@@ -587,10 +624,38 @@ export function BuySellForm({
     });
   };
 
+  const userOptions: SelectOption[] = useMemo(() => {
+    if (!isAdmin) return [];
+    return users
+      .map((u) => ({
+        value: getUserRowId(u),
+        label: userOptionLabel(u),
+      }))
+      .filter((o) => o.value);
+  }, [isAdmin, users]);
+
+  // Align stored userid (Mongo _id or uuid) with dropdown option values.
+  useEffect(() => {
+    if (!isAdmin || !values.userid || users.length === 0) return;
+    const match = users.find(
+      (u) =>
+        getUserRowId(u) === values.userid ||
+        String(u._id || "") === values.userid ||
+        String(u.id || "") === values.userid,
+    );
+    const canonical = match ? getUserRowId(match) : "";
+    if (canonical && canonical !== values.userid) {
+      setFieldValue("userid", canonical);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, users, values.userid]);
+
   // ── Step validation ────────────────────────────────────────────────────────
   const validateStep = useCallback(
     (step: number): string | null => {
       if (step === 0) {
+        if (isAdmin && !isEdit && !values.userid)
+          return "Please select a user to post this listing";
         if (!values.category_id) return "Category is required";
         if (!values.subcategory_id) return "Sub category is required";
         if (!values.price || isNaN(Number(values.price)))
@@ -605,7 +670,17 @@ export function BuySellForm({
       }
       return null;
     },
-    [values.category_id, values.subcategory_id, values.price, location.countryId, location.stateId, location.cityId],
+    [
+      isAdmin,
+      isEdit,
+      values.userid,
+      values.category_id,
+      values.subcategory_id,
+      values.price,
+      location.countryId,
+      location.stateId,
+      location.cityId,
+    ],
   );
 
   const handleNext = () => {
@@ -697,6 +772,7 @@ export function BuySellForm({
         specifications: typeof values.specifications;
         images: string[];
         status?: "draft" | "pending";
+        userid?: string;
       } = {
         category_id: values.category_id,
         subcategory_id: values.subcategory_id,
@@ -712,6 +788,10 @@ export function BuySellForm({
         ),
         images: finalImages,
       };
+
+      if (isAdmin && !isEdit && values.userid) {
+        payload.userid = values.userid;
+      }
 
       if (canChangeStatus) {
         payload.status =
@@ -822,7 +902,9 @@ export function BuySellForm({
       subtitle={
         isEdit
           ? product?.description || "Update your buy/sell listing."
-          : "Post a new buy/sell listing."
+          : isAdmin
+            ? "Select a user, then post a new buy/sell listing."
+            : "Post a new buy/sell listing."
       }
       breadcrumbs={[
         { label: "Dashboard", href: routes.dashboard() },
@@ -863,9 +945,31 @@ export function BuySellForm({
             <Box>
               <StepIntro
                 title="What are you listing?"
-                subtitle="Pick a category, sub category and brand to get started."
+                subtitle={
+                  isAdmin
+                    ? "Select the user this vehicle belongs to, then pick category, sub category and brand."
+                    : "Pick a category, sub category and brand to get started."
+                }
               />
               <FormGrid>
+                {isAdmin && (
+                  <FormGridFull>
+                    <SearchableSelect
+                      label="User"
+                      value={values.userid}
+                      onChange={(v) => setFieldValue("userid", v)}
+                      options={userOptions}
+                      placeholder="Search and select user"
+                      required={!isEdit}
+                      disabled={isEdit}
+                      helperText={
+                        isEdit
+                          ? "Owner cannot be changed after the listing is created."
+                          : "This listing will be posted under the selected user."
+                      }
+                    />
+                  </FormGridFull>
+                )}
                 <CategorySubcategorySelector
                   variant="form"
                   categoryId={values.category_id}

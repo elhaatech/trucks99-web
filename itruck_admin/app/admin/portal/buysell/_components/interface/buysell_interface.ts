@@ -4,6 +4,7 @@ export type FormSpecification = {
 };
 
 export type FormState = {
+  userid: string;
   category_id: string;
   subcategory_id: string;
   price: string;
@@ -31,6 +32,7 @@ export type FilterState = {
 };
 
 export const EMPTY_FORM: FormState = {
+  userid: "",
   category_id: "",
   subcategory_id: "",
   price: "",
