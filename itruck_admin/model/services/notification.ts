@@ -12,9 +12,18 @@ export type Notification = {
   productId?: string;
   read?: boolean;
   createdAt?: string;
+  postId?: string;
+  postType?: string;
   metadata?: {
     route?: string;
     placementId?: string;
+    productId?: string;
+    postId?: string;
+    postType?: string;
+    entityType?: string;
+    entityId?: string;
+    loadId?: string;
+    truckId?: string;
     requestStatus?: string;
     source?: string;
   };

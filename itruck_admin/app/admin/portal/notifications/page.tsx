@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
@@ -24,6 +25,7 @@ import { ModulePageLayout } from "@/components/common";
 import { ListEmptyState } from "@/components/common";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { routes } from "@/lib/routes";
+import { resolveNotificationHref } from "@/lib/notificationHref";
 
 function NotificationIcon({ type }: { type?: string }) {
   const t = (type ?? "").toLowerCase();
@@ -33,6 +35,7 @@ function NotificationIcon({ type }: { type?: string }) {
 
 export default function NotificationsPage() {
   const theme = useTheme();
+  const router = useRouter();
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -118,11 +121,21 @@ export default function NotificationsPage() {
         <List disablePadding sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
           {items.map((n) => {
             const isUnread = n.read !== true;
+            const href = resolveNotificationHref(n);
+            const isProduct = Boolean(
+              n.productId ||
+                n.metadata?.productId ||
+                n.postType === "PRODUCT" ||
+                n.metadata?.postType === "PRODUCT",
+            );
             return (
               <ListItem
                 key={getRowId(n)}
                 component={Paper}
                 elevation={0}
+                onClick={() => {
+                  if (href) router.push(href);
+                }}
                 sx={{
                   borderRadius: "12px",
                   border: "1px solid",
@@ -130,6 +143,7 @@ export default function NotificationsPage() {
                   bgcolor: isUnread ? alpha(theme.palette.primary.main, 0.03) : "background.paper",
                   boxShadow: isUnread ? theme.tokens.shadow.sm : "none",
                   transition: "all 0.2s ease",
+                  cursor: href ? "pointer" : "default",
                   "&:hover": { boxShadow: theme.tokens.shadow.card },
                   p: 0,
                 }}
@@ -137,7 +151,10 @@ export default function NotificationsPage() {
                   <Button
                     size="small"
                     variant={isUnread ? "contained" : "text"}
-                    onClick={() => handleMarkRead(getRowId(n))}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMarkRead(getRowId(n));
+                    }}
                     disabled={!isUnread}
                     sx={{ mr: 1.5, minWidth: 96 }}
                   >
@@ -180,11 +197,16 @@ export default function NotificationsPage() {
                       <Typography variant="body2" color="text.secondary" component="span" sx={{ display: "block", mt: 0.5, lineHeight: 1.5 }}>
                         {n.message}
                       </Typography>
-                      {n.loadId ? (
-                        <Link href={routes.load.view(n.loadId)} sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, mt: 1, fontWeight: 600 }}>
-                          View load details →
-                        </Link>
-                      ) : null}
+                      {href ? (
+                          <Link
+                            component={NextLink}
+                            href={href}
+                            onClick={(e) => e.stopPropagation()}
+                            sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, mt: 1, fontWeight: 600 }}
+                          >
+                            {isProduct ? "View product details →" : "View details →"}
+                          </Link>
+                        ) : null}
                       {n.createdAt ? (
                         <Typography variant="caption" color="text.disabled" sx={{ display: "block", mt: 1 }}>
                           {new Date(n.createdAt).toLocaleString()}

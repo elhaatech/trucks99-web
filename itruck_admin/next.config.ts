@@ -27,6 +27,18 @@ const nextConfig: NextConfig = {
     return {
       beforeFiles: [
         {
+          source: "/portal/products/:id",
+          destination: "/admin/portal/buysell/view/:id",
+        },
+        {
+          source: "/portal/loads/:id",
+          destination: "/admin/portal/load/view/:id",
+        },
+        {
+          source: "/portal/trucks/:id",
+          destination: "/admin/portal/truck/view/:id",
+        },
+        {
           source: "/portal",
           destination: "/admin/portal",
         },

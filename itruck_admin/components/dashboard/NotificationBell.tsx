@@ -16,6 +16,7 @@ import { getNotifications, markNotificationRead, markAllNotificationsRead, type 
 import { ListEmptyState } from "@/components/common";
 import { PRIMARY } from "@/lib/theme";
 import { routes } from "@/lib/routes";
+import { resolveNotificationHref } from "@/lib/notificationHref";
 
 function BellIcon() {
   return (
@@ -76,12 +77,9 @@ export function NotificationBell({ initialCount = 0 }: NotificationBellProps) {
     } catch {
       // ignore dropdown marking errors; page still works
     }
-    if (n.metadata?.route) {
-      router.push(n.metadata.route);
-    } else if (n.event === "featured_free_plan_request") {
-      router.push(routes.buysell.featuredVehicles());
-    } else if (n.loadId) {
-      router.push(routes.load.view(n.loadId));
+    const href = resolveNotificationHref(n);
+    if (href) {
+      router.push(href);
     }
     handleClose();
   };

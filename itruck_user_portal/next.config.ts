@@ -107,6 +107,11 @@ const nextConfig: NextConfig = {
         permanent: false,
       },
       {
+        source: "/portal/products/:id",
+        destination: "/viewproduct/:id",
+        permanent: false,
+      },
+      {
         source: "/my-listing",
         destination: "/my-listings",
         permanent: false,
