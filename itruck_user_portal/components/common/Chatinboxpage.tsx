@@ -32,9 +32,11 @@ type Props = {
    *  ChatInboxPage manages its own ChatDrawer — used by the standalone
    *  /chat route. */
   onSelectRoom?: (roomId: string) => void;
+  /** Hide the page title when the inbox is already wrapped (navbar dialog). */
+  hideHeader?: boolean;
 };
 
-export default function ChatInboxPage({ onSelectRoom }: Props) {
+export default function ChatInboxPage({ onSelectRoom, hideHeader = false }: Props) {
   const auth = useMarketplaceAuthOptional();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +77,9 @@ export default function ChatInboxPage({ onSelectRoom }: Props) {
 
   return (
     <Box>
-      <PageHeader title="Messages" subtitle="Conversations about your buy/sell listings" />
+      {hideHeader ? null : (
+        <PageHeader title="Messages" subtitle="Conversations about your buy/sell listings" />
+      )}
 
       {error && (
         <Alert severity="error" onClose={() => setError("")} sx={{ mb: 2 }}>

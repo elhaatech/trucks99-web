@@ -17,6 +17,7 @@ import {
   type ChatMessage,
   type ChatRoom,
 } from "@/model/services/chatapi";
+import { notifyMarketplaceChatChanged } from "@/lib/marketplaceAuth";
 
 type Props = {
   open: boolean;
@@ -91,6 +92,7 @@ export function ChatDrawer({ open, onClose, embedded = false, productId, roomId,
           if (cancelled) return;
           setRoom(res.room);
           activeRoomId = res.room.roomId ?? res.room._id;
+          notifyMarketplaceChatChanged();
         }
 
         if (activeRoomId) {
@@ -147,6 +149,7 @@ export function ChatDrawer({ open, onClose, embedded = false, productId, roomId,
       const res = await sendChatMessage(activeRoomId, text);
       setMessages((prev) => [...prev, res.chatMessage]);
       setRoom(res.room);
+      notifyMarketplaceChatChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send message");
       setDraft(text);

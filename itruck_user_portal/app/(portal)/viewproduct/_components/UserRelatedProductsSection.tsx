@@ -26,6 +26,7 @@ type UserRelatedProductsSectionProps = {
   /** When true, copy and actions target the listing owner (logged-in seller). */
   isOwnerView?: boolean;
   onAddVehicle?: () => void;
+  onChatProduct?: (productId: string) => void;
   onNotify?: (payload: { type: "success" | "error"; message: string }) => void;
   /** State id of the currently viewed product; auto-restricts to same-state listings. */
   currentStateId?: string | null;
@@ -54,6 +55,7 @@ export function UserRelatedProductsSection({
   isLoggedIn,
   isOwnerView = false,
   onAddVehicle,
+  onChatProduct,
   currentStateId,
   currentCategoryId,
   currentSubcategoryId,
@@ -189,6 +191,7 @@ export function UserRelatedProductsSection({
                   <VehicleCard
                     product={product}
                     onClick={() => router.push(userProductRoutes.view(productId))}
+                    onChat={!isOwnerView ? onChatProduct : undefined}
                   />
                 </Grid>
               );

@@ -10,6 +10,7 @@ import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import { alpha } from "@mui/material/styles";
 import { PRODUCT_THEME as T, INFO, SUCCESS } from "@/lib/theme";
 import { getFirstBuySellImageUrl } from "@/lib/buysellUtils";
@@ -32,6 +33,7 @@ type VehicleCardProps = {
   favoriteLoading?: boolean;
   onFavoriteToggle?: (productId: string) => void;
   onClick?: (productId: string) => void;
+  onChat?: (productId: string) => void;
   layout?: "grid" | "list";
   showViewAction?: boolean;
   viewLabel?: string;
@@ -58,6 +60,7 @@ export const VehicleCard = memo(function VehicleCard({
   favoriteLoading = false,
   onFavoriteToggle,
   onClick,
+  onChat,
   layout = "grid",
   showViewAction = true,
   viewLabel = "View Listing",
@@ -99,6 +102,10 @@ export const VehicleCard = memo(function VehicleCard({
   const handleView = (e: React.MouseEvent) => {
     e.stopPropagation();
     handleClick();
+  };
+  const handleChat = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChat?.(productId);
   };
   const handleFavorite = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -356,23 +363,49 @@ export const VehicleCard = memo(function VehicleCard({
             </Box>
 
             {onClick && showViewAction ? (
-              <Button
-                size="small"
-                variant="contained"
-                onClick={handleView}
+              <Box
                 sx={{
-                  textTransform: "none",
-                  fontWeight: 600,
-                  fontSize: 12,
-                  bgcolor: INFO,
-                  boxShadow: "none",
+                  display: "flex",
+                  gap: 1,
                   width: isList ? "auto" : "100%",
-                  minHeight: 32,
-                  "&:hover": { bgcolor: INFO, boxShadow: "none" },
+                  alignItems: "center",
                 }}
               >
-                {viewLabel}
-              </Button>
+                {onChat ? (
+                  <Tooltip title="Chat with owner">
+                    <IconButton
+                      size="small"
+                      aria-label="Chat with owner"
+                      onClick={handleChat}
+                      sx={{
+                        border: `1px solid ${T.color.border}`,
+                        borderRadius: T.radius.md,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <ChatBubbleOutlineIcon fontSize="small" sx={{ color: INFO }} />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={handleView}
+                  sx={{
+                    textTransform: "none",
+                    fontWeight: 600,
+                    fontSize: 12,
+                    bgcolor: INFO,
+                    boxShadow: "none",
+                    flex: isList ? "none" : 1,
+                    width: isList ? "auto" : "100%",
+                    minHeight: 32,
+                    "&:hover": { bgcolor: INFO, boxShadow: "none" },
+                  }}
+                >
+                  {viewLabel}
+                </Button>
+              </Box>
             ) : null}
 
             {showFeaturePayNow ? (
