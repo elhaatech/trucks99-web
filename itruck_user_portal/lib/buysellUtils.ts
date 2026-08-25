@@ -2,7 +2,7 @@ import { withAppBasePath } from "@/lib/appConfig";
 import { resolvePublicFileUrl } from "@/lib/fileUrl";
 
 /** Public fallback used whenever a Buy/Sell vehicle image is missing or fails to load. */
-export const DEFAULT_VEHICLE_IMAGE = withAppBasePath("/assets/dtruck.png");
+export const DEFAULT_VEHICLE_IMAGE = withAppBasePath("/assets/semi-truck.jpg");
 
 function isDefaultVehicleSrc(src: string): boolean {
   if (!src) return false;
@@ -12,10 +12,13 @@ function isDefaultVehicleSrc(src: string): boolean {
       : src.split("?")[0];
     return (
       pathname === DEFAULT_VEHICLE_IMAGE ||
+      pathname.endsWith("/assets/semi-truck.jpg") ||
       pathname.endsWith("/assets/dtruck.png")
     );
   } catch {
-    return src.includes("/assets/dtruck.png");
+    return (
+      src.includes("/assets/semi-truck.jpg") || src.includes("/assets/dtruck.png")
+    );
   }
 }
 
@@ -23,7 +26,7 @@ function isDefaultVehicleSrc(src: string): boolean {
  * Resolve a stored image path from the API to a browser URL.
  * Uses the current host API base (localhost or truck.elhaa.com) — no hardcoded hosts/paths.
  * Absolute http(s) URLs from the API are returned as-is.
- * Local public assets such as `/assets/dtruck.png` are not prefixed with the API base.
+ * Local public assets such as `/assets/semi-truck.jpg` are not prefixed with the API base.
  */
 export function getBuySellImageUrl(path?: string | null): string {
   return resolvePublicFileUrl(path);

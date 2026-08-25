@@ -1,13 +1,14 @@
 import { joinApiUrl } from "@/src/config/BASE_URL";
-import { withAppBasePath } from "@/lib/appConfig";
+import { APP_BASE_PATH, withAppBasePath } from "@/lib/appConfig";
 
 function isFrontendStaticPath(pathname: string): boolean {
-  return (
-    pathname.startsWith("/assets/") ||
-    pathname.startsWith("/images/") ||
-    pathname.startsWith("/_next/") ||
-    pathname === "/favicon.ico"
-  );
+  const prefixes = ["/assets/", "/images/", "/_next/"];
+  if (pathname === "/favicon.ico") return true;
+  if (prefixes.some((prefix) => pathname.startsWith(prefix))) return true;
+  if (APP_BASE_PATH) {
+    return prefixes.some((prefix) => pathname.startsWith(`${APP_BASE_PATH}${prefix}`));
+  }
+  return false;
 }
 
 function normalizeUploadsPath(pathname: string): string {

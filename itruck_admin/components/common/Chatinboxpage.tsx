@@ -10,6 +10,7 @@ import Alert from "@mui/material/Alert";
 import { PageHeader } from "@/components/ui";
 import { ChatDrawer } from "@/components/common/ChatDrawer";
 import { getChatList, type ChatRoom } from "@/model/services/chatapi";
+import { resolveVehicleImageSrc } from "@/lib/buysellUtils";
 import { getCurrentUser } from "@/model/services/user";
 import type { User } from "@/model/services/user";
 
@@ -131,7 +132,7 @@ export default function ChatInboxPage({ onSelectRoom }: Props) {
                 {/* Product image thumbnail */}
                 <Box
                   component="img"
-                  src={room.product?.image || "/placeholder-product.png"}
+                  src={resolveVehicleImageSrc(room.product?.image)}
                   alt={room.product?.title || "Product"}
                   sx={{
                     width: 56,

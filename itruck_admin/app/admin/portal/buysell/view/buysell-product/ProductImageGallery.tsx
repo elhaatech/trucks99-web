@@ -3,11 +3,9 @@
 import { useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
-import Typography from "@mui/material/Typography";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import ImageNotSupportedOutlinedIcon from "@mui/icons-material/ImageNotSupportedOutlined";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getBuySellImageUrls, handleBuySellImageError } from "@/lib/buysellUtils";
 import { PRODUCT_THEME as T } from "./theme";
 
 interface ProductImageGalleryProps {
@@ -23,13 +21,7 @@ interface ProductImageGalleryProps {
  * zoom-on-hover (desktop only — disabled on touch devices).
  */
 export function ProductImageGallery({ images, title, statusBadge }: ProductImageGalleryProps) {
-  const safeImages = useMemo(
-    () =>
-      images && images.length > 0
-        ? images.map(getBuySellImageUrl).filter(Boolean)
-        : [],
-    [images],
-  );
+  const safeImages = useMemo(() => getBuySellImageUrls(images), [images]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isZooming, setIsZooming] = useState(false);
   const [zoomOrigin, setZoomOrigin] = useState("50% 50%");
@@ -46,30 +38,6 @@ export function ProductImageGallery({ images, title, statusBadge }: ProductImage
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     setZoomOrigin(`${x}% ${y}%`);
   };
-
-  if (safeImages.length === 0) {
-    return (
-      <Box
-        sx={{
-          bgcolor: T.color.surfaceMuted,
-          border: `1px solid ${T.color.border}`,
-          borderRadius: T.radius.md,
-          aspectRatio: "4 / 3",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 1,
-          color: T.color.textMuted,
-        }}
-      >
-        <ImageNotSupportedOutlinedIcon sx={{ fontSize: 40 }} />
-        <Typography sx={{ fontFamily: T.font.body, fontSize: 13 }}>
-          No photos available
-        </Typography>
-      </Box>
-    );
-  }
 
   return (
     <Box>
@@ -103,9 +71,7 @@ export function ProductImageGallery({ images, title, statusBadge }: ProductImage
             transformOrigin: zoomOrigin,
             "@media (hover: none)": { transform: "none !important" },
           }}
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = "none";
-          }}
+          onError={handleBuySellImageError}
         />
 
         {statusBadge && (

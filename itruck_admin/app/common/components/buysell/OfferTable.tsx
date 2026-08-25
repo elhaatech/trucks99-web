@@ -11,7 +11,7 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Avatar from "@mui/material/Avatar";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getFirstBuySellImageUrl } from "@/lib/buysellUtils";
 import { formatProductPrice, getProductTitle } from "./utils";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 import type { ProductBitRecord } from "@/model/services/bitRecord";
@@ -147,7 +147,7 @@ export function OfferTable({
               (row as ProductBitRecord).product_info?.id ||
               "";
             const product = row.product ?? (row as ProductBitRecord).product_info ?? null;
-            const image = product?.images?.[0];
+            const image = getFirstBuySellImageUrl(product?.images);
             const title =
               row.productTitle ||
               (product ? getProductTitle(product as BuySellProduct) : "") ||
@@ -169,7 +169,7 @@ export function OfferTable({
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                     <Avatar
                       variant="rounded"
-                      src={getBuySellImageUrl(image)}
+                      src={image}
                       sx={{ width: 48, height: 40, borderRadius: 1, bgcolor: T.color.border }}
                     />
                     <Typography fontWeight={600} fontSize={14} sx={{ color: T.color.textPrimary }}>
