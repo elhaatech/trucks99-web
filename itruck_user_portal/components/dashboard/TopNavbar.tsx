@@ -30,6 +30,7 @@ import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import { NotificationBell } from "./NotificationBell";
 import { getChatList } from "@/model/services/chatapi";
+import { isAdminLikeRole } from "@/lib/permissions";
 
 const ChatDrawer = dynamic(
   () => import("@/components/common/ChatDrawer").then((m) => m.ChatDrawer),
@@ -193,7 +194,7 @@ export function TopNavbar({ user, onMenuClick }: TopNavbarProps) {
             bgcolor: "background.paper",
           }}
         >
-          <NotificationBell />
+          {!isAdminLikeRole(user?.role ?? null) ? <NotificationBell /> : null}
 
           <Tooltip title="Messages">
             <IconButton
