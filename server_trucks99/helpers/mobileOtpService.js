@@ -7,6 +7,7 @@ const { normalizeMobile } = require("./otpHelper");
 const sendSMS = require("./draft4sms/sendSMS");
 const redisClient = require("../config/redisClient");
 const { ensureRedisConnected } = require("../config/redisClient");
+const MobileOtp = require("../schema/mobileOtp");
 
 const OTP_EXPIRY_MINUTES = Number(process.env.OTP_EXPIRATION_MINUTES || 10);
 const OTP_EXPIRY_SECONDS = Number(
@@ -74,14 +75,53 @@ function otpRedisKey(mobile) {
   return `otp:${mobile}`;
 }
 
+function mongoDocToRecord(doc) {
+  if (!doc) return null;
+  return {
+    otpHash: doc.otpHash,
+    createdAt: doc.createdAt ? new Date(doc.createdAt).getTime() : Date.now(),
+    updatedAt: doc.updatedAt ? new Date(doc.updatedAt).getTime() : Date.now(),
+    attempts: doc.attempts || 0,
+    verified: Boolean(doc.verified),
+    resendCount: doc.resendCount || 0,
+    expiresAt: doc.expiresAt ? new Date(doc.expiresAt).getTime() : 0,
+  };
+}
+
+async function getOtpRecordMongo(mobile) {
+  const doc = await MobileOtp.findOne({ mobile }).exec();
+  return mongoDocToRecord(doc);
+}
+
+async function saveOtpRecordMongo(mobile, record) {
+  await MobileOtp.findOneAndUpdate(
+    { mobile },
+    {
+      otpHash: record.otpHash,
+      expiresAt: new Date(Number(record.expiresAt) || Date.now() + OTP_EXPIRY_SECONDS * 1000),
+      attempts: record.attempts || 0,
+      resendCount: record.resendCount || 0,
+      verified: Boolean(record.verified),
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  ).exec();
+}
+
 async function getOtpRecord(mobile) {
-  await ensureRedisConnected();
-  const raw = await redisClient.get(otpRedisKey(mobile));
-  return raw ? JSON.parse(raw) : null;
+  try {
+    await ensureRedisConnected();
+    const raw = await redisClient.get(otpRedisKey(mobile));
+    if (raw) return JSON.parse(raw);
+  } catch (err) {
+    const msg = err && err.message ? err.message : err;
+    if (String(msg) !== "Redis unavailable") {
+      console.error("Redis error (get), using MongoDB fallback:", msg);
+    }
+  }
+  return getOtpRecordMongo(mobile);
 }
 
 async function saveOtpRecord(mobile, record, ttlSeconds) {
-  await ensureRedisConnected();
   const ttl =
     ttlSeconds > 0
       ? ttlSeconds
@@ -89,14 +129,33 @@ async function saveOtpRecord(mobile, record, ttlSeconds) {
           1,
           Math.ceil((Number(record.expiresAt) - Date.now()) / 1000),
         );
-  await redisClient.set(otpRedisKey(mobile), JSON.stringify(record), {
-    EX: ttl > 0 ? ttl : OTP_EXPIRY_SECONDS,
-  });
+  try {
+    await ensureRedisConnected();
+    await redisClient.set(otpRedisKey(mobile), JSON.stringify(record), {
+      EX: ttl > 0 ? ttl : OTP_EXPIRY_SECONDS,
+    });
+    await MobileOtp.deleteOne({ mobile }).catch(() => {});
+    return;
+  } catch (err) {
+    const msg = err && err.message ? err.message : err;
+    if (String(msg) !== "Redis unavailable") {
+      console.error("Redis error (set), using MongoDB fallback:", msg);
+    }
+  }
+  await saveOtpRecordMongo(mobile, record);
 }
 
 async function deleteOtpRecord(mobile) {
-  await ensureRedisConnected();
-  await redisClient.del(otpRedisKey(mobile));
+  try {
+    await ensureRedisConnected();
+    await redisClient.del(otpRedisKey(mobile));
+  } catch (err) {
+    const msg = err && err.message ? err.message : err;
+    if (String(msg) !== "Redis unavailable") {
+      console.error("Redis error (del):", msg);
+    }
+  }
+  await MobileOtp.deleteOne({ mobile }).catch(() => {});
 }
 
 /**
@@ -113,10 +172,10 @@ async function createAndSendOtp(mobileRaw, { isResend = false } = {}) {
     existing = await getOtpRecord(mobile);
   } catch (err) {
     console.error(
-      "Redis error (get):",
+      "OTP store error (get):",
       err && err.message ? err.message : err,
     );
-    return { ok: false, error: "Internal error (Redis unavailable)." };
+    return { ok: false, error: "Internal error (OTP store unavailable)." };
   }
 
   if (isResend) {
@@ -174,10 +233,10 @@ async function createAndSendOtp(mobileRaw, { isResend = false } = {}) {
     await saveOtpRecord(mobile, redisPayload, OTP_EXPIRY_SECONDS);
   } catch (err) {
     console.error(
-      "Redis error (set):",
+      "OTP store error (set):",
       err && err.message ? err.message : err,
     );
-    return { ok: false, error: "Internal error (Redis unavailable)." };
+    return { ok: false, error: "Internal error (OTP store unavailable)." };
   }
 
   const sms = await sendOtpViaSms(mobile, plainOtp);
@@ -242,12 +301,12 @@ async function verifyOtpCode(mobileRaw, otpRaw) {
     record = await getOtpRecord(mobile);
   } catch (err) {
     console.error(
-      "Redis error (get):",
+      "OTP store error (get):",
       err && err.message ? err.message : err,
     );
     return {
       ok: false,
-      error: "Internal error (Redis unavailable).",
+      error: "Internal error (OTP store unavailable).",
       remainingAttempts: null,
     };
   }
