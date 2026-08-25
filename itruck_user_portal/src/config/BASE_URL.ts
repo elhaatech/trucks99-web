@@ -1,9 +1,8 @@
 export const BASE_URLS = {
-  testing: "https://trucks99.elhaa.com/api/",
   production: "https://trucks99.com/api-v1/",
 };
 
-export const API_BASE_URL = BASE_URLS.testing;
+export const API_BASE_URL = BASE_URLS.production;
 
 /**
  * Join API_BASE_URL with an endpoint without duplicate slashes.
