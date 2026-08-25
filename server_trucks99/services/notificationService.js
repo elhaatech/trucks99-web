@@ -473,7 +473,58 @@ async function resolveUser(userId) {
   if (!userId) return null;
   const oid = await resolveToObjectId(User, String(userId));
   if (!oid) return null;
-  return User.findById(oid).lean();
+  return User.findById(oid).populate('roleId', 'name status').lean();
+}
+
+/** Events that belong in the admin portal only (role.status === "admin"). */
+const ADMIN_NOTIFICATION_EVENTS = [NOTIFICATION_EVENTS.FEATURED_FREE_PLAN_REQUEST];
+
+function roleLooksLikeAdmin(role) {
+  if (!role) return false;
+  const status = String(role.status || '').toLowerCase();
+  const name = String(typeof role === 'string' ? role : role.name || '').toLowerCase();
+  return (
+    status === 'admin' ||
+    name === 'admin' ||
+    name === 'super admin' ||
+    name === 'super_admin' ||
+    name === 'superadmin'
+  );
+}
+
+function isAdminUser(user) {
+  if (!user) return false;
+  const email = String(user.email || '').toLowerCase();
+  if (email === 'admin@mail.com' || email === 'admin@trucks99.com') return true;
+  return roleLooksLikeAdmin(user.roleId || user.role);
+}
+
+function audienceForEvent(event, metadata = {}) {
+  const override = String(metadata.audience || '').toLowerCase();
+  if (override === 'admin' || override === 'user') return override;
+  if (ADMIN_NOTIFICATION_EVENTS.includes(event)) return 'admin';
+  return 'user';
+}
+
+/** Mongo filter so user portal never returns admin-only notifications. */
+function notificationAudienceQuery(audience) {
+  if (audience === 'admin') {
+    return {
+      $or: [
+        { audience: 'admin' },
+        { audience: { $exists: false }, event: { $in: ADMIN_NOTIFICATION_EVENTS } },
+      ],
+    };
+  }
+  return {
+    $or: [
+      { audience: 'user' },
+      {
+        audience: { $exists: false },
+        event: { $nin: ADMIN_NOTIFICATION_EVENTS },
+      },
+    ],
+  };
 }
 
 async function logDelivery({
@@ -575,10 +626,28 @@ async function notify({
 
   const user = await resolveUser(userId);
   const userOid = user?._id || (await resolveToObjectId(User, String(userId)));
+  const audience = audienceForEvent(event, metadata);
+  const recipientIsAdmin = isAdminUser(user);
 
   if (!userOid && event !== NOTIFICATION_EVENTS.ADMIN_BULK) {
     console.warn("[FCM][notificationService] SKIP — user not found:", userId, "event:", event);
     return { ok: false, error: 'User not found', results };
+  }
+
+  // User-portal events stay with role.status=user; admin events stay with role.status=admin.
+  if (userOid && audience === 'user' && recipientIsAdmin) {
+    console.warn("[FCM][notificationService] SKIP — admin recipient for user-portal event:", {
+      event,
+      userId: String(userOid),
+    });
+    return { ok: true, skipped: true, reason: 'admin recipient', results };
+  }
+  if (userOid && audience === 'admin' && !recipientIsAdmin) {
+    console.warn("[FCM][notificationService] SKIP — non-admin recipient for admin event:", {
+      event,
+      userId: String(userOid),
+    });
+    return { ok: true, skipped: true, reason: 'non-admin recipient', results };
   }
 
   if (!skipDedupe && dedupeKey && userOid) {
@@ -618,6 +687,7 @@ async function notify({
         message,
         event,
         type: event,
+        audience,
         read: false,
         isRead: false,
         loadId: toMongoIdOrUndefined(metadata.loadMongoId || metadata.loadId),
@@ -899,6 +969,7 @@ async function seedDefaultTemplates() {
 module.exports = {
   NOTIFICATION_EVENTS,
   DEFAULT_TEMPLATES,
+  ADMIN_NOTIFICATION_EVENTS,
   notify,
   notifyMultiple,
   seedDefaultTemplates,
@@ -906,4 +977,8 @@ module.exports = {
   wasRecentlySent,
   resolveFcmEventType,
   buildProductPushMetadata,
+  audienceForEvent,
+  notificationAudienceQuery,
+  isAdminUser,
+  roleLooksLikeAdmin,
 };

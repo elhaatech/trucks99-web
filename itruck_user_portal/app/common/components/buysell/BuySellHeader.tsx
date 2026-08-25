@@ -55,6 +55,7 @@ import { getBuySellFavoriteCount } from "@/model/services/favoriteapi";
 import { getChatList } from "@/model/services/chatapi";
 import { NotificationDropdown } from "@/components/common/NotificationDropdown";
 import { withAppBasePath } from "@/lib/appConfig";
+import { isAdminLikeRole } from "@/lib/permissions";
 
 const ChatDrawer = dynamic(
   () => import("@/components/common/ChatDrawer").then((m) => m.ChatDrawer),
@@ -416,7 +417,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
             </Button>
           </Tooltip>
 
-          <NotificationDropdown />
+          {!isAdminLikeRole(user?.role ?? null) ? <NotificationDropdown /> : null}
 
           <Tooltip title="Messages">
             <IconButton
