@@ -17,6 +17,7 @@ import { ListEmptyState } from "@/components/common";
 import { PRIMARY } from "@/lib/theme";
 import { routes } from "@/lib/routes";
 import { resolveNotificationHref } from "@/lib/notificationHref";
+import { setUnreadNotificationCount, useUnreadNotificationCount } from "@/hooks/useUnreadNotificationCount";
 
 function BellIcon() {
   return (
@@ -31,13 +32,13 @@ export interface NotificationBellProps {
   initialCount?: number;
 }
 
-export function NotificationBell({ initialCount = 0 }: NotificationBellProps) {
+export function NotificationBell(_props: NotificationBellProps) {
   const router = useRouter();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [items, setItems] = React.useState<Notification[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
-  const [unreadCount, setUnreadCount] = React.useState(initialCount);
+  const unreadCount = useUnreadNotificationCount();
 
   const open = Boolean(anchorEl);
 
@@ -47,7 +48,7 @@ export function NotificationBell({ initialCount = 0 }: NotificationBellProps) {
     getNotifications()
       .then((list) => {
         setItems(list);
-        setUnreadCount(list.filter((n) => !(n.read === true)).length);
+        setUnreadNotificationCount(list.filter((n) => n.read !== true).length);
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : "Failed to load notifications");
@@ -72,7 +73,7 @@ export function NotificationBell({ initialCount = 0 }: NotificationBellProps) {
       if (n.read !== true) {
         await markNotificationRead(id);
         setItems((prev) => prev.map((x) => (getRowId(x) === id ? { ...x, read: true } : x)));
-        setUnreadCount((c) => Math.max(0, c - 1));
+        setUnreadNotificationCount(unreadCount - 1);
       }
     } catch {
       // ignore dropdown marking errors; page still works
@@ -88,13 +89,13 @@ export function NotificationBell({ initialCount = 0 }: NotificationBellProps) {
     try {
       await markAllNotificationsRead();
       setItems((prev) => prev.map((n) => ({ ...n, read: true })));
-      setUnreadCount(0);
+      setUnreadNotificationCount(0);
     } catch {
       // ignore; user can retry
     }
   };
 
-  const visibleBadgeCount = unreadCount ?? initialCount;
+  const visibleBadgeCount = unreadCount;
 
   return (
     <>

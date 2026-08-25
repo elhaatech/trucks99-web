@@ -152,7 +152,8 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
     }
     try {
       const rooms = await getChatList();
-      setTotalUnread(rooms.reduce((sum, r) => sum + (r.unreadCount || 0), 0));
+      const next = rooms.reduce((sum, r) => sum + (r.unreadCount || 0), 0);
+      setTotalUnread((prev) => (prev === next ? prev : next));
     } catch {
       // badge stays as-is if the list call fails
     }

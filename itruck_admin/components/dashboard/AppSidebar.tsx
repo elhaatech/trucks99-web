@@ -34,6 +34,7 @@ import {
   normalizePathForMatch,
 } from "@/lib/permissions";
 import { routes } from "@/lib/routes";
+import { useUnreadNotificationCount } from "@/hooks/useUnreadNotificationCount";
 
 const SIDEBAR_COLLAPSED = LAYOUT.sidebarCollapsed;
 const SIDEBAR_EXPANDED = LAYOUT.sidebarExpanded;
@@ -463,14 +464,21 @@ type NavItem = {
 
 export interface AppSidebarProps {
   user?: User | null;
-  notificationCount?: number;
   onNavClick?: () => void;
   variant?: "rail" | "drawer";
 }
 
+function SidebarUnreadBadge({ children }: { children: React.ReactNode }) {
+  const count = useUnreadNotificationCount();
+  return (
+    <Badge badgeContent={count} color="secondary">
+      {children}
+    </Badge>
+  );
+}
+
 export function AppSidebar({
   user,
-  notificationCount = 0,
   onNavClick,
   variant = "rail",
 }: AppSidebarProps) {
@@ -612,7 +620,7 @@ export function AppSidebar({
         )}
 
         {effectiveExpanded && (
-          <Badge badgeContent={notificationCount} color="secondary">
+          <SidebarUnreadBadge>
             <Avatar
               component={canViewRoute(role, routes.profile()) ? Link : "div"}
               href={
@@ -638,7 +646,7 @@ export function AppSidebar({
             >
               {user?.name?.[0]?.toUpperCase() || "U"}
             </Avatar>
-          </Badge>
+          </SidebarUnreadBadge>
         )}
       </Box>
 
