@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Box from "@mui/material/Box";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { withAppBasePath } from "@/lib/appConfig";
@@ -45,14 +44,14 @@ export function BrandLogo({
         ...((sx as object) || {}),
       }}
     >
-      <Image
+      <Box
+        component="img"
         src={withAppBasePath(BRAND_LOGO_SRC)}
         alt={alt}
         width={w}
         height={height}
-        priority={priority}
-        unoptimized
-        style={{
+        {...(priority ? { fetchPriority: "high" as const } : {})}
+        sx={{
           width: w,
           height,
           objectFit: "contain",

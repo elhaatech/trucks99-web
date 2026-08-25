@@ -28,7 +28,6 @@ import DirectionsCarOutlinedIcon from "@mui/icons-material/DirectionsCarOutlined
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import ContactSupportOutlinedIcon from "@mui/icons-material/ContactSupportOutlined";
 import { alpha } from "@mui/material/styles";
-import Image from "next/image";
 import Link from "next/link";
 import {
   INFO,
@@ -210,13 +209,13 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                 lineHeight: 0,
               }}
             >
-              <Image
-                src="/assets/logo.png"
+              <Box
+                component="img"
+                src={withAppBasePath("/assets/logo.png")}
                 alt="TRUCKS99"
                 width={60}
                 height={40}
-                priority
-                style={{
+                sx={{
                   width: "100%",
                   height: "100%",
                   objectFit: "contain",
