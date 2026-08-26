@@ -34,6 +34,12 @@ type UserRelatedProductsSectionProps = {
   currentCategoryId?: string | null;
   /** Subcategory id of the currently viewed product; auto-restricts to same-subcategory listings. */
   currentSubcategoryId?: string | null;
+  /** Category name of the currently viewed product (display only). */
+  currentCategoryName?: string | null;
+  /** Subcategory name of the currently viewed product (display only). */
+  currentSubcategoryName?: string | null;
+  /** State name of the currently viewed product (display only). */
+  currentStateName?: string | null;
 };
 
 function RelatedCardSkeleton() {
@@ -59,6 +65,9 @@ export function UserRelatedProductsSection({
   currentStateId,
   currentCategoryId,
   currentSubcategoryId,
+  currentCategoryName,
+  currentSubcategoryName,
+  currentStateName,
 }: UserRelatedProductsSectionProps) {
   const router = useRouter();
   const [products, setProducts] = useState<BuySellProduct[]>([]);
@@ -119,16 +128,14 @@ export function UserRelatedProductsSection({
       }}
     >
       <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: 1, mb: 2 }}>
-        <Box>
-          <Typography sx={{ fontWeight: 700, fontSize: 17, mb: 0.5 }}>
-            {isOwnerView ? "Related Vechile Details" : `More from ${sellerName ?? "this seller"}`}
-          </Typography>
-          <Typography sx={{ fontSize: 13, color: T.color.textSecondary, lineHeight: 1.6 }}>
-            {isOwnerView
-              ? "Manage your fleet — open another listing or list a new vehicle for sale."
-              : "Browse other vehicles by this seller. Use View Product to open details, ♥ to save to favourites, or the chat icon to message the seller."}
-          </Typography>
-        </Box>
+         <Box>
+           <Typography sx={{ fontWeight: 700, fontSize: 17, mb: 0.5 }}>
+            Related Vechile Details
+           </Typography>
+           <Typography sx={{ fontSize: 13, color: T.color.textSecondary, textTransform: "uppercase" }}>
+             {`${currentCategoryName?.trim() || "N/A"} - ${currentSubcategoryName?.trim() || "N/A"} - ${currentStateName?.trim() || "N/A"}`}
+           </Typography>
+         </Box>
         {isOwnerView && onAddVehicle ? (
           <Button
             variant="contained"
