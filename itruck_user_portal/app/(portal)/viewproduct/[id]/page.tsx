@@ -516,6 +516,15 @@ export default function UserProductViewPage() {
                         )
                       : undefined
                   }
+                  currentCategoryName={
+                    typeof item.category_id === "object" ? item.category_id?.category_name : undefined
+                  }
+                  currentSubcategoryName={
+                    typeof item.subcategory_id === "object"
+                      ? item.subcategory_id?.sub_category_name
+                      : undefined
+                  }
+                  currentStateName={item.state_info?.name}
                />
           ) : null}
         </Box>

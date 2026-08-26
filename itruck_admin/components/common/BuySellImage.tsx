@@ -12,14 +12,9 @@ export type BuySellImageProps = Omit<
   "src"
 > & {
   src?: string | null;
-  /** Stretch the image to fill an absolutely-positioned parent. */
   fill?: boolean;
 };
 
-/**
- * Buy/Sell vehicle image with a guaranteed `/assets/semi-truck.jpg` fallback
- * when the API path is missing, invalid, or fails to load.
- */
 export function BuySellImage({
   src,
   alt = "Vehicle",

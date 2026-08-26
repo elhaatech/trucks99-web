@@ -62,8 +62,19 @@ export function ChatDrawer({ open, onClose, embedded = false, productId, roomId,
     try {
       if (!silent) setLoading(true);
       const data = await getChatMessages(id);
-      setRoom(data.room);
-      setMessages(data.messages);
+      setRoom((prev) => {
+        const nextId = data.room.roomId ?? data.room._id;
+        const prevId = prev?.roomId ?? prev?._id;
+        return prevId === nextId ? prev : data.room;
+      });
+      setMessages((prev) => {
+        const prevLast = prev[prev.length - 1]?._id ?? prev[prev.length - 1]?.id;
+        const nextLast =
+          data.messages[data.messages.length - 1]?._id ??
+          data.messages[data.messages.length - 1]?.id;
+        if (prev.length === data.messages.length && prevLast === nextLast) return prev;
+        return data.messages;
+      });
     } catch (err) {
       if (!silent) setError(err instanceof Error ? err.message : "Failed to load chat");
     } finally {
@@ -109,14 +120,17 @@ export function ChatDrawer({ open, onClose, embedded = false, productId, roomId,
   }, [open, productId, roomId, loadMessages]);
 
   // Poll for new messages while open (placeholder until Socket.IO is wired up).
+  const activePollRoomId = room?.roomId ?? room?._id ?? null;
   useEffect(() => {
-    if (!open || !room) return;
-    const activeRoomId = room.roomId ?? room._id;
-    pollRef.current = setInterval(() => loadMessages(activeRoomId, true), POLL_INTERVAL_MS);
+    if (!open || !activePollRoomId) return;
+    pollRef.current = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      void loadMessages(activePollRoomId, true);
+    }, POLL_INTERVAL_MS);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [open, room, loadMessages]);
+  }, [open, activePollRoomId, loadMessages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

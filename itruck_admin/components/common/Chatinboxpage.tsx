@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Avatar from "@mui/material/Avatar";
@@ -10,10 +10,9 @@ import Alert from "@mui/material/Alert";
 import { PageHeader } from "@/components/ui";
 import { ChatDrawer } from "@/components/common/ChatDrawer";
 import { getChatList, type ChatRoom } from "@/model/services/chatapi";
+import { resolveVehicleImageSrc } from "@/lib/buysellUtils";
 import { getCurrentUser } from "@/model/services/user";
 import type { User } from "@/model/services/user";
-
-const POLL_INTERVAL_MS = 8000;
 
 function extractId(value: unknown): string | null {
   if (!value) return null;
@@ -23,6 +22,12 @@ function extractId(value: unknown): string | null {
     return inner ? String(inner) : null;
   }
   return String(value);
+}
+
+function roomsFingerprint(rooms: ChatRoom[]): string {
+  return rooms
+    .map((r) => `${r.roomId ?? r._id}:${r.unreadCount ?? 0}:${r.lastMessageAt ?? ""}:${r.lastMessage ?? ""}`)
+    .join("|");
 }
 
 type Props = {
@@ -40,6 +45,7 @@ export default function ChatInboxPage({ onSelectRoom }: Props) {
   const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
+  const roomsKeyRef = useRef("");
 
   useEffect(() => {
     getCurrentUser()
@@ -51,7 +57,11 @@ export default function ChatInboxPage({ onSelectRoom }: Props) {
     try {
       if (!silent) setLoading(true);
       const data = await getChatList();
-      setRooms(data);
+      const key = roomsFingerprint(data);
+      if (roomsKeyRef.current !== key) {
+        roomsKeyRef.current = key;
+        setRooms(data);
+      }
     } catch (err) {
       if (!silent) setError(err instanceof Error ? err.message : "Failed to load chats");
     } finally {
@@ -61,11 +71,11 @@ export default function ChatInboxPage({ onSelectRoom }: Props) {
 
   useEffect(() => {
     void loadRooms();
-    const interval = setInterval(() => {
-      if (document.visibilityState === "hidden") return;
-      void loadRooms(true);
-    }, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void loadRooms(true);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [loadRooms]);
 
   const currentUserId = extractId(
@@ -122,7 +132,7 @@ export default function ChatInboxPage({ onSelectRoom }: Props) {
                 {/* Product image thumbnail */}
                 <Box
                   component="img"
-                  src={room.product?.image || "/placeholder-product.png"}
+                  src={resolveVehicleImageSrc(room.product?.image)}
                   alt={room.product?.title || "Product"}
                   sx={{
                     width: 56,

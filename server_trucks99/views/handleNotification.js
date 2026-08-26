@@ -9,24 +9,22 @@ const {
   notifyMultiple,
   NOTIFICATION_EVENTS,
   DEFAULT_TEMPLATES,
+  notificationAudienceQuery,
+  isAdminUser,
+  roleLooksLikeAdmin,
 } = require('../services/notificationService');
 
 const notificationRouter = express.Router();
 
 function isAdminActor(actor) {
   if (!actor) return false;
-  const email = actor.email && String(actor.email).toLowerCase();
-  if (email === 'admin@mail.com') return true;
-  const role = actor.roleId || actor.role;
-  const roleName =
-    typeof role === 'string' ? role : role?.name || role?.status || '';
-  const n = String(roleName).toLowerCase();
-  return (
-    n === 'admin' ||
-    n === 'super admin' ||
-    n === 'super_admin' ||
-    n === 'superadmin'
-  );
+  return isAdminUser(actor) || roleLooksLikeAdmin(actor.roleId || actor.role);
+}
+
+function resolveListAudience(req, extra) {
+  const raw = String(req.query?.audience || extra?.audience || '').toLowerCase();
+  if (raw === 'admin' || raw === 'user') return raw;
+  return isAdminActor(req.user) ? 'admin' : 'user';
 }
 
 function requireAdmin(req, res, next) {
@@ -50,7 +48,11 @@ notificationRouter.get('/', async (req, res) => {
     }
     const userId = await resolveToObjectId(User, String(userIdRaw));
     if (!userId) return res.status(404).json({ message: 'User not found' });
-    const notifications = await Notification.find({ userId })
+    const audience = resolveListAudience(req);
+    const notifications = await Notification.find({
+      userId,
+      ...notificationAudienceQuery(audience),
+    })
       .sort({ createdAt: -1 })
       .limit(100)
       .lean();
@@ -205,7 +207,11 @@ notificationRouter.put('/read-all', async (req, res) => {
     }
     const userId = await resolveToObjectId(User, String(userIdRaw));
     if (!userId) return res.status(404).json({ message: 'User not found' });
-    await Notification.updateMany({ userId }, { read: true });
+    const audience = resolveListAudience(req, req.body || {});
+    await Notification.updateMany(
+      { userId, ...notificationAudienceQuery(audience) },
+      { read: true },
+    );
     res.status(200).json({ message: 'All notifications marked as read' });
   } catch (error) {
     res.status(500).json({ message: 'Error updating notifications', error: error.message });

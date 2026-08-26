@@ -20,7 +20,7 @@ import {
   postBuySellProductsByOwner,
   getBuySellRowId,
 } from "@/model/services/buysellapi";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getFirstBuySellImageUrl, handleBuySellImageError } from "@/lib/buysellUtils";
 import { formatCreatedDate } from "@/lib/dateUtils";
 import { routes } from "@/lib/routes";
 import { PRODUCT_THEME as T } from "./theme";
@@ -69,7 +69,7 @@ function SellerProductCard({
   product: BuySellProduct;
   onNavigate: (productId: string) => void;
 }) {
-  const image = product.images?.[0];
+  const image = getFirstBuySellImageUrl(product.images);
   const productId = getBuySellRowId(product);
 
   const subcategoryName =
@@ -117,35 +117,19 @@ function SellerProductCard({
       }}
     >
       <Box sx={{ position: "relative" }}>
-        {image ? (
-          <Box
-            component="img"
-            src={getBuySellImageUrl(image)}
-            alt={product.description || "Product"}
-            sx={{
-              width: "100%",
-              height: { xs: 140, sm: 160 },
-              objectFit: "cover",
-              display: "block",
-              bgcolor: T.color.surfaceMuted,
-            }}
-          />
-        ) : (
-          <Box
-            sx={{
-              width: "100%",
-              height: { xs: 140, sm: 160 },
-              bgcolor: T.color.surfaceMuted,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Typography sx={{ fontSize: 12, color: T.color.textMuted }}>
-              No photo
-            </Typography>
-          </Box>
-        )}
+        <Box
+          component="img"
+          src={image}
+          alt={product.description || "Product"}
+          onError={handleBuySellImageError}
+          sx={{
+            width: "100%",
+            height: { xs: 140, sm: 160 },
+            objectFit: "cover",
+            display: "block",
+            bgcolor: T.color.surfaceMuted,
+          }}
+        />
       </Box>
 
       <Box sx={{ p: 1.5, flexGrow: 1, display: "flex", flexDirection: "column", gap: 0.75 }}>

@@ -1,5 +1,5 @@
 export const BASE_URLS = {
-  testing: "https://trucks99.elhaa.com/api/",
+  testing: "https://trucks99.elhaa.com/api/", 
   production: "https://trucks99.com/api-v1/",
 };
 

@@ -6,7 +6,7 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Avatar from "@mui/material/Avatar";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getFirstBuySellImageUrl } from "@/lib/buysellUtils";
 import { formatProductPrice, getProductTitle } from "../utils";
 import { PRODUCT_THEME as T, INFO, RADIUS } from "@/lib/theme";
 import type { ProductBitRecord } from "@/model/services/bitRecord";
@@ -211,7 +211,7 @@ function OfferTableRow({
   tdSx: object;
 }) {
   const product = row.product ?? (row as ProductBitRecord).product_info ?? null;
-  const image = vehicleImage || product?.images?.[0];
+  const image = getFirstBuySellImageUrl(vehicleImage ? [vehicleImage] : product?.images);
   const title =
     vehicleTitle ||
     row.productTitle ||
@@ -228,7 +228,7 @@ function OfferTableRow({
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
             <Avatar
               variant="rounded"
-              src={getBuySellImageUrl(image)}
+              src={image}
               sx={{ width: 44, height: 38, borderRadius: 1, bgcolor: "#e2e8f0" }}
             />
             <Typography fontWeight={600} fontSize={14}>
@@ -291,7 +291,7 @@ function OfferMobileCard({
   const recordId = row._id || row.id || "";
   const pending = isOfferPending(row.status);
   const loadingRow = busyRecordId === recordId;
-  const image = vehicleImage || row.product?.images?.[0];
+  const image = getFirstBuySellImageUrl(vehicleImage ? [vehicleImage] : row.product?.images);
 
   return (
     <Box
@@ -306,7 +306,7 @@ function OfferMobileCard({
       <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
         <Avatar
           variant="rounded"
-          src={getBuySellImageUrl(image)}
+          src={image}
           sx={{ width: 48, height: 40, borderRadius: 1 }}
         />
         <Box sx={{ flex: 1, minWidth: 0 }}>

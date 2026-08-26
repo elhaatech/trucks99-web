@@ -21,6 +21,7 @@ import {
 } from "@mui/icons-material";
 import { alpha, useTheme } from "@mui/material/styles";
 import { getNotifications, markNotificationRead, markAllNotificationsRead, getRowId, type Notification } from "@/model/api";
+import { setUnreadNotificationCount } from "@/hooks/useUnreadNotificationCount";
 import { ModulePageLayout } from "@/components/common";
 import { ListEmptyState } from "@/components/common";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -53,10 +54,14 @@ export default function NotificationsPage() {
     load();
   }, []);
 
+  const unreadCount = items.filter((n) => !(n.read === true)).length;
+  const hasUnread = unreadCount > 0;
+
   const handleMarkRead = async (id: string) => {
     try {
       await markNotificationRead(id);
       setItems((prev) => prev.map((n) => (getRowId(n) === id ? { ...n, read: true } : n)));
+      setUnreadNotificationCount(Math.max(0, unreadCount - 1));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to mark as read");
     }
@@ -66,13 +71,11 @@ export default function NotificationsPage() {
     try {
       await markAllNotificationsRead();
       setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadNotificationCount(0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to mark all as read");
     }
   };
-
-  const unreadCount = items.filter((n) => !(n.read === true)).length;
-  const hasUnread = unreadCount > 0;
 
   return (
     <ModulePageLayout

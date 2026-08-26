@@ -23,6 +23,7 @@ import {
 } from "@/model/services/notification";
 import { getRowId } from "@/model/services/common";
 import { resolveNotificationHref } from "@/lib/notificationHref";
+import { setUnreadNotificationCount } from "@/hooks/useUnreadNotificationCount";
 
 export type NotificationItem = {
   id: string;
@@ -66,7 +67,10 @@ export function NotificationDropdown(_props: NotificationDropdownProps) {
       setLoading(true);
       try {
         const list = await getNotifications();
-        if (active) setItems(list);
+        if (active) {
+          setItems(list);
+          setUnreadNotificationCount(list.filter((n) => n.read !== true).length);
+        }
       } catch (err) {
         console.error("NotificationDropdown failed to load notifications:", err);
       } finally {
@@ -100,6 +104,7 @@ export function NotificationDropdown(_props: NotificationDropdownProps) {
           setItems((prev) =>
             prev.map((x) => (getRowId(x) === id ? { ...x, read: true } : x)),
           );
+          setUnreadNotificationCount(Math.max(0, unreadCount - 1));
         }
       } catch {
         // still navigate even if mark-read fails
@@ -108,15 +113,17 @@ export function NotificationDropdown(_props: NotificationDropdownProps) {
       handleClose();
       if (href) router.push(href);
     },
-    [handleClose, router],
+    [handleClose, router, unreadCount],
   );
 
   const handleMarkAllRead = useCallback(async () => {
     try {
       await markAllNotificationsRead();
       setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadNotificationCount(0);
     } catch {
       setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadNotificationCount(0);
     }
   }, []);
 

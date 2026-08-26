@@ -24,6 +24,12 @@ function extractId(value: unknown): string | null {
   return String(value);
 }
 
+function roomsFingerprint(rooms: ChatRoom[]): string {
+  return rooms
+    .map((r) => `${r.roomId ?? r._id}:${r.unreadCount ?? 0}:${r.lastMessageAt ?? ""}:${r.lastMessage ?? ""}`)
+    .join("|");
+}
+
 export function MarketplaceChatSplit() {
   const { user: currentUser } = useMarketplaceAuth();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
@@ -35,7 +41,7 @@ export function MarketplaceChatSplit() {
     try {
       if (!silent) setLoading(true);
       const data = await getChatList();
-      setRooms(data);
+      setRooms((prev) => (roomsFingerprint(prev) === roomsFingerprint(data) ? prev : data));
       setActiveRoomId((prev) => prev ?? data[0]?.roomId ?? data[0]?._id ?? null);
     } catch (err) {
       if (!silent) setError(err instanceof Error ? err.message : "Failed to load chats");
