@@ -1,14 +1,11 @@
 import { joinApiUrl } from "@/src/config/BASE_URL";
-import { APP_BASE_PATH, withAppBasePath } from "@/lib/appConfig";
+import { stripAppBasePath, withAppBasePath } from "@/lib/appConfig";
 
 function isFrontendStaticPath(pathname: string): boolean {
+  const path = stripAppBasePath(pathname).split("?")[0];
   const prefixes = ["/assets/", "/images/", "/_next/"];
-  if (pathname === "/favicon.ico") return true;
-  if (prefixes.some((prefix) => pathname.startsWith(prefix))) return true;
-  if (APP_BASE_PATH) {
-    return prefixes.some((prefix) => pathname.startsWith(`${APP_BASE_PATH}${prefix}`));
-  }
-  return false;
+  if (path === "/favicon.ico") return true;
+  return prefixes.some((prefix) => path.startsWith(prefix));
 }
 
 function normalizeUploadsPath(pathname: string): string {
@@ -19,7 +16,7 @@ function normalizeUploadsPath(pathname: string): string {
 /**
  * Resolve a DB/API file path to a browser URL.
  * - `/uploads/...` → API_BASE_URL + uploads path
- * - `/images`, `/assets` → this portal's public prefix (`/user`)
+ * - `/images`, `/assets` → this portal's public files at the host root
  */
 export function resolvePublicFileUrl(path?: string | null): string {
   if (path == null) return "";
@@ -33,14 +30,15 @@ export function resolvePublicFileUrl(path?: string | null): string {
   if (/^https?:\/\//i.test(trimmed)) {
     try {
       const parsed = new URL(trimmed);
+      const pathname = stripAppBasePath(parsed.pathname);
       if (
-        parsed.pathname.startsWith("/uploads") ||
-        parsed.pathname.startsWith("/api/uploads")
+        pathname.startsWith("/uploads") ||
+        pathname.startsWith("/api/uploads")
       ) {
-        return `${joinApiUrl(normalizeUploadsPath(parsed.pathname))}${parsed.search}`;
+        return `${joinApiUrl(normalizeUploadsPath(pathname))}${parsed.search}`;
       }
-      if (isFrontendStaticPath(parsed.pathname)) {
-        return withAppBasePath(`${parsed.pathname}${parsed.search}`);
+      if (isFrontendStaticPath(pathname)) {
+        return withAppBasePath(`${pathname}${parsed.search}`);
       }
       return trimmed;
     } catch {
@@ -48,10 +46,15 @@ export function resolvePublicFileUrl(path?: string | null): string {
     }
   }
 
-  const normalized = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-  if (isFrontendStaticPath(normalized)) return withAppBasePath(normalized);
-  if (normalized.startsWith("/uploads") || normalized.startsWith("/api/uploads")) {
-    return joinApiUrl(normalizeUploadsPath(normalized));
+  const normalized = stripAppBasePath(
+    trimmed.startsWith("/") ? trimmed : `/${trimmed}`,
+  );
+  const q = normalized.indexOf("?");
+  const pathOnly = q === -1 ? normalized : normalized.slice(0, q);
+  const search = q === -1 ? "" : normalized.slice(q);
+  if (isFrontendStaticPath(pathOnly)) return withAppBasePath(normalized);
+  if (pathOnly.startsWith("/uploads") || pathOnly.startsWith("/api/uploads")) {
+    return `${joinApiUrl(normalizeUploadsPath(pathOnly))}${search}`;
   }
   return joinApiUrl(normalized);
 }
