@@ -208,6 +208,52 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
             </Box>
           ))}
 
+          {/* Get the App */}
+          <Box>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                color: alpha(PRIMARY, 0.85),
+                mb: 2,
+              }}
+            >
+              Get the App
+            </Typography>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 1,
+                alignItems: "flex-start",
+              }}
+            >
+              <Box
+                component="a"
+                href="https://play.google.com/store/apps/details?id=com.brahmaesolutions.trucks99"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Get it on Google Play"
+                sx={{
+                  display: "inline-block",
+                  transition: "opacity 0.15s, transform 0.15s",
+                  "&:hover": { opacity: 0.9, transform: "translateY(-2px)" },
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
+                  alt="Get it on Google Play"
+                  style={{ height: 80, width: "auto", display: "block" }}
+                />
+              </Box>
+              {/* TODO: replace with actual App Store URL */}
+             
+            </Box>
+          </Box>
+
           {/* Contact / Get in Touch
           <Box>
             <Typography
