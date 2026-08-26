@@ -329,16 +329,11 @@ export default function UserProductViewPage() {
         >
           {title}
         </Typography>
-        {summaryProps.subtitle ? (
+       
           <Typography sx={{ color: T.color.textSecondary, fontSize: 14, mt: 0.25 }}>
             {summaryProps.subtitle}
           </Typography>
-        ) : null}
-        {formatVehicleIdDisplay(getProductVehicleId(item)) ? (
-          <Typography sx={{ color: T.color.textSecondary, fontSize: 14, mt: 0.25 }}>
-            {formatVehicleIdDisplay(getProductVehicleId(item))}
-          </Typography>
-        ) : null}
+       
       </Box>
 
       <Box
@@ -352,7 +347,10 @@ export default function UserProductViewPage() {
         <Box>
           <ProductViewGallery images={item.images ?? []} title={title} />
 
-          <ProductViewSummary {...summaryProps} />
+          <ProductViewSummary
+            {...summaryProps}
+            vehicleIdLabel={formatVehicleIdDisplay(getProductVehicleId(item)) || undefined}
+          />
 
           <ProductVehicleDetails
             specs={specEntries}

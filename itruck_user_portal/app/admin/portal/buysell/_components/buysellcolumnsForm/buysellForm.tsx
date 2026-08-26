@@ -701,37 +701,30 @@ export function BuySellForm({
     const target = pendingSlotRef.current;
     pendingSlotRef.current = null;
 
-    if (target != null) {
-      // Assign / replace a specific required angle slot (Front/Back/Left/Right).
-      const file = files[0];
-      const newEntry: ImageEntry = {
-        kind: "new",
-        file,
-        preview: URL.createObjectURL(file),
-      };
-      setImageEntries((prev) => {
-        const next = [...prev];
-        const pos = Math.min(target, MAX_PHOTOS - 1);
-        if (pos < next.length) {
-          if (next[pos].kind === "new") URL.revokeObjectURL(next[pos].preview);
-          next[pos] = newEntry;
-        } else {
-          next.push(newEntry);
-        }
-        return next;
-      });
-      setError("");
-      return;
-    }
-
-    // No specific slot → append as additional photos ("Add more"), capped at max.
     setImageEntries((prev) => {
-      const remaining = MAX_PHOTOS - prev.length;
-      if (remaining <= 0) {
-        setError(`You can upload a maximum of ${MAX_PHOTOS} images.`);
-        return prev;
+      const next = [...prev];
+      // Start at the clicked slot, otherwise the first empty slot, else append.
+      let pos = target != null ? target : next.findIndex((entry) => !entry);
+      if (pos === -1) pos = next.length;
+
+      for (const file of files) {
+        if (next.length >= MAX_PHOTOS) break;
+        const entry: ImageEntry = {
+          kind: "new",
+          file,
+          preview: URL.createObjectURL(file),
+        };
+        if (pos < next.length) {
+          const existing = next[pos];
+          if (existing.kind === "new") URL.revokeObjectURL(existing.preview);
+          next[pos] = entry;
+        } else {
+          next.push(entry);
+        }
+        pos += 1;
       }
-      const filesToAdd = files.slice(0, remaining);
+
+      const remaining = MAX_PHOTOS - prev.length;
       if (files.length > remaining) {
         setError(
           `Only ${remaining} more image(s) can be added (max ${MAX_PHOTOS} total).`,
@@ -739,12 +732,7 @@ export function BuySellForm({
       } else {
         setError("");
       }
-      const newEntries: ImageEntry[] = filesToAdd.map((file) => ({
-        kind: "new" as const,
-        file,
-        preview: URL.createObjectURL(file),
-      }));
-      return [...prev, ...newEntries];
+      return next;
     });
   };
 
