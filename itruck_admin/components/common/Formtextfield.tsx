@@ -19,6 +19,8 @@ export interface FormTextFieldProps
   fullWidth?: boolean;
   error?: boolean;
   helperText?: React.ReactNode;
+  /** Restrict input to digits only (e.g. KM Driven, Pincode, Price). */
+  digitsOnly?: boolean;
 }
 
 export default function FormTextField({
@@ -35,6 +37,7 @@ export default function FormTextField({
   fullWidth = true,
   error,
   helperText,
+  digitsOnly = false,
   sx,
   inputProps,
   ...rest
@@ -42,19 +45,34 @@ export default function FormTextField({
   // Stable ID shared between server and client — fixes MUI hydration mismatch
   const stableId = useId();
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    onChange(digitsOnly ? raw.replace(/\D/g, "") : raw);
+  };
+
   const multilineProps = multiline
     ? {
         multiline: true,
         rows,
         minRows: minRows ?? 2,
         maxRows: maxRows ?? 6,
-        inputProps: { style: { minHeight: 56 }, ...inputProps },
+        inputProps: {
+          style: { minHeight: 56 },
+          ...inputProps,
+          inputMode: digitsOnly ? "numeric" : undefined,
+        } as TextFieldProps["inputProps"],
         sx: {
           "& .MuiInputBase-root": { minHeight: 56, alignItems: "flex-start" },
           ...sx,
         },
       }
-    : { inputProps, sx };
+    : {
+        inputProps: {
+          ...inputProps,
+          inputMode: digitsOnly ? "numeric" : undefined,
+        } as TextFieldProps["inputProps"],
+        sx,
+      };
 
   return (
     <TextField
@@ -62,8 +80,8 @@ export default function FormTextField({
       size="small"
       label={label}
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-      type={type}
+      onChange={handleChange}
+      type={digitsOnly ? "text" : type}
       placeholder={placeholder}
       required={required}
       fullWidth={fullWidth}

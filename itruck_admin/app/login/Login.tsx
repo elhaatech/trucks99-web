@@ -125,7 +125,7 @@ export default function LoginPage() {
     <AuthLayout
       leftContent={
         <WelcomePanel
-          title="Welcome to iTruck"
+          title="Welcome to TRUCKS99"
           subtitle="Sign in to the Admin Portal"
           siteUrl="www.itruck.com"
         />
