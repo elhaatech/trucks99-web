@@ -42,7 +42,6 @@ import {
   incrementMarketItemView,
 } from "@/model/services/buysellapi";
 import { getBitRecords, type ProductBitRecord } from "@/model/api";
-import { getChatList } from "@/model/services/chatapi";
 import { BitRecordsSection } from "@/components/common/BitRecordsSection";
 import { getCurrentUser } from "@/model/services/user";
 import type { User } from "@/model/services/user";
@@ -165,7 +164,6 @@ export default function BuySellViewPage() {
   const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
-  const [totalUnread, setTotalUnread] = useState(0);
   const [inboxOpen, setInboxOpen] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
@@ -222,29 +220,6 @@ export default function BuySellViewPage() {
     setSubcategoryFilter(null);
     setStateFilter("");
   }, [id]);
-
-  // Poll unread count across ALL of this user's conversations (not just this
-  // product) so the inbox icon badge stays accurate wherever they navigate.
-  useEffect(() => {
-    let cancelled = false;
-
-    async function poll() {
-      try {
-        const rooms = await getChatList();
-        if (cancelled) return;
-        setTotalUnread(rooms.reduce((sum, r) => sum + (r.unreadCount || 0), 0));
-      } catch {
-        // ignore — badge just won't update this cycle
-      }
-    }
-
-    poll();
-    const interval = setInterval(poll, 8000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, []);
 
   const handleFavorite = async () => {
     if (!currentUser) {

@@ -11,7 +11,7 @@ import TablePagination from "@mui/material/TablePagination";
 import { useRouter } from "next/navigation";
 import { EmptyState, TableSkeleton } from "@/components/ui";
 import { ProductStatusChip } from "@/app/admin/portal/buysell/_components/ProductStatusChip";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { resolveVehicleImageSrc } from "@/lib/buysellUtils";
 import { routes } from "@/lib/routes";
 import {
   formatCount,
@@ -30,7 +30,7 @@ const PERFORMING_OPTIONS: { value: MarketplacePeriod | "all"; label: string }[] 
 ];
 
 function ProductThumb({ src, name }: { src?: string | null; name: string }) {
-  const url = getBuySellImageUrl(src);
+  const url = resolveVehicleImageSrc(src);
   return (
     <Box
       sx={{
@@ -40,7 +40,7 @@ function ProductThumb({ src, name }: { src?: string | null; name: string }) {
         overflow: "hidden",
         flexShrink: 0,
         bgcolor: "action.hover",
-        backgroundImage: url ? `url(${url})` : "none",
+        backgroundImage: `url(${url})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         display: "flex",

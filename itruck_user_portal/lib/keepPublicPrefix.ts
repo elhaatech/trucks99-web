@@ -13,6 +13,8 @@ function passThrough(pathname: string, prefix: string): boolean {
     pathname.startsWith(`${prefix}/`) ||
     pathname === "/api" ||
     pathname.startsWith("/api/") ||
+    pathname === "/api-v1" ||
+    pathname.startsWith("/api-v1/") ||
     pathname === "/uploads" ||
     pathname.startsWith("/uploads/") ||
     pathname.startsWith("/_next")
@@ -46,13 +48,13 @@ function rewriteHref(url: string, prefix: string, origin: string): string {
 }
 
 /**
- * Apache strips `/user` before Next.js. Keep the public URL and RSC fetches
- * under `/user` so the browser does not request `/_next` or `/login` at the
- * domain root (those 404).
+ * When PUBLIC_URL_PREFIX is set, keep browser URLs and RSC fetches under that
+ * prefix. Currently empty — the portal is served at the host root.
  */
 export function useKeepPublicPrefix(): void {
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!PUBLIC_URL_PREFIX) return;
     if (!isProductionHost(window.location.hostname)) return;
 
     const prefix = PUBLIC_URL_PREFIX;

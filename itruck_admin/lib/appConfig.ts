@@ -16,13 +16,13 @@ export const PUBLIC_URL_PREFIX = "/admin";
 export const APP_BASE_PATH: string =
   process.env.NODE_ENV === "production" ? "/admin" : "";
 
-export const PRODUCTION_API_ORIGIN = "https://trucks99.elhaa.com";
-
 export const LOCAL_BACKEND_PORT = "3003";
 
 export const PRODUCTION_HOSTS = new Set([
   "trucks99.elhaa.com",
   "www.trucks99.elhaa.com",
+  "trucks99.com",
+  "www.trucks99.com",
 ]);
 
 function splitPathAndSearch(path: string): { pathname: string; search: string } {

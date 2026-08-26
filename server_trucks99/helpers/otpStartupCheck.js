@@ -14,7 +14,8 @@ async function checkOtpDependencies() {
     const msg = `Redis unavailable (${err.message || err})`;
     issues.push(msg);
     console.error(`[OTP] ${msg}`);
-    console.error("[OTP] Install/start Redis and set REDIS_URL in .env");
+    console.error("[OTP] Login OTP will use MongoDB fallback until Redis is available.");
+    console.error("[OTP] Optional: install/start Redis and set REDIS_URL in .env");
   }
 
   if (sendSMS.isDraft4SmsConfigured()) {
@@ -27,7 +28,7 @@ async function checkOtpDependencies() {
 
   if (isProduction && issues.length) {
     console.error(
-      "[OTP] WARNING: OTP login will fail in production until the issues above are fixed.",
+      "[OTP] WARNING: Redis and/or SMS config issues above. OTP storage can use MongoDB if Redis is down; SMS still requires Draft4SMS.",
     );
   }
 

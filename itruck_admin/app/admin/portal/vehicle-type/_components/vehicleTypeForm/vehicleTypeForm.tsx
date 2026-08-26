@@ -23,7 +23,7 @@ import {
   updateVehicleType,
   getVehicleBodyTypeAll,
 } from "@/model/api";
-import { resolveApiBase, getAuthHeaders } from "@/model/services/common";
+import { joinApiUrl, getAuthHeaders } from "@/model/services/common";
 import {
   BackButton,
   FormFooter,
@@ -48,7 +48,7 @@ async function uploadImage(file: File): Promise<string> {
   formData.append("key", "vehicle_type");
   formData.append("file", file);
 
-  const res = await fetch(`${resolveApiBase()}/api/upload`, {
+  const res = await fetch(joinApiUrl("/api/upload"), {
     method: "POST",
     body: formData,
     headers: {

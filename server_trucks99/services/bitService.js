@@ -144,11 +144,23 @@ async function resolveEntityType(entityIdRaw, typeHint) {
   return (await tryLoad()) || (await tryTruck()) || (await tryProduct());
 }
 
+function ownerRefToIdString(value) {
+  if (value == null || value === '') return '';
+  if (typeof value === 'object') {
+    if (typeof value.toHexString === 'function') return value.toHexString();
+    if (value._id) return ownerRefToIdString(value._id);
+    if (value.id && typeof value.id !== 'object') return String(value.id).trim();
+  }
+  const s = String(value).trim();
+  return s === '[object Object]' ? '' : s;
+}
+
 function getEntityOwnerObjectIds(entityType, entityDoc) {
   if (!entityDoc) return [];
   const ids = new Set();
   const add = (v) => {
-    if (v) ids.add(v.toString());
+    const id = ownerRefToIdString(v);
+    if (id) ids.add(id);
   };
 
   if (entityType === 'load') {
@@ -157,9 +169,12 @@ function getEntityOwnerObjectIds(entityType, entityDoc) {
     add(entityDoc.createdBy);
   } else if (entityType === 'truck') {
     add(entityDoc.ownerId);
+    add(entityDoc.userId);
     add(entityDoc.createdBy);
   } else if (entityType === 'product') {
     add(entityDoc.userid);
+    add(entityDoc.userId);
+    add(entityDoc.ownerId);
   }
   return [...ids];
 }
@@ -257,6 +272,9 @@ function buildBidMetadata({
     bitReason: record?.bitReason || '',
     bidderId: record?.userId || null,
     bidderName: record?.userName || '',
+    productMongoId: productDoc?._id || record?.productId || null,
+    loadMongoId: loadDoc?._id || record?.loadId || null,
+    truckMongoId: truckDoc?._id || record?.truckId || null,
     route: route || '/admin/portal/notifications',
     ...extra,
   };
@@ -358,13 +376,38 @@ async function notifyOwnersNewBid({ kind, record, userOid, userName, bit, bitRea
   if (!entityDoc) return;
 
   const ctx = await resolveBidNotificationContext(kind, record);
-  const ownerIds = getEntityOwnerObjectIds(entityType, entityDoc);
+  const rawOwnerIds = getEntityOwnerObjectIds(entityType, entityDoc);
   const bidderIdStr = userOid ? String(userOid) : '';
   const postTypeLabel = kind === 'product' ? 'product' : kind === 'truck' ? 'truck' : 'load';
 
-  for (const ownerId of ownerIds) {
-    if (bidderIdStr && ownerId === bidderIdStr) continue;
+  if (!rawOwnerIds.length) {
+    console.warn('[FCM][bitService] SKIP — no post owner on', kind, entityPublicId(entityDoc));
+    return;
+  }
 
+  const resolvedOwners = [];
+  const seenOwners = new Set();
+  for (const rawId of rawOwnerIds) {
+    if (bidderIdStr && String(rawId) === bidderIdStr) continue;
+    // eslint-disable-next-line no-await-in-loop
+    const ownerOid = await resolveUserObjectId(rawId);
+    if (!ownerOid) {
+      console.warn('[FCM][bitService] SKIP — post owner user not found:', rawId, 'kind:', kind);
+      continue;
+    }
+    const ownerKey = String(ownerOid);
+    if (bidderIdStr && ownerKey === bidderIdStr) continue;
+    if (seenOwners.has(ownerKey)) continue;
+    seenOwners.add(ownerKey);
+    resolvedOwners.push(ownerOid);
+  }
+
+  if (!resolvedOwners.length) {
+    console.warn('[FCM][bitService] SKIP — no resolvable post owner for', kind, entityPublicId(entityDoc), rawOwnerIds);
+    return;
+  }
+
+  for (const ownerId of resolvedOwners) {
     dispatchBidNotify({
       userId: ownerId,
       event: NOTIFICATION_EVENTS.NEW_REQUEST,

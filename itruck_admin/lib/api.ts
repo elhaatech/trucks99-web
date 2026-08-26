@@ -6,6 +6,7 @@ export {
   api,
   API_BASE,
   resolveApiBase,
+  joinApiUrl,
   getAuthHeaders,
   setToken,
   clearToken,

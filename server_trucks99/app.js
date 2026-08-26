@@ -107,7 +107,10 @@ const defaultOrigins = [
   "http://truck.elhaa.com",
   "https://truck.elhaa.com",
   "http://truck.elhaa.com:3000",
-
+  "https://trucks99.com",
+  "https://www.trucks99.com",
+  "http://trucks99.com",
+  "http://www.trucks99.com",
 ];
 
 const envOrigins = [
@@ -139,6 +142,11 @@ function isAllowedOrigin(origin) {
 
   // Any subdomain of elhaa.com on any port (http://truck.elhaa.com:3002)
   if (/^https?:\/\/([a-z0-9-]+\.)*elhaa\.com(?::\d+)?$/i.test(origin)) {
+    return true;
+  }
+
+  // Client production UI
+  if (/^https?:\/\/(www\.)?trucks99\.com(?::\d+)?$/i.test(origin)) {
     return true;
   }
 
@@ -212,6 +220,9 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 
+const { restoreStrippedApiPrefix } = require("./helpers/restoreStrippedApiPrefix");
+app.use(restoreStrippedApiPrefix);
+
 // gzip/brotli when client Accept-Encoding allows — shrinks large list JSON payloads
 app.use(
   compression({
@@ -269,9 +280,7 @@ app.use(passport.session());
 
 const { jwtAuth } = require("./helpers/jwtAuth");
 const { requireAuthUnlessPublic } = require("./helpers/requireAuth");
-const { restoreStrippedApiPrefix } = require("./helpers/restoreStrippedApiPrefix");
 
-app.use(restoreStrippedApiPrefix);
 app.use(jwtAuth);
 app.use(requireAuthUnlessPublic);
 

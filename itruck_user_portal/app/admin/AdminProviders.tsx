@@ -1,17 +1,18 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { getCurrentUser, getNotifications, type User } from "@/model/api";
+import { getCurrentUser, type User } from "@/model/api";
 import {
   registerFcmTokenForCurrentUser,
+  subscribeToForegroundFcmNotifications,
 } from "@/model/services/firebase";
+import { notifyNotificationsChanged } from "@/model/services/notification";
 import { DashboardLayout } from "@/components/dashboard";
 import { GoogleAdsProvider } from "@/components/common";
 import { NavigationProvider } from "@/components/navigation/NavigationProvider";
 
 export function AdminProviders({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
     getCurrentUser()
@@ -23,18 +24,28 @@ export function AdminProviders({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    getNotifications()
-      .then((list) => setNotificationCount(list.filter((n) => !n.read).length))
-      .catch(() => setNotificationCount(0));
+    let unsubscribe: (() => void) | null = null;
+    subscribeToForegroundFcmNotifications(({ title, body }) => {
+      notifyNotificationsChanged();
+      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+        new Notification(title, { body });
+      }
+    })
+      .then((fn) => {
+        unsubscribe = fn;
+      })
+      .catch(() => undefined);
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   return (
     <>
       <Suspense fallback={null}>
         <NavigationProvider>
-          <DashboardLayout user={user} notificationCount={notificationCount}>
-            {children}
-          </DashboardLayout>
+          <DashboardLayout user={user}>{children}</DashboardLayout>
         </NavigationProvider>
       </Suspense>
       <GoogleAdsProvider />

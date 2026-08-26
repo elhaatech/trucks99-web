@@ -269,6 +269,7 @@ async function notifyAdminsOfFreePlanRequest({
       requestId: String(placement._id),
       requestStatus: "pending",
       source: "free_plan",
+      audience: "admin",
       route: ADMIN_FEATURED_ROUTE,
       postType: "PRODUCT",
       senderId: seller?._id || undefined,

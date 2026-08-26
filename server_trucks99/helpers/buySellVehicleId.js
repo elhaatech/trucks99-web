@@ -2,31 +2,48 @@
 
 const mongoose = require("mongoose");
 
-const NEW_VEHICLE_ID_RE = /^(\d{4})(\d{6})$/;
+const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
+const NEW_VEHICLE_ID_RE = /^(\d{6})(\d{4})$/;
 const COUNTER_PREFIX = "buysell_vehicle_";
 const BS_COUNTER_ID = "buysell_bs";
-const MAX_MONTHLY_SEQ = 999999;
+const MAX_DAILY_SEQ = 9999;
 
 function getBuySellProduct() {
   return require("../schema/buysellProduct");
 }
 
-function yymmFromDate(date = new Date()) {
+function pad2(value) {
+  return String(value).padStart(2, "0");
+}
+
+function yymmddFromDate(date = new Date()) {
   const d = date instanceof Date ? date : new Date(date);
   if (Number.isNaN(d.getTime())) {
     throw new Error("Invalid creation date for vehicle ID");
   }
-  const yy = String(d.getFullYear() % 100).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  return `${yy}${mm}`;
+  // Asia/Kolkata is UTC+5:30 year-round (no DST).
+  const ist = new Date(d.getTime() + IST_OFFSET_MS);
+  const yy = pad2(ist.getUTCFullYear() % 100);
+  const mm = pad2(ist.getUTCMonth() + 1);
+  const dd = pad2(ist.getUTCDate());
+  const yymmdd = `${yy}${mm}${dd}`;
+  if (!/^\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$/.test(yymmdd)) {
+    throw new Error(`Invalid vehicle ID date prefix: ${yymmdd}`);
+  }
+  return yymmdd;
 }
 
-function formatVehicleId(yymm, seq) {
+/** @deprecated Use yymmddFromDate. Kept so older callers still resolve. */
+function yymmFromDate(date = new Date()) {
+  return yymmddFromDate(date);
+}
+
+function formatVehicleId(yymmdd, seq) {
   const n = Number(seq);
-  if (!Number.isInteger(n) || n < 1 || n > MAX_MONTHLY_SEQ) {
+  if (!Number.isInteger(n) || n < 1 || n > MAX_DAILY_SEQ) {
     throw new Error(`Vehicle ID counter out of range: ${seq}`);
   }
-  return `${yymm}${String(n).padStart(6, "0")}`;
+  return `${yymmdd}${String(n).padStart(4, "0")}`;
 }
 
 function formatBsNumber(seq, createdAt = new Date()) {
@@ -44,7 +61,12 @@ function formatBsNumber(seq, createdAt = new Date()) {
 function parseNewVehicleId(value) {
   const match = String(value || "").trim().match(NEW_VEHICLE_ID_RE);
   if (!match) return null;
-  return { yymm: match[1], seq: parseInt(match[2], 10) };
+  const yymmdd = match[1];
+  return {
+    yymmdd,
+    yymm: yymmdd.slice(0, 4),
+    seq: parseInt(match[2], 10),
+  };
 }
 
 function isNewVehicleIdFormat(value) {
@@ -62,14 +84,14 @@ function countersCollection() {
   return mongoose.connection.collection("counters");
 }
 
-function monthlyCounterId(yymm) {
-  return `${COUNTER_PREFIX}${yymm}`;
+function dailyCounterId(yymmdd) {
+  return `${COUNTER_PREFIX}${yymmdd}`;
 }
 
-async function findMaxExistingSeqForMonth(yymm) {
+async function findMaxExistingSeqForDay(yymmdd) {
   const BuySellProduct = getBuySellProduct();
-  const minId = `${yymm}000000`;
-  const maxId = `${yymm}999999`;
+  const minId = `${yymmdd}0000`;
+  const maxId = `${yymmdd}9999`;
   const docs = await BuySellProduct.find(
     {
       $or: [
@@ -84,7 +106,7 @@ async function findMaxExistingSeqForMonth(yymm) {
   for (const doc of docs) {
     for (const value of [doc.vehicleId, doc.bsNumber]) {
       const parsed = parseNewVehicleId(value);
-      if (parsed && parsed.yymm === yymm && parsed.seq > maxSeq) {
+      if (parsed && parsed.yymmdd === yymmdd && parsed.seq > maxSeq) {
         maxSeq = parsed.seq;
       }
     }
@@ -142,21 +164,21 @@ async function reserveCounterRange(counterId, count, maxExisting) {
   return { start, end };
 }
 
-async function reserveMonthlySeqRange(yymm, count, options = {}) {
+async function reserveDailySeqRange(yymmdd, count, options = {}) {
   const n = Math.trunc(Number(count));
   if (!Number.isInteger(n) || n < 1) {
     throw new Error(`Invalid vehicle ID allocation count: ${count}`);
   }
 
-  const counterId = options.counterId || monthlyCounterId(yymm);
+  const counterId = options.counterId || dailyCounterId(yymmdd);
   const maxExisting =
     typeof options.maxExisting === "number"
       ? options.maxExisting
-      : await findMaxExistingSeqForMonth(yymm);
+      : await findMaxExistingSeqForDay(yymmdd);
 
   const range = await reserveCounterRange(counterId, n, maxExisting);
-  if (range.end > MAX_MONTHLY_SEQ) {
-    throw new Error("Vehicle ID monthly counter overflow (max 999999)");
+  if (range.end > MAX_DAILY_SEQ) {
+    throw new Error("Vehicle ID daily counter overflow (max 9999)");
   }
   return range;
 }
@@ -164,11 +186,11 @@ async function reserveMonthlySeqRange(yymm, count, options = {}) {
 async function allocateVehicleIds(count, createdAt = new Date(), options = {}) {
   const n = Math.trunc(Number(count));
   if (!Number.isInteger(n) || n < 1) return [];
-  const yymm = yymmFromDate(createdAt);
-  const { start, end } = await reserveMonthlySeqRange(yymm, n, options);
+  const yymmdd = yymmddFromDate(createdAt);
+  const { start, end } = await reserveDailySeqRange(yymmdd, n, options);
   const ids = [];
   for (let i = start; i <= end; i += 1) {
-    ids.push(formatVehicleId(yymm, i));
+    ids.push(formatVehicleId(yymmdd, i));
   }
   return ids;
 }
@@ -195,16 +217,35 @@ async function generateNextBsNumber(createdAt = new Date()) {
   return id;
 }
 
-/** Prefer dedicated vehicleId; fall back if an earlier create stored YYMM###### in bsNumber. */
+/**
+ * API presentation for Vehicle ID.
+ * Older rows were stored as YYMM + 6-digit seq (day slot is "00").
+ * Those are shown as YYMMDD + last 4 digits using createdAt, without rewriting the document.
+ */
+function formatVehicleIdWithDate(vehicleId, createdAt) {
+  const raw = String(vehicleId || "").trim();
+  if (!raw) return null;
+  if (!/^\d{10}$/.test(raw)) return raw;
+  if (raw.slice(4, 6) !== "00") return raw;
+  if (!createdAt) return raw;
+  try {
+    return `${yymmddFromDate(createdAt)}${raw.slice(6, 10)}`;
+  } catch {
+    return raw;
+  }
+}
+
+/** Prefer dedicated vehicleId; fall back if an earlier create stored YYMMDD#### in bsNumber. */
 function resolveVehicleId(item) {
   if (!item) return null;
+  let raw = null;
   if (item.vehicleId && String(item.vehicleId).trim()) {
-    return String(item.vehicleId).trim();
+    raw = String(item.vehicleId).trim();
+  } else if (isNewVehicleIdFormat(item.bsNumber)) {
+    raw = String(item.bsNumber).trim();
   }
-  if (isNewVehicleIdFormat(item.bsNumber)) {
-    return String(item.bsNumber).trim();
-  }
-  return null;
+  if (!raw) return null;
+  return formatVehicleIdWithDate(raw, item.createdAt) || raw;
 }
 
 /**
@@ -229,19 +270,23 @@ function formatBsNumberWithDate(bsNumber, createdAt) {
 
 module.exports = {
   NEW_VEHICLE_ID_RE,
+  yymmddFromDate,
   yymmFromDate,
   formatVehicleId,
   formatBsNumber,
   parseNewVehicleId,
   isNewVehicleIdFormat,
   seqFromFindOneAndUpdate,
-  findMaxExistingSeqForMonth,
+  findMaxExistingSeqForDay,
+  findMaxExistingSeqForMonth: findMaxExistingSeqForDay,
   findMaxExistingBsSeq,
-  reserveMonthlySeqRange,
+  reserveDailySeqRange,
+  reserveMonthlySeqRange: reserveDailySeqRange,
   allocateVehicleIds,
   allocateBsNumbers,
   generateNextVehicleId,
   generateNextBsNumber,
   resolveVehicleId,
+  formatVehicleIdWithDate,
   formatBsNumberWithDate,
 };

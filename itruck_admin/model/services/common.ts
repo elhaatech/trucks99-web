@@ -1,12 +1,11 @@
 import {
   persistMarketplaceUserId,
 } from "@/lib/marketplaceUser";
-import { forceBackendPort, resolveApiBase } from "@/lib/apiBase";
-import { PRODUCTION_API_ORIGIN } from "@/lib/appConfig";
+import { joinApiUrl, resolveApiBase } from "@/lib/apiBase";
+import { API_BASE_URL } from "@/src/config/BASE_URL";
 
-/** Deprecated snapshot — prefer resolveApiBase(). */
-export const API_BASE = PRODUCTION_API_ORIGIN;
-export { resolveApiBase };
+export const API_BASE = API_BASE_URL.replace(/\/+$/, "");
+export { resolveApiBase, joinApiUrl };
 
 const TOKEN_KEY = "itruck_token";
 
@@ -60,8 +59,7 @@ export async function api<T = unknown>(
   options: RequestOptions = {}
 ): Promise<T> {
   const { params, ...init } = options;
-  const base = forceBackendPort(resolveApiBase());
-  const url = new URL(path.startsWith("http") ? forceBackendPort(path) : `${base}${path}`);
+  const url = new URL(path.startsWith("http") ? path : joinApiUrl(path));
   if (params) {
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   }
@@ -120,8 +118,7 @@ export async function publicApi<T = unknown>(
   options: RequestOptions = {}
 ): Promise<T> {
   const { params, ...init } = options;
-  const base = forceBackendPort(resolveApiBase());
-  const url = new URL(path.startsWith("http") ? forceBackendPort(path) : `${base}${path}`);
+  const url = new URL(path.startsWith("http") ? path : joinApiUrl(path));
   if (params) {
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   }

@@ -31,9 +31,12 @@ otpRouter.get('/health', async (_req, res) => {
 
   const smsConfigured = sendSMS.isDraft4SmsConfigured();
 
-  return res.status(redisOk && smsConfigured ? 200 : 503).json({
-    ok: redisOk && smsConfigured,
+  // OTP can still be stored in MongoDB when Redis is down
+  const otpReady = smsConfigured;
+  return res.status(otpReady ? 200 : 503).json({
+    ok: otpReady,
     redis: redisOk ? 'connected' : 'unavailable',
+    otpStorage: redisOk ? 'redis' : 'mongodb',
     ...(redisError ? { redisError } : {}),
     draft4sms: smsConfigured ? 'configured' : 'missing_api_key_or_sender',
     nodeEnv: process.env.NODE_ENV || 'development',

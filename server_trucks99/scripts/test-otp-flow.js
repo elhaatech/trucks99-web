@@ -36,8 +36,18 @@ function fail(name, detail) {
 }
 
 async function clearOtp() {
-  await ensureRedisConnected();
-  await redisClient.del(REDIS_KEY);
+  try {
+    await ensureRedisConnected();
+    await redisClient.del(REDIS_KEY);
+  } catch (err) {
+    console.warn("clearOtp Redis:", err.message || err);
+  }
+  try {
+    const MobileOtp = require("../schema/mobileOtp");
+    await MobileOtp.deleteOne({ mobile: TEST_MOBILE_NORM });
+  } catch (err) {
+    console.warn("clearOtp Mongo:", err.message || err);
+  }
 }
 
 async function ensureTestUser() {
@@ -347,21 +357,30 @@ async function testRedisUnavailable() {
   delete require.cache[require.resolve("../config/redisClient")];
   const liveRedis = require("../config/redisClient");
   const originalGet = liveRedis.get.bind(liveRedis);
+  const originalSet = liveRedis.set.bind(liveRedis);
   liveRedis.get = async () => {
+    throw new Error("Simulated Redis down");
+  };
+  liveRedis.set = async () => {
     throw new Error("Simulated Redis down");
   };
   delete require.cache[require.resolve("../helpers/mobileOtpService")];
   const svc = require("../helpers/mobileOtpService");
-  const v = await svc.verifyOtpCode(TEST_MOBILE, "123456");
+  const send = await svc.createAndSendOtp(TEST_MOBILE);
   liveRedis.get = originalGet;
+  liveRedis.set = originalSet;
   delete require.cache[require.resolve("../helpers/mobileOtpService")];
   delete require.cache[require.resolve("../config/redisClient")];
 
-  if (v.ok || !v.error.includes("Redis unavailable")) {
-    fail("15. Redis unavailable", v.error || "unexpected success");
+  if (send.error && /Redis unavailable|OTP store unavailable/i.test(send.error)) {
+    fail("15. Redis unavailable falls back to Mongo", send.error);
   } else {
-    pass("15. Redis unavailable", v.error);
+    pass(
+      "15. Redis unavailable falls back to Mongo",
+      send.ok ? "OTP stored without Redis" : `store ok, send=${send.error || "sms issue"}`,
+    );
   }
+  await clearOtp();
 }
 
 async function testSmsFailure() {

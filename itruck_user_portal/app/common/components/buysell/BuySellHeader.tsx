@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import Box from "@mui/material/Box";
@@ -12,6 +13,9 @@ import Badge from "@mui/material/Badge";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Divider from "@mui/material/Divider";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
 import InputBase from "@mui/material/InputBase";
 import Avatar from "@mui/material/Avatar";
 import Tooltip from "@mui/material/Tooltip";
@@ -19,6 +23,7 @@ import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import MenuIcon from "@mui/icons-material/Menu";
 import SearchIcon from "@mui/icons-material/Search";
 import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
+import MarkChatUnreadOutlinedIcon from "@mui/icons-material/MarkChatUnreadOutlined";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
@@ -28,7 +33,6 @@ import DirectionsCarOutlinedIcon from "@mui/icons-material/DirectionsCarOutlined
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import ContactSupportOutlinedIcon from "@mui/icons-material/ContactSupportOutlined";
 import { alpha } from "@mui/material/styles";
-import Image from "next/image";
 import Link from "next/link";
 import {
   INFO,
@@ -46,10 +50,22 @@ import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProv
 import {
   MARKETPLACE_FAVORITES_CHANGED_EVENT,
   getMarketplaceDisplayName,
+  MARKETPLACE_CHAT_CHANGED_EVENT,
 } from "@/lib/marketplaceAuth";
 import { getBuySellFavoriteCount } from "@/model/services/favoriteapi";
+import { getChatList } from "@/model/services/chatapi";
 import { NotificationDropdown } from "@/components/common/NotificationDropdown";
 import { withAppBasePath } from "@/lib/appConfig";
+import { isAdminLikeRole } from "@/lib/permissions";
+
+const ChatDrawer = dynamic(
+  () => import("@/components/common/ChatDrawer").then((m) => m.ChatDrawer),
+  { ssr: false },
+);
+const ChatInboxPage = dynamic(
+  () => import("@/components/common/Chatinboxpage"),
+  { ssr: false },
+);
 
 const NAV_LINKS = [
   { label: "Buy Vehicle", href: userProductRoutes.list() },
@@ -71,10 +87,14 @@ export function resolveBuySellNavHref(
   if (link.label === "Sell Vehicle" && !isLoggedIn) {
     return userProductRoutes.login(userProductRoutes.sellVehicle());
   }
+  if (link.label === "Messages" && !isLoggedIn) {
+    return userProductRoutes.login(userProductRoutes.chat());
+  }
   return link.href;
 }
 
 const MOBILE_EXTRA_LINKS = [
+  { label: "Messages", href: userProductRoutes.chat() },
   { label: "AI Chatbot", href: userProductRoutes.assistant() },
 ];
 
@@ -85,12 +105,15 @@ type BuySellHeaderProps = {
 export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, isLoggedIn, logout: marketplaceLogout } = useMarketplaceAuth();
+  const { user, userId, isLoggedIn, logout: marketplaceLogout } = useMarketplaceAuth();
   const navLinks = useMemo(() => getBuySellNavLinks(isLoggedIn), [isLoggedIn]);
   const displayName = getMarketplaceDisplayName(user);
   const [favoriteCount, setFavoriteCount] = useState(0);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [headerSearch, setHeaderSearch] = useState("");
+  const [totalUnread, setTotalUnread] = useState(0);
+  const [inboxOpen, setInboxOpen] = useState(false);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
 
   const assistantActive =
     pathname === userProductRoutes.assistant() ||
@@ -125,6 +148,57 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
       );
   }, [refreshCounts]);
 
+  const refreshUnread = useCallback(async () => {
+    if (!isLoggedIn) {
+      setTotalUnread(0);
+      return;
+    }
+    try {
+      const rooms = await getChatList();
+      const next = rooms.reduce((sum, r) => sum + (r.unreadCount || 0), 0);
+      setTotalUnread((prev) => (prev === next ? prev : next));
+    } catch {
+      // badge stays as-is if the list call fails
+    }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setTotalUnread(0);
+      return;
+    }
+    let lastAt = 0;
+    const run = (force: boolean) => {
+      const now = Date.now();
+      if (!force && now - lastAt < 60_000) return;
+      lastAt = now;
+      void refreshUnread();
+    };
+    run(true);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") run(false);
+    };
+    const onChatChanged = () => {
+      lastAt = Date.now();
+      void refreshUnread();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener(MARKETPLACE_CHAT_CHANGED_EVENT, onChatChanged);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener(MARKETPLACE_CHAT_CHANGED_EVENT, onChatChanged);
+    };
+  }, [isLoggedIn, refreshUnread]);
+
+  const openInbox = () => {
+    if (!isLoggedIn) {
+      router.push(userProductRoutes.login(userProductRoutes.chat()));
+      return;
+    }
+    setInboxOpen(true);
+    void refreshUnread();
+  };
+
   const handleHeaderSearch = () => {
     router.push(
       userProductRoutes.list(headerSearch.trim() ? { q: headerSearch.trim() } : undefined),
@@ -141,6 +215,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
   };
 
   return (
+    <>
     <AppBar
       position="fixed"
       elevation={0}
@@ -212,13 +287,13 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                 lineHeight: 0,
               }}
             >
-              <Image
-                src="/assets/logo.png"
+              <Box
+                component="img"
+                src={withAppBasePath("/assets/logo.png")}
                 alt="TRUCKS99"
                 width={60}
                 height={40}
-                priority
-                style={{
+                sx={{
                   width: "100%",
                   height: "100%",
                   objectFit: "contain",
@@ -344,7 +419,27 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
             </Button>
           </Tooltip>
 
-          <NotificationDropdown />
+          {!isAdminLikeRole(user?.role ?? null) ? <NotificationDropdown /> : null}
+
+          <Tooltip title="Messages">
+            <IconButton
+              onClick={openInbox}
+              aria-label="Messages"
+              sx={{
+                border: `1px solid ${T.color.border}`,
+                borderRadius: 2,
+                transition: `all ${TRANSITION.fast}`,
+                "&:hover": {
+                  bgcolor: alpha(PRIMARY, 0.06),
+                  borderColor: alpha(PRIMARY, 0.3),
+                },
+              }}
+            >
+              <Badge badgeContent={isLoggedIn ? totalUnread : 0} color="error" max={99}>
+                <MarkChatUnreadOutlinedIcon sx={{ fontSize: 20 }} />
+              </Badge>
+            </IconButton>
+          </Tooltip>
 
           <IconButton
             onClick={() => router.push(userProductRoutes.favorites())}
@@ -458,6 +553,15 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                 <MenuItem
                   onClick={() => {
                     setUserMenuAnchor(null);
+                    openInbox();
+                  }}
+                >
+                  <MarkChatUnreadOutlinedIcon sx={{ mr: 1.5, fontSize: 18, color: "text.secondary" }} />
+                  Messages
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    setUserMenuAnchor(null);
                     router.push(userProductRoutes.dashboard());
                   }}
                 >
@@ -542,6 +646,52 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
         </Box>
       </Toolbar>
     </AppBar>
+
+      <Dialog
+        open={inboxOpen}
+        onClose={() => setInboxOpen(false)}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{ sx: { height: "80vh" } }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            py: 1.5,
+            borderBottom: "1px solid",
+            borderColor: "grey.200",
+          }}
+        >
+          Messages
+          <IconButton onClick={() => setInboxOpen(false)} size="small" sx={{ color: "grey.500" }} aria-label="Close messages">
+            <CloseRoundedIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 2, overflowY: "auto" }}>
+          {inboxOpen ? (
+            <ChatInboxPage
+              hideHeader
+              onSelectRoom={(roomId) => {
+                setSelectedRoomId(roomId);
+                setInboxOpen(false);
+              }}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <ChatDrawer
+        open={!!selectedRoomId}
+        onClose={() => {
+          setSelectedRoomId(null);
+          void refreshUnread();
+        }}
+        roomId={selectedRoomId ?? undefined}
+        currentUserId={userId}
+      />
+    </>
   );
 }
 

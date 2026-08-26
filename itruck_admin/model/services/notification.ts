@@ -12,16 +12,35 @@ export type Notification = {
   productId?: string;
   read?: boolean;
   createdAt?: string;
+  postId?: string;
+  postType?: string;
   metadata?: {
     route?: string;
     placementId?: string;
+    productId?: string;
+    postId?: string;
+    postType?: string;
+    entityType?: string;
+    entityId?: string;
+    loadId?: string;
+    truckId?: string;
     requestStatus?: string;
     source?: string;
   };
 };
 
+export const NOTIFICATIONS_CHANGED_EVENT = "itruck-notifications-changed";
+
+/** Admin portal only lists admin-role notifications. */
+const PORTAL_AUDIENCE = "admin";
+
+export function notifyNotificationsChanged(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED_EVENT));
+}
+
 export async function getNotifications(): Promise<Notification[]> {
-  return api<Notification[]>("/api/notification");
+  return api<Notification[]>(`/api/notification?audience=${PORTAL_AUDIENCE}`);
 }
 
 export async function markNotificationRead(id: string) {
@@ -31,7 +50,7 @@ export async function markNotificationRead(id: string) {
 export async function markAllNotificationsRead() {
   return api<{ message: string }>("/api/notification/read-all", {
     method: "PUT",
-    body: JSON.stringify({}),
+    body: JSON.stringify({ audience: PORTAL_AUDIENCE }),
   });
 }
 

@@ -23,6 +23,7 @@ import {
   removeBuySellFromCart,
   type BuySellCartItem,
 } from "@/model/services/buysellapi";
+import { getFirstBuySellImageUrl } from "@/lib/buysellUtils";
 import { ProductStatusChip } from "../_components/ProductStatusChip";
 
 export default function BuySellCartPage() {
@@ -97,7 +98,7 @@ export default function BuySellCartPage() {
               const product = item.product;
               const productId = getBuySellRowId(product);
               const price = Number(product.price) || 0;
-              const imageUrl = product.images?.[0];
+              const imageUrl = getFirstBuySellImageUrl(product.images);
 
               return (
                 <AppCard key={item._id || productId} hover={false} padding={0}>
@@ -108,7 +109,7 @@ export default function BuySellCartPage() {
                         height: { xs: 160, sm: "auto" },
                         minHeight: { sm: 140 },
                         bgcolor: alpha(theme.palette.text.primary, 0.04),
-                        backgroundImage: imageUrl ? `url(${imageUrl})` : undefined,
+                        backgroundImage: `url(${imageUrl})`,
                         backgroundSize: "cover",
                         backgroundPosition: "center",
                         borderRadius: { xs: "12px 12px 0 0", sm: "12px 0 0 12px" },
@@ -121,9 +122,7 @@ export default function BuySellCartPage() {
                           <Typography variant="subtitle1" fontWeight={700}>
                             {product.description || product.bsNumber || "Vehicle"}
                           </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-                            {product.bsNumber}
-                          </Typography>
+                  
                           {product.vehicleId ? (
                             <Typography variant="body2" color="text.secondary">
                               Vehicle ID: {product.vehicleId}

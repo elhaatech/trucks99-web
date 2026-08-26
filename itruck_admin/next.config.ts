@@ -7,8 +7,9 @@ import type { NextConfig } from "next";
  * Apache already serves JS at /admin/_next/... and strips `/admin` when
  * forwarding to this process. Do not set `basePath` to `/admin` — App Router
  * pages already live at `/admin/portal`.
+ *
+ * Backend API origin is configured in src/config/BASE_URL.ts (not .env).
  */
-const PRODUCTION_API_ORIGIN = "https://trucks99.elhaa.com";
 const PRODUCTION_ASSET_PREFIX = "/admin";
 const INTERNAL_BACKEND = "http://127.0.0.1:3003";
 const isProd = process.env.NODE_ENV === "production";
@@ -16,11 +17,6 @@ const isProd = process.env.NODE_ENV === "production";
 const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
   assetPrefix: isProd ? PRODUCTION_ASSET_PREFIX : undefined,
-  env: {
-    NEXT_PUBLIC_API_URL: isProd
-      ? PRODUCTION_API_ORIGIN
-      : "http://127.0.0.1:3003",
-  },
   /**
    * Proxy backend API through the Next.js origin for local/LAN.
    * `/portal` rewrites exist because Apache strips `/admin` from
@@ -30,6 +26,18 @@ const nextConfig: NextConfig = {
     const backend = INTERNAL_BACKEND.replace(/\/$/, "");
     return {
       beforeFiles: [
+        {
+          source: "/portal/products/:id",
+          destination: "/admin/portal/buysell/view/:id",
+        },
+        {
+          source: "/portal/loads/:id",
+          destination: "/admin/portal/load/view/:id",
+        },
+        {
+          source: "/portal/trucks/:id",
+          destination: "/admin/portal/truck/view/:id",
+        },
         {
           source: "/portal",
           destination: "/admin/portal",
@@ -42,6 +50,10 @@ const nextConfig: NextConfig = {
       afterFiles: [
         {
           source: "/api/:path*",
+          destination: `${backend}/api/:path*`,
+        },
+        {
+          source: "/api-v1/:path*",
           destination: `${backend}/api/:path*`,
         },
         {
@@ -68,6 +80,9 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "46.202.176.124", port: "3003", pathname: "/**" },
       { protocol: "https", hostname: "trucks99.elhaa.com", pathname: "/**" },
       { protocol: "http", hostname: "trucks99.elhaa.com", pathname: "/**" },
+      { protocol: "https", hostname: "trucks99.com", pathname: "/**" },
+      { protocol: "http", hostname: "trucks99.com", pathname: "/**" },
+      { protocol: "https", hostname: "www.trucks99.com", pathname: "/**" },
     ],
   },
 };

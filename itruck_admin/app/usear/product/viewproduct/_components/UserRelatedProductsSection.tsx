@@ -19,7 +19,7 @@ import {
   getBuySellRowId,
   postBuySellProductsByOwner,
 } from "@/model/services/buysellapi";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getFirstBuySellImageUrl } from "@/lib/buysellUtils";
 import { addFavorite, removeFavorite } from "@/model/services/favoriteapi";
 import {
   formatProductPrice,
@@ -68,7 +68,7 @@ function RelatedProductCard({
   onChat: () => void;
   onFavoriteToggle: () => void;
 }) {
-  const imageUrl = getBuySellImageUrl(product.images?.[0]);
+  const imageUrl = getFirstBuySellImageUrl(product.images);
   const title = getProductTitle(product);
   const subtitle = getProductSubtitle(product);
   const location = getProductLocation(product);
@@ -93,7 +93,7 @@ function RelatedProductCard({
           sx={{
             height: 150,
             bgcolor: T.color.surfaceMuted,
-            backgroundImage: imageUrl ? `url(${imageUrl})` : undefined,
+            backgroundImage: `url(${imageUrl})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}

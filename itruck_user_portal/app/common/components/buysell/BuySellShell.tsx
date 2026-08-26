@@ -18,6 +18,7 @@ import StarOutlineRoundedIcon from "@mui/icons-material/StarOutlineRounded";
 import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
+import MarkChatUnreadOutlinedIcon from "@mui/icons-material/MarkChatUnreadOutlined";
 import { alpha } from "@mui/material/styles";
 import { isSellHubPath, userProductRoutes } from "@/lib/userProductRoutes";
 import {
@@ -59,6 +60,8 @@ function navIcon(label: string) {
     case "Favorites":
     case "My Favorite List":
       return <FavoriteBorderIcon fontSize="small" />;
+    case "Messages":
+      return <MarkChatUnreadOutlinedIcon fontSize="small" />;
     case "AI Chatbot":
       return <ChatBubbleOutlineRoundedIcon fontSize="small" />;
     default:
@@ -154,6 +157,8 @@ export function BuySellShell({ children }: BuySellShellProps) {
                   ? pathname === link.href
                   : link.label === "AI Chatbot"
                     ? pathname === link.href || pathname.startsWith(`${link.href}/`)
+                    : link.label === "Messages"
+                      ? pathname === link.href || pathname.startsWith(`${link.href}/`)
                     : pathname === link.href || pathname.startsWith(`${link.href}/`);
 
             return (

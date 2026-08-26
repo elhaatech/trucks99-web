@@ -12,13 +12,11 @@ import type { User } from "@/model/api";
 export interface DashboardLayoutProps {
   children: React.ReactNode;
   user?: User | null;
-  notificationCount?: number;
 }
 
 export function DashboardLayout({
   children,
   user,
-  notificationCount = 0,
 }: DashboardLayoutProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -38,7 +36,6 @@ export function DashboardLayout({
       {!isMobile ? (
         <AppSidebar
           user={user}
-          notificationCount={notificationCount}
           variant="rail"
         />
       ) : (
@@ -59,7 +56,6 @@ export function DashboardLayout({
         >
           <AppSidebar
             user={user}
-            notificationCount={notificationCount}
             variant="drawer"
             onNavClick={closeMobileNav}
           />
@@ -78,7 +74,6 @@ export function DashboardLayout({
       >
         <TopNavbar
           user={user}
-          notificationCount={notificationCount}
           onMenuClick={isMobile ? () => setMobileNavOpen(true) : undefined}
         />
         <Box
