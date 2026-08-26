@@ -208,7 +208,7 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
             </Box>
           ))}
 
-          {/* Contact / Get in Touch */}
+          {/* Contact / Get in Touch
           <Box>
             <Typography
               sx={{
@@ -252,7 +252,7 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
                 value={"Monday – Saturday\n9:00 AM – 7:00 PM"}
               />
             </Box>
-          </Box>
+          </Box> */}
         </Box>
       </Box>
     </Box>
