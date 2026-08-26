@@ -26,6 +26,16 @@ client.on("error", (err) => {
 let connectPromise = null;
 let skipReconnectUntil = 0;
 
+async function closeBrokenSocket() {
+  try {
+    if (client.isOpen) {
+      await client.disconnect();
+    }
+  } catch (_) {
+    // Ignore — the next connect() opens a new socket.
+  }
+}
+
 async function ensureRedisConnected() {
   if (client.isReady) {
     return client;
@@ -37,20 +47,25 @@ async function ensureRedisConnected() {
 
   if (!connectPromise) {
     connectPromise = (async () => {
-      if (!client.isOpen) {
-        await client.connect();
-      }
-      await client.ping();
-      skipReconnectUntil = 0;
-      return client;
-    })()
-      .catch((err) => {
+      try {
+        if (client.isOpen && !client.isReady) {
+          await closeBrokenSocket();
+        }
+        if (!client.isOpen) {
+          await client.connect();
+        }
+        await client.ping();
+        skipReconnectUntil = 0;
+        return client;
+      } catch (err) {
         skipReconnectUntil = Date.now() + FAIL_COOLDOWN_MS;
-        throw err;
-      })
-      .finally(() => {
-        connectPromise = null;
-      });
+        await closeBrokenSocket();
+        const detail = err && err.message ? err.message : err;
+        throw new Error(`Redis unavailable (${detail})`);
+      }
+    })().finally(() => {
+      connectPromise = null;
+    });
   }
 
   return connectPromise;

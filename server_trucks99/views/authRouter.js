@@ -61,6 +61,7 @@ authRouter.post('/send-otp', async (req, res) => {
     if (!result.ok) {
       return res.status(result.error?.includes('Wait') ? 429 : 503).json({
         message: result.error,
+        otpSentViaSms: false,
         isNewUser,
         ...(result.smsError ? { smsError: result.smsError } : {}),
       });
@@ -70,7 +71,9 @@ authRouter.post('/send-otp', async (req, res) => {
       message: result.message,
       otpSentViaSms: Boolean(result.sent),
       isNewUser,
-      ...(result.otpForDev ? { otpForDev: result.otpForDev } : {}),
+      ...(String(process.env.DEV_OTP_FALLBACK || '').toLowerCase() === 'true' && result.otpForDev
+        ? { otpForDev: result.otpForDev }
+        : {}),
       ...(result.smsError ? { smsError: result.smsError } : {}),
     });
   } catch (err) {
@@ -102,6 +105,7 @@ authRouter.post('/resend-otp', async (req, res) => {
     if (!result.ok) {
       return res.status(result.error?.includes('wait') ? 429 : 400).json({
         message: result.error,
+        otpSentViaSms: false,
         ...(result.smsError ? { smsError: result.smsError } : {}),
       });
     }
@@ -109,7 +113,9 @@ authRouter.post('/resend-otp', async (req, res) => {
     return res.status(200).json({
       message: result.message || 'OTP resent via SMS.',
       otpSentViaSms: Boolean(result.sent),
-      ...(result.otpForDev ? { otpForDev: result.otpForDev } : {}),
+      ...(String(process.env.DEV_OTP_FALLBACK || '').toLowerCase() === 'true' && result.otpForDev
+        ? { otpForDev: result.otpForDev }
+        : {}),
       ...(result.smsError ? { smsError: result.smsError } : {}),
     });
   } catch (err) {

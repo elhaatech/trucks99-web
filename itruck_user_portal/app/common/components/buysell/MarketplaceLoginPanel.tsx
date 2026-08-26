@@ -111,7 +111,13 @@ export function MarketplaceLoginPanel({
     setIsNewUser(newUser);
     setOtpSentViaSms(Boolean(res.otpSentViaSms));
     setOtp("");
-    if (res.otpSentViaSms) {
+    if (res.otpForDev) {
+      setInfo(
+        res.otpSentViaSms
+          ? `OTP sent by SMS. Local code: ${res.otpForDev}`
+          : `SMS not delivered${res.smsError ? ` (${res.smsError})` : ""}. Local OTP: ${res.otpForDev}`,
+      );
+    } else if (res.otpSentViaSms) {
       setInfo(
         newUser
           ? "OTP sent. Enter the code to complete registration and sign in."

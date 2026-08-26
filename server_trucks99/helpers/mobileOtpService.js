@@ -29,13 +29,7 @@ const OTP_PEPPER = (
 ).trim();
 
 function isDevOtpFallbackEnabled() {
-  if (String(process.env.DEV_OTP_FALLBACK || "").toLowerCase() === "false") {
-    return false;
-  }
-  if (String(process.env.DEV_OTP_FALLBACK || "").toLowerCase() === "true") {
-    return true;
-  }
-  return process.env.NODE_ENV !== "production";
+  return String(process.env.DEV_OTP_FALLBACK || "").toLowerCase() === "true";
 }
 
 function hashOtp(plainOtp, mobile) {
@@ -114,7 +108,7 @@ async function getOtpRecord(mobile) {
     if (raw) return JSON.parse(raw);
   } catch (err) {
     const msg = err && err.message ? err.message : err;
-    if (String(msg) !== "Redis unavailable") {
+    if (!String(msg).startsWith("Redis unavailable")) {
       console.error("Redis error (get), using MongoDB fallback:", msg);
     }
   }
@@ -135,14 +129,15 @@ async function saveOtpRecord(mobile, record, ttlSeconds) {
       EX: ttl > 0 ? ttl : OTP_EXPIRY_SECONDS,
     });
     await MobileOtp.deleteOne({ mobile }).catch(() => {});
-    return;
+    return "redis";
   } catch (err) {
     const msg = err && err.message ? err.message : err;
-    if (String(msg) !== "Redis unavailable") {
+    if (!String(msg).startsWith("Redis unavailable")) {
       console.error("Redis error (set), using MongoDB fallback:", msg);
     }
   }
   await saveOtpRecordMongo(mobile, record);
+  return "mongodb";
 }
 
 async function deleteOtpRecord(mobile) {
@@ -151,7 +146,7 @@ async function deleteOtpRecord(mobile) {
     await redisClient.del(otpRedisKey(mobile));
   } catch (err) {
     const msg = err && err.message ? err.message : err;
-    if (String(msg) !== "Redis unavailable") {
+    if (!String(msg).startsWith("Redis unavailable")) {
       console.error("Redis error (del):", msg);
     }
   }
@@ -229,8 +224,9 @@ async function createAndSendOtp(mobileRaw, { isResend = false } = {}) {
     expiresAt,
   };
 
+  let storedIn = "mongodb";
   try {
-    await saveOtpRecord(mobile, redisPayload, OTP_EXPIRY_SECONDS);
+    storedIn = await saveOtpRecord(mobile, redisPayload, OTP_EXPIRY_SECONDS);
   } catch (err) {
     console.error(
       "OTP store error (set):",
@@ -239,10 +235,23 @@ async function createAndSendOtp(mobileRaw, { isResend = false } = {}) {
     return { ok: false, error: "Internal error (OTP store unavailable)." };
   }
 
-  const sms = await sendOtpViaSms(mobile, plainOtp);
-  const isDev = isDevOtpFallbackEnabled();
+  console.log(`[OTP] stored via ${storedIn} for ${mobile}; calling Draft4SMS`);
 
-  if (!sms.sent && !isDev) {
+  let sms;
+  try {
+    sms = await sendOtpViaSms(mobile, plainOtp);
+  } catch (err) {
+    sms = {
+      sent: false,
+      error: err && err.message ? err.message : "SMS send failed",
+    };
+  }
+
+  console.log(
+    `[OTP] Draft4SMS sent=${Boolean(sms.sent)} error=${sms.error || "none"}`,
+  );
+
+  if (!sms.sent) {
     try {
       await deleteOtpRecord(mobile);
     } catch (delErr) {
@@ -251,32 +260,32 @@ async function createAndSendOtp(mobileRaw, { isResend = false } = {}) {
         delErr && delErr.message ? delErr.message : delErr,
       );
     }
+
+    if (isDevOtpFallbackEnabled()) {
+      return {
+        ok: true,
+        sent: false,
+        message: "SMS not sent. Request a new OTP.",
+        smsError: sms.error,
+        otpForDev: plainOtp,
+      };
+    }
+
     return {
       ok: false,
-      error:
-        sms.error ||
-        "Could not send OTP via SMS. Check SMS provider configuration.",
+      error: "Could not send OTP via SMS. Try again later.",
       smsError: sms.error,
     };
   }
 
   const payload = {
     ok: true,
-    sent: Boolean(sms.sent),
-    message: sms.sent
-      ? "OTP sent to your mobile number via SMS."
-      : "SMS not sent. Request a new OTP.",
+    sent: true,
+    message: "OTP sent to your mobile number via SMS.",
   };
-
-  if (sms.error && !sms.sent) {
-    payload.smsError = sms.error;
-  }
-
-  // Dev only: expose the random OTP when SMS failed
-  if (isDevOtpFallbackEnabled() && !sms.sent) {
+  if (isDevOtpFallbackEnabled()) {
     payload.otpForDev = plainOtp;
   }
-
   return payload;
 }
 

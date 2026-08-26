@@ -66,6 +66,15 @@ function loginResponse(req, res, user) {
   });
 }
 
+function allowDevOtpInResponse() {
+  return String(process.env.DEV_OTP_FALLBACK || "").toLowerCase() === "true";
+}
+
+function otpDevFields(result) {
+  if (!allowDevOtpInResponse() || !result || !result.otpForDev) return {};
+  return { otpForDev: result.otpForDev };
+}
+
 function otpProfileFromBody(body = {}) {
   return {
     name: body.name,
@@ -112,7 +121,7 @@ otpRouter.post('/send', async (req, res) => {
       message: result.message || 'OTP sent to your mobile number.',
       otpSentViaSms: Boolean(result.sent),
       isNewUser,
-      ...(result.otpForDev ? { otpForDev: result.otpForDev } : {}),
+      ...otpDevFields(result),
       ...(result.smsError ? { smsError: result.smsError } : {}),
     });
   } catch (err) {
@@ -123,6 +132,7 @@ otpRouter.post('/send', async (req, res) => {
     const isDev = process.env.NODE_ENV !== 'production';
     return res.status(500).json({
       message: 'Failed to send OTP.',
+      otpSentViaSms: false,
       ...(isDev ? { error: err.message } : {}),
     });
   }
@@ -157,7 +167,7 @@ otpRouter.post('/resend', async (req, res) => {
     return res.status(200).json({
       message: result.message || 'OTP resent to your mobile number.',
       otpSentViaSms: Boolean(result.sent),
-      ...(result.otpForDev ? { otpForDev: result.otpForDev } : {}),
+      ...otpDevFields(result),
       ...(result.smsError ? { smsError: result.smsError } : {}),
     });
   } catch (err) {

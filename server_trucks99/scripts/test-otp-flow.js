@@ -175,6 +175,8 @@ async function testWrongOtpAndAttempts() {
 async function sendOtpWithMockSms(smsSent = false) {
   const smsPath = require.resolve("../helpers/draft4sms/sendSMS");
   const originalSms = require.cache[smsPath].exports;
+  const prevDev = process.env.DEV_OTP_FALLBACK;
+  if (!smsSent) process.env.DEV_OTP_FALLBACK = "true";
   require.cache[smsPath].exports = async () =>
     smsSent
       ? { sent: true, messageId: "test" }
@@ -183,6 +185,7 @@ async function sendOtpWithMockSms(smsSent = false) {
   const svc = require("../helpers/mobileOtpService");
   const result = await svc.createAndSendOtp(TEST_MOBILE);
   require.cache[smsPath].exports = originalSms;
+  process.env.DEV_OTP_FALLBACK = prevDev;
   delete require.cache[require.resolve("../helpers/mobileOtpService")];
   return result;
 }

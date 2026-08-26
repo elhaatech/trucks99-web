@@ -1,5 +1,16 @@
+/**
+ * OTP / API origin by environment:
+ *
+ * local:      http://localhost:3002/api/otp/send
+ * testing:    https://trucks99.elhaa.com/api/otp/send
+ * production: https://trucks99.com/api-v1/otp/send
+ *
+ * Service paths stay `/api/...`. joinApiUrl strips the extra `/api` because
+ * each base already ends with `/api/` or `/api-v1/`.
+ */
 export const BASE_URLS = {
-  testing: "https://trucks99.elhaa.com/api/", 
+  local: "http://localhost:3002/api/",
+  testing: "https://trucks99.elhaa.com/api/",
   production: "https://trucks99.com/api-v1/",
 };
 
@@ -9,12 +20,15 @@ function hostWithoutWww(hostname: string): string {
   return hostname.replace(/^www\./i, "").toLowerCase();
 }
 
-/** Browser host wins so trucks99.com always uses /api-v1/ after deploy. */
+/** Browser host picks local / testing / production. */
 export function getActiveApiBaseUrl(): string {
   if (typeof window !== "undefined") {
     const host = hostWithoutWww(window.location.hostname);
     if (host === "trucks99.com") return BASE_URLS.production;
     if (host === "trucks99.elhaa.com") return BASE_URLS.testing;
+    if (host === "localhost" || host === "127.0.0.1") {
+      return `${window.location.origin}/api/`;
+    }
   }
   return API_BASE_URL;
 }
