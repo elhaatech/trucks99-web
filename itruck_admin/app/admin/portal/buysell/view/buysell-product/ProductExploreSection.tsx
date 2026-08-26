@@ -13,8 +13,7 @@ import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
 import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 
-import { CategorySubcategoriesList, type SubcategoryFilterValue } from "@/components/common";
-import { StateFilterDropdown } from "@/app/common/components/buysell/StateFilterDropdown";
+import { type SubcategoryFilterValue } from "@/components/common";
 import {
   BuySellProduct,
   postBuySellProductsByOwner,
@@ -286,18 +285,12 @@ function SellerProductsGrid({
 }
 
 export function ProductExploreSection({
-  categoryId,
-  categoryName,
-  currentSubcategoryId,
-  currentSubcategoryName,
   sellerId,
   sellerName,
   excludeProductId,
   isLoggedIn,
   subcategoryFilter,
-  onSubcategoryFilterChange,
   stateFilter,
-  onStateFilterChange,
   getViewRoute,
 }: ProductExploreSectionProps) {
   const router = useRouter();
@@ -364,45 +357,9 @@ export function ProductExploreSection({
             color: T.color.textPrimary,
           }}
         >
-          {sectionTitle}
+        Related Vechile Details
         </Typography>
-        <Typography
-          sx={{
-            fontFamily: T.font.body,
-            fontSize: 13,
-            color: T.color.textSecondary,
-            mt: 0.5,
-            lineHeight: 1.5,
-          }}
-        >
-          Explore other active listings from the same seller. Use the filters below
-          to narrow by subcategory or state.
-        </Typography>
-      </Box>
-
-      <Box sx={{ mb: 2, display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 2, alignItems: { sm: "flex-start" } }}>
-        {categoryId ? (
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <CategorySubcategoriesList
-              compact
-              categoryId={categoryId}
-              categoryName={categoryName}
-              currentSubcategoryId={currentSubcategoryId}
-              currentSubcategoryName={currentSubcategoryName}
-              selectedFilter={subcategoryFilter}
-              onFilterChange={onSubcategoryFilterChange}
-            />
-          </Box>
-        ) : null}
-
-        <Box sx={{ width: { xs: "100%", sm: 260 }, flexShrink: 0 }}>
-          <StateFilterDropdown
-            label="State"
-            value={stateFilter}
-            onChange={onStateFilterChange}
-            placeholder="All states"
-          />
-        </Box>
+        
       </Box>
 
       {!isLoggedIn ? (

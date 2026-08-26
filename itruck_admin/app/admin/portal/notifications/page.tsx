@@ -34,6 +34,15 @@ function NotificationIcon({ type }: { type?: string }) {
   return <NotificationsNoneOutlined />;
 }
 
+function displayNotificationMessage(n: Notification): string {
+  const isFreePlanFeaturedRequest =
+    n.event === "featured_free_plan_request" ||
+    /requested a Free Plan to feature/i.test(n.message);
+  if (!isFreePlanFeaturedRequest) return n.message;
+  // Strip the " - BS277" / " - 2608240021" vehicle/short code segment (keeps the date).
+  return n.message.replace(/\s*-\s*(?:BS\d+|\d{6,})\b/i, "");
+}
+
 export default function NotificationsPage() {
   const theme = useTheme();
   const router = useRouter();
@@ -198,7 +207,7 @@ export default function NotificationsPage() {
                   secondary={
                     <>
                       <Typography variant="body2" color="text.secondary" component="span" sx={{ display: "block", mt: 0.5, lineHeight: 1.5 }}>
-                        {n.message}
+                        {displayNotificationMessage(n)}
                       </Typography>
                       {href ? (
                           <Link
