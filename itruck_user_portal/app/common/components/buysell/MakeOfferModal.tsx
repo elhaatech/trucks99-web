@@ -58,6 +58,7 @@ export function MakeOfferModal({
         bitReason: message.trim() || undefined,
         status: "pending",
         userId: userId ?? undefined,
+        userName: user?.name || undefined,
         user: toMarketplaceApiUser(user),
       });
       onNotify({ type: "success", message: "Offer sent successfully." });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Avatar from "@mui/material/Avatar";
@@ -12,8 +12,7 @@ import { ChatDrawer } from "@/components/common/ChatDrawer";
 import { BuySellImage } from "@/components/common/BuySellImage";
 import { getChatList, type ChatRoom } from "@/model/services/chatapi";
 import { useMarketplaceAuthOptional } from "@/components/marketplace/MarketplaceAuthProvider";
-
-const POLL_INTERVAL_MS = 8000;
+import { MARKETPLACE_CHAT_CHANGED_EVENT } from "@/lib/marketplaceAuth";
 
 function extractId(value: unknown): string | null {
   if (!value) return null;
@@ -25,6 +24,12 @@ function extractId(value: unknown): string | null {
   return String(value);
 }
 
+function roomsFingerprint(rooms: ChatRoom[]): string {
+  return rooms
+    .map((r) => `${r.roomId ?? r._id}:${r.unreadCount ?? 0}:${r.lastMessageAt ?? ""}:${r.lastMessage ?? ""}`)
+    .join("|");
+}
+
 type Props = {
   /** When provided, room clicks are delegated to the parent (e.g. so the
    *  parent can close a wrapping Dialog before opening ChatDrawer, avoiding
@@ -32,20 +37,27 @@ type Props = {
    *  ChatInboxPage manages its own ChatDrawer — used by the standalone
    *  /chat route. */
   onSelectRoom?: (roomId: string) => void;
+  /** Hide the page title when the inbox is already wrapped (navbar dialog). */
+  hideHeader?: boolean;
 };
 
-export default function ChatInboxPage({ onSelectRoom }: Props) {
+export default function ChatInboxPage({ onSelectRoom, hideHeader = false }: Props) {
   const auth = useMarketplaceAuthOptional();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
+  const roomsKeyRef = useRef("");
 
   const loadRooms = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
       const data = await getChatList();
-      setRooms(data);
+      const key = roomsFingerprint(data);
+      if (roomsKeyRef.current !== key) {
+        roomsKeyRef.current = key;
+        setRooms(data);
+      }
     } catch (err) {
       if (!silent) setError(err instanceof Error ? err.message : "Failed to load chats");
     } finally {
@@ -55,13 +67,18 @@ export default function ChatInboxPage({ onSelectRoom }: Props) {
 
   useEffect(() => {
     void loadRooms();
-    const interval = setInterval(() => {
-      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
-        return;
-      }
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void loadRooms(true);
+    };
+    const onChatChanged = () => {
       void loadRooms(true);
-    }, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener(MARKETPLACE_CHAT_CHANGED_EVENT, onChatChanged);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener(MARKETPLACE_CHAT_CHANGED_EVENT, onChatChanged);
+    };
   }, [loadRooms]);
 
   const currentUser = auth?.user ?? null;
@@ -75,7 +92,9 @@ export default function ChatInboxPage({ onSelectRoom }: Props) {
 
   return (
     <Box>
-      <PageHeader title="Messages" subtitle="Conversations about your buy/sell listings" />
+      {hideHeader ? null : (
+        <PageHeader title="Messages" subtitle="Conversations about your buy/sell listings" />
+      )}
 
       {error && (
         <Alert severity="error" onClose={() => setError("")} sx={{ mb: 2 }}>

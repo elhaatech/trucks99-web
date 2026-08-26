@@ -8,6 +8,7 @@ import {
 export const MARKETPLACE_AUTH_CHANGED_EVENT = "itruck-marketplace-auth-changed";
 export const MARKETPLACE_FAVORITES_CHANGED_EVENT =
   "itruck-marketplace-favorites-changed";
+export const MARKETPLACE_CHAT_CHANGED_EVENT = "itruck-marketplace-chat-changed";
 
 export function hasMarketplaceBearerToken(): boolean {
   return Boolean(getAuthHeaders().Authorization);
@@ -23,6 +24,12 @@ export function notifyMarketplaceAuthChanged(): void {
 export function notifyMarketplaceFavoritesChanged(): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(MARKETPLACE_FAVORITES_CHANGED_EVENT));
+}
+
+/** Notify header inbox badge after a chat room is created or a message is sent. */
+export function notifyMarketplaceChatChanged(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(MARKETPLACE_CHAT_CHANGED_EVENT));
 }
 
 export function resolveMarketplaceUserIdFromUser(

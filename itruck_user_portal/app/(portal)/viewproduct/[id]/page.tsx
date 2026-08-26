@@ -189,10 +189,10 @@ export default function UserProductViewPage() {
     };
   }, [sellerId, id]);
 
-  const openChat = (productId?: string) => {
+  const openChat = useCallback((productId?: string) => {
     setChatProductId(productId ?? id);
     setChatOpen(true);
-  };
+  }, [id]);
 
   const wishlisted = favoriteIds.has(String(id));
   const favoriteBusy = togglingIds.has(String(id));
@@ -367,6 +367,7 @@ export default function UserProductViewPage() {
             location={locationLabel || item.address || undefined}
             reviewCount={0}
             sellerProfileImage={owner?.profileImage || undefined}
+            onChat={canShop ? () => openChat() : undefined}
           />
 
           <ProductViewActionBar
@@ -492,6 +493,7 @@ export default function UserProductViewPage() {
                isLoggedIn={isLoggedIn}
                isOwnerView={isOwner}
                onAddVehicle={() => router.push(userProductRoutes.sellVehicle("create"))}
+               onChatProduct={!isOwner ? openChat : undefined}
                 onNotify={notify}
                  currentStateId={
                   item.state_info?._id
@@ -516,6 +518,15 @@ export default function UserProductViewPage() {
                         )
                       : undefined
                   }
+                  currentCategoryName={
+                    typeof item.category_id === "object" ? item.category_id?.category_name : undefined
+                  }
+                  currentSubcategoryName={
+                    typeof item.subcategory_id === "object"
+                      ? item.subcategory_id?.sub_category_name
+                      : undefined
+                  }
+                  currentStateName={item.state_info?.name}
                />
           ) : null}
         </Box>

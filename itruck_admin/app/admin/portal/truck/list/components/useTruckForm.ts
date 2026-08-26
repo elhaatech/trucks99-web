@@ -5,14 +5,14 @@ import {
   type Truck, getRowId,
 } from "@/model/api";
 import { useToast } from "@/lib/toast";
-import { resolveApiBase, getAuthHeaders } from "@/model/services/common";
+import { joinApiUrl, getAuthHeaders } from "@/model/services/common";
 import { EMPTY_FORM, type TruckFormState } from "./truckTypes";
 
 const uploadFile = async (file: File, key: string): Promise<string> => {
   const formData = new FormData();
   formData.append("key", key);
   formData.append("file", file);
-  const res = await fetch(`${resolveApiBase()}/api/upload`, {
+  const res = await fetch(joinApiUrl("/api/upload"), {
     method: "POST",
     body: formData,
     headers: { ...getAuthHeaders() },

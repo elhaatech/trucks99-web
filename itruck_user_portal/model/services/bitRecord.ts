@@ -80,6 +80,9 @@ export type CreateBitRecordPayload =
       bitReason?: string;
       status?: BitRecordStatus;
       user?: ApiUser;
+      userId?: string;
+      userName?: string;
+      userEmail?: string;
       truckId?: string;
     }
   | {
@@ -89,6 +92,9 @@ export type CreateBitRecordPayload =
       bitReason?: string;
       status?: BitRecordStatus;
       user?: ApiUser;
+      userId?: string;
+      userName?: string;
+      userEmail?: string;
       loadId?: string;
     }
   | {
@@ -99,6 +105,8 @@ export type CreateBitRecordPayload =
       status?: BitRecordStatus;
       user?: ApiUser;
       userId?: string;
+      userName?: string;
+      userEmail?: string;
       guestKey?: string;
     };
 
@@ -188,6 +196,9 @@ export function jsonBodyForCreateBitRecord(body: CreateBitRecordPayload): Record
     status: body.status,
   };
   if (body.user) base.user = body.user;
+  if (body.userId) base.userId = body.userId;
+  if (body.userName) base.userName = body.userName;
+  if (body.userEmail) base.userEmail = body.userEmail;
 
   if (kind === "load") {
     const b = body as Extract<CreateBitRecordPayload, { loadId: string }>;

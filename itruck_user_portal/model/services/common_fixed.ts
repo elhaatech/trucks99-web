@@ -1,5 +1,6 @@
 import { persistMarketplaceUserId, clearMarketplaceAuthStorage } from "@/lib/marketplaceUser";
-import { resolveApiBase } from "@/lib/apiBase";
+import { joinApiUrl, resolveApiBase } from "@/lib/apiBase";
+import { API_BASE_URL } from "@/src/config/BASE_URL";
 import { STORAGE_KEYS } from "@/constants/storageKeys";
 import { notifyMarketplaceAuthChanged } from "@/lib/marketplaceAuth";
 
@@ -9,8 +10,8 @@ import { notifyMarketplaceAuthChanged } from "@/lib/marketplaceAuth";
  * consolidate to this implementation when possible.
  */
 
-export const API_BASE = resolveApiBase();
-export { resolveApiBase };
+export const API_BASE = API_BASE_URL.replace(/\/+$/, "");
+export { resolveApiBase, joinApiUrl };
 
 const TOKEN_KEY = STORAGE_KEYS.AUTH_TOKEN;
 
@@ -55,8 +56,7 @@ function flightKey(method: string, urlKey: string, body: BodyInit | null | undef
 
 export async function api<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
   const { params, ...init } = options;
-  const base = resolveApiBase();
-  const url = new URL(path.startsWith("http") ? path : `${base}${path}`);
+  const url = new URL(path.startsWith("http") ? path : joinApiUrl(path));
   if (params) {
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   }
@@ -104,8 +104,7 @@ export async function api<T = unknown>(path: string, options: RequestOptions = {
 
 export async function publicApi<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
   const { params, ...init } = options;
-  const base = resolveApiBase();
-  const url = new URL(path.startsWith("http") ? path : `${base}${path}`);
+  const url = new URL(path.startsWith("http") ? path : joinApiUrl(path));
   if (params) {
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   }

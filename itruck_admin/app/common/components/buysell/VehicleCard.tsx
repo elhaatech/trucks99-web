@@ -20,7 +20,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { alpha } from "@mui/material/styles";
 import { PRODUCT_THEME as T, INFO, SUCCESS } from "@/lib/theme";
 import { ProductStatusChip } from "@/app/admin/portal/buysell/_components/ProductStatusChip";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getFirstBuySellImageUrl } from "@/lib/buysellUtils";
 import { getBuySellRowId, type BuySellProduct } from "@/model/services/buysellapi";
 import {
   formatProductPrice,
@@ -167,7 +167,7 @@ export function VehicleCard({
   deleteLoading = false,
 }: VehicleCardProps) {
   const productId = getBuySellRowId(product);
-  const imageUrl = getBuySellImageUrl(product.images?.[0]);
+  const imageUrl = getFirstBuySellImageUrl(product.images);
   const title = getProductTitle(product);
   const subtitle = getProductSubtitle(product);
   const location = getProductLocation(product);
@@ -239,7 +239,7 @@ export function VehicleCard({
           aspectRatio: isList ? undefined : "4/3",
           flexShrink: 0,
           bgcolor: alpha(INFO, 0.04),
-          backgroundImage: imageUrl ? `url(${imageUrl})` : undefined,
+          backgroundImage: `url(${imageUrl})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
           "&::after": {

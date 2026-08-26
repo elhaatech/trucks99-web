@@ -57,6 +57,7 @@ import {
 } from "@/model/services/incomeExpense";
 import { api } from "@/model/services/common";
 import { getFileUrl } from "@/lib/fileUrl";
+import { getFirstBuySellImageUrl } from "@/lib/buysellUtils";
 import { routes } from "@/lib/routes";
 import { useAppNavigate, useInvalidIdRedirect } from "@/lib/navigation";
 import {
@@ -618,7 +619,7 @@ function SellTab({
           const highestBid = (p as any).highest_bid;
           const bidCount =
             (p as any).bid_count ?? (p as any).bit_records?.length ?? 0;
-          const thumb = p.images?.[0] ? getFileUrl(p.images[0]) : null;
+          const thumb = getFirstBuySellImageUrl(p.images);
           return (
             <TableRow key={pid} hover sx={rowHoverSx()} onClick={() => onView(pid)}>
               <TableCell sx={TD_SX}>
@@ -775,9 +776,7 @@ function BuyTab({
               ? product.subcategory_id.sub_category_name
               : "Product"
             : "Product";
-          const thumb = product?.images?.[0]
-            ? getFileUrl(product.images[0])
-            : null;
+          const thumb = getFirstBuySellImageUrl(product?.images);
           const seller = product?.created_by || "—";
           const bidDate = rec.createdAt
             ? new Date(rec.createdAt).toLocaleDateString("en-IN", {

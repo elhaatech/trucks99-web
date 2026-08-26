@@ -1,11 +1,13 @@
 "use client";
 
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import Avatar from "@mui/material/Avatar";
 import StarIcon from "@mui/icons-material/Star";
 import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
 import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
+import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 import { MetaIconLine, PhoneMetaLine } from "@/app/common/components/buysell/MetaIconLine";
 import { getBuySellImageUrl, handleBuySellImageError } from "@/lib/buysellUtils";
@@ -17,6 +19,7 @@ type ProductSellerInfoProps = {
   location?: string;
   rating?: number;
   reviewCount?: number;
+  onChat?: () => void;
 };
 
 export function ProductSellerInfo({
@@ -26,6 +29,7 @@ export function ProductSellerInfo({
   location,
   rating = 4.5,
   reviewCount,
+  onChat,
 }: ProductSellerInfoProps) {
   if (!sellerName) return null;
 
@@ -75,6 +79,28 @@ export function ProductSellerInfo({
           </Box>
         </Box>
       </Box>
+
+      {onChat ? (
+        <Button
+          fullWidth
+          variant="contained"
+          onClick={onChat}
+          startIcon={<ChatBubbleOutlineIcon />}
+          sx={{
+            mt: 2,
+            textTransform: "none",
+            fontWeight: 600,
+            fontSize: 14,
+            py: 1.15,
+            borderRadius: `${T.radius.md}`,
+            bgcolor: INFO,
+            boxShadow: "none",
+            "&:hover": { bgcolor: "#1d4ed8", boxShadow: "none" },
+          }}
+        >
+          Chat with Owner
+        </Button>
+      ) : null}
     </Box>
   );
 }

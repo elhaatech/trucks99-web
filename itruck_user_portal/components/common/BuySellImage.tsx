@@ -17,7 +17,7 @@ export type BuySellImageProps = Omit<
 };
 
 /**
- * Buy/Sell vehicle image with a guaranteed `/assets/dtruck.png` fallback
+ * Buy/Sell vehicle image with a guaranteed `/assets/semi-truck.jpg` fallback
  * when the API path is missing, invalid, or fails to load.
  */
 export function BuySellImage({

@@ -1,6 +1,6 @@
 /**
  * Next.js same-origin Places proxy (`/api/places/*`).
- * These are App Router routes, not the backend at PRODUCTION_API_ORIGIN.
+ * These are App Router routes, not the backend at API_BASE_URL.
  */
 
 import { nextAppApiUrl } from "@/lib/appConfig";

@@ -42,7 +42,7 @@ import { isProductOwner } from "@/app/admin/portal/buysell/view/[id]/_components
 import { ProductLifecycleSection } from "@/app/admin/portal/buysell/view/[id]/_components/ProductLifecycleSection";
 import { UserRelatedProductsSection } from "../_components/UserRelatedProductsSection";
 import { extractId } from "@/app/common/components/buysell/utils";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getFirstBuySellImageUrl } from "@/lib/buysellUtils";
 import { ChatDrawer } from "@/components/common/ChatDrawer";
 import { ProductViewGallery } from "../_components/ProductViewGallery";
 import { ProductViewBreadcrumbs } from "../_components/ProductViewBreadcrumbs";
@@ -243,7 +243,7 @@ export default function UserProductViewPage() {
     vehicle: {
       productId: id,
       title,
-      imageUrl: getBuySellImageUrl(item.images?.[0]) || undefined,
+      imageUrl: getFirstBuySellImageUrl(item.images),
       listedPrice: Number(item.price) || 0,
       sellerName: item.created_by ?? "Seller",
     },

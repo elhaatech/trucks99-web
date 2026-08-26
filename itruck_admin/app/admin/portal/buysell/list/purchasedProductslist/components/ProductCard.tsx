@@ -12,7 +12,7 @@ import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
 
 import type { BuySellProduct } from "@/model/services/buysellapi";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getFirstBuySellImageUrl, handleBuySellImageError } from "@/lib/buysellUtils";
 
 const STATUS_COLOR: Record<string, "success" | "warning" | "default" | "info"> =
   {
@@ -42,7 +42,7 @@ export function ProductCard({
   badge,
   badgeColor = "success",
 }: ProductCardProps) {
-  const image = product.images?.[0];
+  const image = getFirstBuySellImageUrl(product.images);
   const statusColor = STATUS_COLOR[product.status] ?? "default";
 
   const locationLabel = [product.city_info?.name, product.state_info?.name]
@@ -106,28 +106,12 @@ export function ProductCard({
         </IconButton>
       )}
 
-      {image ? (
-        <CardMedia
-          component="img"
-          image={getBuySellImageUrl(image)}
-          sx={{ height: 160, objectFit: "cover" }}
-        />
-      ) : (
-        <CardMedia
-          component="div"
-          sx={{
-            height: 160,
-            bgcolor: "grey.100",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Typography variant="caption" color="text.secondary">
-            No image
-          </Typography>
-        </CardMedia>
-      )}
+      <CardMedia
+        component="img"
+        image={image}
+        onError={handleBuySellImageError}
+        sx={{ height: 160, objectFit: "cover" }}
+      />
 
       <CardContent
         sx={{
@@ -145,9 +129,9 @@ export function ProductCard({
             gap: 1,
           }}
         >
-          <Typography variant="subtitle2" color="text.secondary" noWrap>
+          {/* <Typography variant="subtitle2" color="text.secondary" noWrap>
             {product.bsNumber || "—"}
-          </Typography>
+          </Typography> */}
           {product.vehicleId ? (
             <Typography variant="subtitle2" color="text.secondary" noWrap>
               Vehicle ID: {product.vehicleId}

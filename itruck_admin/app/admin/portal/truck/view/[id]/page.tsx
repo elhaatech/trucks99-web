@@ -25,7 +25,7 @@ import {
 import { getCurrentUser } from "@/model/services/user";
 import { routes } from "@/lib/routes";
 import { useInvalidIdRedirect, useSmartBack } from "@/lib/navigation";
-import { resolveApiBase } from "@/model/services/common";
+import { resolvePublicFileUrl } from "@/lib/fileUrl";
 import Button from "@mui/material/Button";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { BitRecordsSection } from "@/components/common/BitRecordsSection";
@@ -85,11 +85,7 @@ type VehicleType =
   | undefined;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const getFileUrl = (path?: string) => {
-  if (!path) return "";
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  return `${resolveApiBase()}${path}`;
-};
+const getFileUrl = (path?: string) => resolvePublicFileUrl(path);
 
 const vehicleTypeName = (vt: VehicleType): string => {
   if (!vt) return "—";

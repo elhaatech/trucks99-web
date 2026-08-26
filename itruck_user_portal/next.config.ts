@@ -1,26 +1,22 @@
 import type { NextConfig } from "next";
 
 /**
- * Local: http://localhost:3002/  (no public prefix)
- * Production: https://trucks99.elhaa.com/user/
+ * Local: http://localhost:3002/
+ * Production: https://trucks99.com/  (no `/user` prefix)
  *
- * Apache already serves JS at /user/_next/... and strips `/user` when
- * forwarding here. Do not also set `basePath` to `/user` — Next.js would
- * 404 the homepage after Apache strips the prefix.
+ * Do not set Next.js `basePath` to `/user`. Old `/user/...` URLs redirect below.
  */
 const INTERNAL_BACKEND = "http://127.0.0.1:3003";
-const PRODUCTION_ASSET_PREFIX = "/user";
 const isProd = process.env.NODE_ENV === "production";
 
 const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
-  assetPrefix: isProd ? PRODUCTION_ASSET_PREFIX : undefined,
   turbopack: {
     root: import.meta.dirname,
   },
   /**
-   * Backend `/api` and `/uploads` stay at the site root on purpose
-   * (`https://trucks99.elhaa.com/api/...`).
+   * Backend `/api` and `/uploads` stay at the site root on purpose for the
+   * Apache reverse proxy. Browser API calls use src/config/BASE_URL.ts.
    */
   async rewrites() {
     const backend = INTERNAL_BACKEND.replace(/\/$/, "");
@@ -28,6 +24,10 @@ const nextConfig: NextConfig = {
       afterFiles: [
         {
           source: "/api/:path*",
+          destination: `${backend}/api/:path*`,
+        },
+        {
+          source: "/api-v1/:path*",
           destination: `${backend}/api/:path*`,
         },
         {
@@ -39,8 +39,8 @@ const nextConfig: NextConfig = {
   },
   images: {
     /**
-     * Apache strips `/user`, so `/_next/image` at the domain root 404s and
-     * `/user/_next/image` can 400. Serve public files directly from `/user/images`.
+     * Public files are served from `/images` and `/assets` at the host root.
+     * `unoptimized` avoids `/_next/image` on Apache in production.
      */
     unoptimized: isProd,
     remotePatterns: [
@@ -54,6 +54,9 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "46.202.176.124", port: "3003", pathname: "/**" },
       { protocol: "https", hostname: "trucks99.elhaa.com", pathname: "/**" },
       { protocol: "http", hostname: "trucks99.elhaa.com", pathname: "/**" },
+      { protocol: "https", hostname: "trucks99.com", pathname: "/**" },
+      { protocol: "http", hostname: "trucks99.com", pathname: "/**" },
+      { protocol: "https", hostname: "www.trucks99.com", pathname: "/**" },
       { protocol: "https", hostname: "firebasestorage.googleapis.com", pathname: "/**" },
     ],
   },
@@ -67,6 +70,11 @@ const nextConfig: NextConfig = {
       {
         source: "/user/",
         destination: "/",
+        permanent: false,
+      },
+      {
+        source: "/user/:path*",
+        destination: "/:path*",
         permanent: false,
       },
       {
@@ -97,6 +105,11 @@ const nextConfig: NextConfig = {
       {
         source: "/product/:path*",
         destination: "/viewproduct/:path*",
+        permanent: false,
+      },
+      {
+        source: "/portal/products/:id",
+        destination: "/viewproduct/:id",
         permanent: false,
       },
       {

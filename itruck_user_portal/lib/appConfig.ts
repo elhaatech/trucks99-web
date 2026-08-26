@@ -1,34 +1,25 @@
 /**
- * Public deployment path and production API origin for the User Portal.
+ * Public deployment path for the User Portal.
  *
- * Apache serves this app at https://trucks99.elhaa.com/user/ and strips `/user`
- * before forwarding to port 3002, so Next.js pages stay at `/` internally.
- * Do not set Next.js `basePath` to `/user` — Apache would then 404 the homepage.
- *
- * `assetPrefix` in next.config.ts makes `/_next` assets load from `/user/_next`.
- * Keep APP_BASE_PATH in sync with that public prefix for raw `<img>` / SW URLs.
+ * The marketplace is served at the host root (`/` locally and in production).
+ * Do not set a `/user` prefix here — old `/user/...` URLs redirect in next.config.ts.
  * Do not use .env for these values.
  */
 
-/** Public URL prefix. Empty in `next dev` so localhost:3002 stays at `/`. */
-export const APP_BASE_PATH: string =
-  process.env.NODE_ENV === "production" ? "/user" : "";
+/** Public URL prefix. Empty so pages live at `/`, `/list`, `/dashboard`. */
+export const APP_BASE_PATH: string = "";
 
-export const PUBLIC_URL_PREFIX = "/user";
+export const PUBLIC_URL_PREFIX = "";
+
+/** Old production prefix. Strip from image/page URLs so `/user/assets/...` still loads. */
+const LEGACY_PUBLIC_PREFIX = "/user";
 
 export const PRODUCTION_HOSTS = new Set([
   "trucks99.elhaa.com",
   "www.trucks99.elhaa.com",
+  "trucks99.com",
+  "www.trucks99.com",
 ]);
-
-/**
- * Existing production backend origin used by this portal.
- * Backend routes stay at `/api/...` on this host.
- */
-export const PRODUCTION_API_ORIGIN = "https://trucks99.elhaa.com";
-
-/** Local `server_trucks99` port (browser on localhost / LAN only). */
-export const LOCAL_BACKEND_PORT = "3003";
 
 function splitPathAndSearch(path: string): { pathname: string; search: string } {
   const q = path.indexOf("?");
@@ -36,42 +27,55 @@ function splitPathAndSearch(path: string): { pathname: string; search: string } 
   return { pathname: path.slice(0, q), search: path.slice(q) };
 }
 
+function stripLegacyPublicPrefix(pathname: string): string {
+  let p = pathname || "/";
+  if (APP_BASE_PATH) {
+    if (p === APP_BASE_PATH || p === `${APP_BASE_PATH}/`) return "/";
+    if (p.startsWith(`${APP_BASE_PATH}/`)) p = p.slice(APP_BASE_PATH.length) || "/";
+  }
+  if (p === LEGACY_PUBLIC_PREFIX || p === `${LEGACY_PUBLIC_PREFIX}/`) return "/";
+  if (p.startsWith(`${LEGACY_PUBLIC_PREFIX}/`)) {
+    return p.slice(LEGACY_PUBLIC_PREFIX.length) || "/";
+  }
+  return p;
+}
+
 /**
- * Prefix a same-origin public path (`/images`, `/assets`) with `/user` in
- * production. Apache only serves those files under `/user/...`. `next/link`
- * and `router.push` stay unprefixed because Apache strips `/user` before
- * Next.js. `next/image` srcs MUST be prefixed because `basePath` is unset.
+ * Prefix a same-origin public path (`/images`, `/assets`) when APP_BASE_PATH
+ * is set. Currently empty — paths stay `/images/...`. Old `/user/...` paths
+ * are stripped so logos and vehicle fallbacks keep loading.
  */
 export function withAppBasePath(path: string): string {
   if (!path) return APP_BASE_PATH || "/";
-  if (
-    path.startsWith("http://") ||
-    path.startsWith("https://") ||
-    path.startsWith("blob:") ||
-    path.startsWith("data:")
-  ) {
+  if (path.startsWith("blob:") || path.startsWith("data:")) {
     return path;
+  }
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    try {
+      const parsed = new URL(path);
+      const stripped = stripLegacyPublicPrefix(parsed.pathname);
+      if (stripped === parsed.pathname) return path;
+      parsed.pathname = stripped;
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    } catch {
+      return path;
+    }
   }
   const { pathname, search } = splitPathAndSearch(path);
   const normalized = pathname.startsWith("/") ? pathname : `/${pathname}`;
-  if (!APP_BASE_PATH) return `${normalized}${search}`;
-  if (normalized === APP_BASE_PATH || normalized.startsWith(`${APP_BASE_PATH}/`)) {
-    return `${normalized}${search}`;
+  const stripped = stripLegacyPublicPrefix(normalized);
+  if (!APP_BASE_PATH) return `${stripped}${search}`;
+  if (stripped === APP_BASE_PATH || stripped.startsWith(`${APP_BASE_PATH}/`)) {
+    return `${stripped}${search}`;
   }
-  return `${APP_BASE_PATH}${normalized}${search}`;
+  return `${APP_BASE_PATH}${stripped}${search}`;
 }
 
-/** Strip the app base path so values match `usePathname()` / `router.push()`. */
+/** Strip `/user` (and APP_BASE_PATH) so values match `usePathname()` / `router.push()`. */
 export function stripAppBasePath(path: string): string {
   if (!path) return "/";
   const { pathname, search } = splitPathAndSearch(path);
-  let p = pathname || "/";
-  if (!APP_BASE_PATH) return `${p}${search}`;
-  if (p === APP_BASE_PATH || p === `${APP_BASE_PATH}/`) {
-    p = "/";
-  } else if (p.startsWith(`${APP_BASE_PATH}/`)) {
-    p = p.slice(APP_BASE_PATH.length) || "/";
-  }
+  const p = stripLegacyPublicPrefix(pathname || "/");
   return `${p}${search}`;
 }
 

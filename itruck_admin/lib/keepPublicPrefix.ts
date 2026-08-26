@@ -13,6 +13,8 @@ function passThrough(pathname: string, prefix: string): boolean {
     pathname.startsWith(`${prefix}/`) ||
     pathname === "/api" ||
     pathname.startsWith("/api/") ||
+    pathname === "/api-v1" ||
+    pathname.startsWith("/api-v1/") ||
     pathname === "/uploads" ||
     pathname.startsWith("/uploads/") ||
     pathname.startsWith("/_next")

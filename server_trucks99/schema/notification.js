@@ -16,6 +16,8 @@ const notificationSchema = new Schema({
   requestId: { type: String },
   postType: { type: String },
   metadata: { type: Schema.Types.Mixed, default: {} },
+  /** `user` = user portal; `admin` = admin portal. */
+  audience: { type: String, enum: ['user', 'admin'], default: 'user', index: true },
   read: { type: Boolean, default: false },
   isRead: { type: Boolean, default: false },
 }, { timestamps: true });

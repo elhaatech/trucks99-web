@@ -12,19 +12,37 @@ export type Notification = {
   productId?: string;
   read?: boolean;
   createdAt?: string;
+  postId?: string;
+  postType?: string;
   metadata?: {
     route?: string;
     placementId?: string;
     productId?: string;
+    postId?: string;
+    postType?: string;
+    entityType?: string;
+    entityId?: string;
+    loadId?: string;
+    truckId?: string;
     requestStatus?: string;
     source?: string;
   };
 };
 
+export const NOTIFICATIONS_CHANGED_EVENT = "itruck-notifications-changed";
+
+/** User portal only lists marketplace notifications (not admin-role alerts). */
+const PORTAL_AUDIENCE = "user";
+
+export function notifyNotificationsChanged(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED_EVENT));
+}
+
 export async function getNotifications(): Promise<Notification[]> {
   let res: unknown;
   try {
-    res = await api<unknown>("/api/notification");
+    res = await api<unknown>(`/api/notification?audience=${PORTAL_AUDIENCE}`);
   } catch (err) {
     console.error("[getNotifications] request failed:", err);
     throw err;
@@ -51,7 +69,7 @@ export async function markNotificationRead(id: string) {
 export async function markAllNotificationsRead() {
   return api<{ message: string }>("/api/notification/read-all", {
     method: "PUT",
-    body: JSON.stringify({}),
+    body: JSON.stringify({ audience: PORTAL_AUDIENCE }),
   });
 }
 

@@ -16,7 +16,7 @@ import {
   postBuySellProductsByOwner,
   getBuySellRowId,
 } from "@/model/services/buysellapi";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getFirstBuySellImageUrl, handleBuySellImageError } from "@/lib/buysellUtils";
 import { formatCreatedDate } from "@/lib/dateUtils";
 import { routes } from "@/lib/routes";
 import { ProductStatusChip } from "../../_components/ProductStatusChip";
@@ -59,7 +59,7 @@ function SellerProductCard({
   product: BuySellProduct;
   onNavigate: (productId: string) => void;
 }) {
-  const image = product.images?.[0];
+  const image = getFirstBuySellImageUrl(product.images);
   const productId = getBuySellRowId(product);
 
   const categoryName =
@@ -110,41 +110,19 @@ function SellerProductCard({
       }}
     >
       <Box sx={{ position: "relative" }}>
-        {image ? (
-          <Box
-            component="img"
-            src={getBuySellImageUrl(image)}
-            alt={product.description || "Product"}
-            sx={{
-              width: "100%",
-              height: { xs: 140, sm: 160 },
-              objectFit: "cover",
-              display: "block",
-              bgcolor: T.color.surfaceMuted,
-            }}
-          />
-        ) : (
-          <Box
-            sx={{
-              width: "100%",
-              height: { xs: 140, sm: 160 },
-              bgcolor: T.color.surfaceMuted,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Typography
-              sx={{
-                fontFamily: T.font.body,
-                fontSize: 12,
-                color: T.color.textMuted,
-              }}
-            >
-              No image
-            </Typography>
-          </Box>
-        )}
+        <Box
+          component="img"
+          src={image}
+          alt={product.description || "Product"}
+          onError={handleBuySellImageError}
+          sx={{
+            width: "100%",
+            height: { xs: 140, sm: 160 },
+            objectFit: "cover",
+            display: "block",
+            bgcolor: T.color.surfaceMuted,
+          }}
+        />
         {showStatusBadge && (
           <Box sx={{ position: "absolute", top: 8, left: 8 }}>
             <ProductStatusChip status={product.status} />

@@ -1,4 +1,4 @@
-import { api, clearToken, setToken, resolveApiBase } from "./common_fixed";
+import { api, clearToken, setToken, joinApiUrl } from "./common_fixed";
 import { getAuthHeaders } from "@/services";
 import { persistMarketplaceUserId, clearMarketplaceUserId } from "@/lib/marketplaceUser";
 import { clearMarketplaceGuestKey } from "@/lib/marketplaceGuest";
@@ -103,10 +103,9 @@ async function postOtpJson<T>(
 ): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  const base = resolveApiBase();
 
   try {
-    const res = await fetch(`${base}${path}`, {
+    const res = await fetch(joinApiUrl(path), {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -266,7 +265,7 @@ export async function logout(): Promise<void> {
   invalidateBuySellFavoritesCache();
   notifyMarketplaceAuthChanged();
   try {
-    await fetch(`${resolveApiBase()}/api/logout`, {
+    await fetch(joinApiUrl("/api/logout"), {
       method: "DELETE",
       credentials: "include",
       headers,

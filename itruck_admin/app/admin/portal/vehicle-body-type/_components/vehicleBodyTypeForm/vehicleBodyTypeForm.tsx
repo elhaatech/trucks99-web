@@ -30,7 +30,7 @@ import {
   updateVehicleBodyType,
 } from "@/model/api";
 import { useNotification } from "@/hooks/useNotification";
-import { resolveApiBase, getAuthHeaders } from "@/model/services/common";
+import { joinApiUrl, getAuthHeaders } from "@/model/services/common";
 import { getFileUrl } from "@/lib/fileUrl";
 import type { FormState } from "../interface/vehicleBodyTypeTypes";
 import { EMPTY_FORM } from "../interface/vehicleBodyTypeTypes";
@@ -69,7 +69,7 @@ async function uploadImage(file: File): Promise<string> {
   const formData = new FormData();
   formData.append("key", "vehicle_body");
   formData.append("file", file);
-  const res = await fetch(`${resolveApiBase()}/api/upload`, {
+  const res = await fetch(joinApiUrl("/api/upload"), {
     method: "POST",
     body: formData,
     headers: { ...getAuthHeaders() },

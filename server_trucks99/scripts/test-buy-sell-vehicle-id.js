@@ -8,7 +8,7 @@
 require("dotenv").config({ path: require("path").join(__dirname, "..", ".env") });
 const mongoose = require("mongoose");
 const {
-  yymmFromDate,
+  yymmddFromDate,
   formatVehicleId,
   formatBsNumber,
   parseNewVehicleId,
@@ -16,6 +16,8 @@ const {
   formatBsNumberWithDate,
   generateNextVehicleId,
   seqFromFindOneAndUpdate,
+  formatVehicleIdWithDate,
+  resolveVehicleId,
 } = require("../helpers/buySellVehicleId");
 
 const results = [];
@@ -37,43 +39,49 @@ function assertEqual(name, actual, expected) {
 
 function runFormatTests() {
   assertEqual(
-    "January 2026 count 1",
-    formatVehicleId(yymmFromDate(new Date(2026, 0, 15)), 1),
-    "2601000001",
+    "January 15 2026 count 1",
+    formatVehicleId(yymmddFromDate(new Date(Date.UTC(2026, 0, 15, 12, 0, 0))), 1),
+    "2601150001",
   );
   assertEqual(
-    "August 2026 count 127",
-    formatVehicleId(yymmFromDate(new Date(2026, 7, 18)), 127),
-    "2608000127",
+    "August 18 2026 count 127",
+    formatVehicleId(yymmddFromDate(new Date(Date.UTC(2026, 7, 18, 12, 0, 0))), 127),
+    "2608180127",
   );
   assertEqual(
-    "August 2026 count 128",
-    formatVehicleId(yymmFromDate(new Date(2026, 7, 18)), 128),
-    "2608000128",
+    "August 18 2026 count 128",
+    formatVehicleId(yymmddFromDate(new Date(Date.UTC(2026, 7, 18, 12, 0, 0))), 128),
+    "2608180128",
   );
   assertEqual(
-    "September 2026 count 1",
-    formatVehicleId(yymmFromDate(new Date(2026, 8, 1)), 1),
-    "2609000001",
+    "August 25 2026 count 27 includes day",
+    formatVehicleId(yymmddFromDate(new Date(Date.UTC(2026, 7, 25, 12, 0, 0))), 27),
+    "2608250027",
   );
-  assertEqual("6-digit pad 27", formatVehicleId("2608", 27), "2608000027");
-  assertEqual("6-digit max", formatVehicleId("2608", 999999), "2608999999");
+  assertEqual(
+    "September 1 2026 count 1",
+    formatVehicleId(yymmddFromDate(new Date(Date.UTC(2026, 8, 1, 12, 0, 0))), 1),
+    "2609010001",
+  );
+  assertEqual("4-digit pad 27", formatVehicleId("260825", 27), "2608250027");
+  assertEqual("4-digit max", formatVehicleId("260825", 9999), "2608259999");
   assertEqual(
     "BS number format",
     formatBsNumber(256, new Date(2026, 7, 18)),
     "18-08-2026 - BS256",
   );
 
-  const parsed = parseNewVehicleId("2608000127");
+  const parsed = parseNewVehicleId("2608250027");
+  assertEqual("parse yymmdd", parsed && parsed.yymmdd, "260825");
   assertEqual("parse yymm", parsed && parsed.yymm, "2608");
-  assertEqual("parse seq", parsed && parsed.seq, 127);
-  assertEqual("is new format", isNewVehicleIdFormat("2608000127"), true);
+  assertEqual("parse seq", parsed && parsed.seq, 27);
+  assertEqual("is new format", isNewVehicleIdFormat("2608250027"), true);
   assertEqual("legacy is not new format", isNewVehicleIdFormat("18-08-2026 - BS127"), false);
 
   assertEqual(
     "response keeps new ID as stored",
-    formatBsNumberWithDate("2608000127", new Date(2026, 7, 18)),
-    "2608000127",
+    formatBsNumberWithDate("2608250027", new Date(2026, 7, 25)),
+    "2608250027",
   );
   assertEqual(
     "legacy display unchanged in style",
@@ -91,12 +99,37 @@ function runFormatTests() {
     seqFromFindOneAndUpdate({ value: { seq: 9 } }),
     9,
   );
+  assertEqual(
+    "legacy stored ID gets listing day in response",
+    formatVehicleIdWithDate("2608000030", new Date("2026-08-25T09:57:52.956Z")),
+    "2608250030",
+  );
+  assertEqual(
+    "already dated ID is left unchanged",
+    formatVehicleIdWithDate("2608250001", new Date("2026-08-25T09:57:52.956Z")),
+    "2608250001",
+  );
+  assertEqual(
+    "resolveVehicleId fills day from createdAt",
+    resolveVehicleId({
+      vehicleId: "2608000030",
+      createdAt: "2026-08-25T09:57:52.956Z",
+    }),
+    "2608250030",
+  );
 
   try {
-    formatVehicleId("2608", 0);
+    formatVehicleId("260825", 0);
     fail("reject seq 0", "should have thrown");
   } catch {
     pass("reject seq 0");
+  }
+
+  try {
+    formatVehicleId("260825", 10000);
+    fail("reject seq 10000", "should have thrown");
+  } catch {
+    pass("reject seq 10000");
   }
 }
 
@@ -108,7 +141,7 @@ async function runConcurrentCounterTest() {
 
   await mongoose.connect(process.env.MONGODB_ATLAS.trim());
   const counterId = `buysell_vehicle_test_${Date.now()}`;
-  const createdAt = new Date(2026, 7, 18);
+  const createdAt = new Date(Date.UTC(2026, 7, 18, 12, 0, 0));
 
   try {
     const ids = await Promise.all(
@@ -125,11 +158,11 @@ async function runConcurrentCounterTest() {
     }
 
     const sorted = [...ids].sort();
-    assertEqual("concurrent first id", sorted[0], "2608000001");
-    assertEqual("concurrent last id", sorted[sorted.length - 1], "2608000020");
-    const allMatch = ids.every((id) => /^\d{10}$/.test(id) && id.startsWith("2608"));
-    if (allMatch) pass("concurrent format YYMM######");
-    else fail("concurrent format YYMM######", ids.join(","));
+    assertEqual("concurrent first id", sorted[0], "2608180001");
+    assertEqual("concurrent last id", sorted[sorted.length - 1], "2608180020");
+    const allMatch = ids.every((id) => /^\d{10}$/.test(id) && id.startsWith("260818"));
+    if (allMatch) pass("concurrent format YYMMDD####");
+    else fail("concurrent format YYMMDD####", ids.join(","));
   } finally {
     await mongoose.connection.collection("counters").deleteOne({ _id: counterId });
     await mongoose.disconnect();

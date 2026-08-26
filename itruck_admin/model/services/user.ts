@@ -4,9 +4,8 @@ import {
   clearToken,
   getAuthHeaders,
   setToken,
-  resolveApiBase,
+  joinApiUrl,
 } from "./common";
-import { forceBackendPort } from "@/lib/apiBase";
 import { persistMarketplaceUserId, clearMarketplaceUserId } from "@/lib/marketplaceUser";
 import { normalizeRolePermissionsInput, type Role } from "./role";
 
@@ -142,7 +141,7 @@ export async function verifyOtp(mobile: string, otp: string) {
 }
 
 export async function logout(): Promise<void> {
-  await fetch(`${forceBackendPort(resolveApiBase())}/api/logout`, {
+  await fetch(joinApiUrl("/api/logout"), {
     method: "DELETE",
     credentials: "include",
     headers: getAuthHeaders(),

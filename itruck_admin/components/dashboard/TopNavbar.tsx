@@ -35,7 +35,6 @@ import { getChatList } from "@/model/services/chatapi";
 
 export interface TopNavbarProps {
   user?: User | null;
-  notificationCount?: number;
   onMenuClick?: () => void;
 }
 
@@ -63,7 +62,7 @@ function extractId(value: unknown): string | null {
   return String(value);
 }
 
-export function TopNavbar({ user, notificationCount = 0, onMenuClick }: TopNavbarProps) {
+export function TopNavbar({ user, onMenuClick }: TopNavbarProps) {
   const router = useRouter();
   const initial = user?.name?.[0]?.toUpperCase() ?? "U";
   const firstName = user?.name?.trim().split(" ")[0] ?? "User";
@@ -82,7 +81,8 @@ export function TopNavbar({ user, notificationCount = 0, onMenuClick }: TopNavba
   const refreshUnread = React.useCallback(async () => {
     try {
       const rooms = await getChatList();
-      setTotalUnread(rooms.reduce((sum, r) => sum + (r.unreadCount || 0), 0));
+      const next = rooms.reduce((sum, r) => sum + (r.unreadCount || 0), 0);
+      setTotalUnread((prev) => (prev === next ? prev : next));
     } catch {
       // ignore — badge just won't update this cycle
     }
@@ -186,7 +186,7 @@ export function TopNavbar({ user, notificationCount = 0, onMenuClick }: TopNavba
             bgcolor: "background.paper",
           }}
         >
-          <NotificationBell initialCount={notificationCount} />
+          <NotificationBell />
 
           <Tooltip title="Messages">
             <IconButton

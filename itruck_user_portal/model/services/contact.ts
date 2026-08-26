@@ -1,4 +1,4 @@
-import { publicApi, resolveApiBase } from "@/model/services/common_fixed";
+import { publicApi, joinApiUrl } from "@/model/services/common_fixed";
 
 export type ContactInfo = {
   phone: string;
@@ -46,8 +46,7 @@ export async function submitContactForm(
     formData.append("message", input.message);
     formData.append("attachment", input.attachmentFile);
 
-    const base = resolveApiBase().replace(/\/$/, "");
-    const res = await fetch(`${base}/api/contact/submit`, {
+    const res = await fetch(joinApiUrl("/api/contact/submit"), {
       method: "POST",
       body: formData,
       credentials: "include",

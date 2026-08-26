@@ -8,7 +8,7 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import ThreeSixtyOutlinedIcon from "@mui/icons-material/ThreeSixtyOutlined";
 import ImageNotSupportedOutlinedIcon from "@mui/icons-material/ImageNotSupportedOutlined";
-import { getBuySellImageUrl } from "@/lib/buysellUtils";
+import { getBuySellImageUrls, handleBuySellImageError } from "@/lib/buysellUtils";
 import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 
 const MAX_VISIBLE_THUMBS = 5;
@@ -20,7 +20,7 @@ type ProductViewGalleryProps = {
 
 export function ProductViewGallery({ images, title }: ProductViewGalleryProps) {
   const safeImages = useMemo(
-    () => (images ?? []).map(getBuySellImageUrl).filter(Boolean),
+    () => getBuySellImageUrls(images),
     [images],
   );
   const [index, setIndex] = useState(0);
@@ -61,6 +61,7 @@ export function ProductViewGallery({ images, title }: ProductViewGalleryProps) {
               component="img"
               src={safeImages[index]}
               alt={title ? `${title} photo ${index + 1}` : "Vehicle photo"}
+              onError={handleBuySellImageError}
               sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
             />
             {hasMultiple ? (

@@ -14,7 +14,16 @@ import CircleIcon from "@mui/icons-material/Circle";
 import { alpha } from "@mui/material/styles";
 import CircularProgress from "@mui/material/CircularProgress";
 import { PRIMARY, PRODUCT_THEME as T, TRANSITION } from "@/lib/theme";
-import { getNotifications, type Notification } from "@/model/services/notification";
+import { useRouter } from "next/navigation";
+import {
+  getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  type Notification,
+} from "@/model/services/notification";
+import { getRowId } from "@/model/services/common";
+import { resolveNotificationHref } from "@/lib/notificationHref";
+import { setUnreadNotificationCount } from "@/hooks/useUnreadNotificationCount";
 
 export type NotificationItem = {
   id: string;
@@ -40,60 +49,14 @@ function formatTimeAgo(iso?: string): string {
   return new Date(then).toLocaleDateString();
 }
 
-function toNotificationItem(n: Notification): NotificationItem {
-  return {
-    id: n.id ?? n._id,
-    message: n.message ?? n.title ?? "",
-    timestamp: formatTimeAgo(n.createdAt),
-    read: Boolean(n.read),
-    icon: (
-      <CircleIcon sx={{ fontSize: 9, color: n.read ? "text.disabled" : PRIMARY }} />
-    ),
-  };
-}
-
-const MOCK_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: "n1",
-    message: "Your listing '2021 Freightliner Cascadia' received a new offer.",
-    timestamp: "2 mins ago",
-    read: false,
-    icon: <CircleIcon sx={{ fontSize: 9, color: PRIMARY }} />,
-  },
-  {
-    id: "n2",
-    message: "Welcome to TRUCKS99! Complete your profile to get started.",
-    timestamp: "1 hour ago",
-    read: false,
-    icon: <CircleIcon sx={{ fontSize: 9, color: PRIMARY }} />,
-  },
-  {
-    id: "n3",
-    message: "Someone saved your listing '2019 Volvo VNL 760' to favorites.",
-    timestamp: "3 hours ago",
-    read: false,
-    icon: <CircleIcon sx={{ fontSize: 9, color: PRIMARY }} />,
-  },
-  {
-    id: "n4",
-    message: "Your offer on '2018 Peterbilt 579' was accepted.",
-    timestamp: "Yesterday",
-    read: true,
-    icon: <CircleIcon sx={{ fontSize: 9, color: "text.disabled" }} />,
-  },
-];
-
 type NotificationDropdownProps = {
   notifications?: NotificationItem[];
 };
 
-export function NotificationDropdown({
-  notifications: notificationsProp,
-}: NotificationDropdownProps) {
+export function NotificationDropdown(_props: NotificationDropdownProps) {
+  const router = useRouter();
   const [anchor, setAnchor] = useState<null | HTMLElement>(null);
-  const [items, setItems] = useState<NotificationItem[]>(
-    () => notificationsProp ?? MOCK_NOTIFICATIONS,
-  );
+  const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
 
   const open = Boolean(anchor);
@@ -104,7 +67,10 @@ export function NotificationDropdown({
       setLoading(true);
       try {
         const list = await getNotifications();
-        if (active) setItems(list.map(toNotificationItem));
+        if (active) {
+          setItems(list);
+          setUnreadNotificationCount(list.filter((n) => n.read !== true).length);
+        }
       } catch (err) {
         console.error("NotificationDropdown failed to load notifications:", err);
       } finally {
@@ -129,8 +95,36 @@ export function NotificationDropdown({
     setAnchor(null);
   }, []);
 
-  const handleMarkAllRead = useCallback(() => {
-    setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+  const handleItemClick = useCallback(
+    async (n: Notification) => {
+      const id = getRowId(n);
+      try {
+        if (n.read !== true) {
+          await markNotificationRead(id);
+          setItems((prev) =>
+            prev.map((x) => (getRowId(x) === id ? { ...x, read: true } : x)),
+          );
+          setUnreadNotificationCount(Math.max(0, unreadCount - 1));
+        }
+      } catch {
+        // still navigate even if mark-read fails
+      }
+      const href = resolveNotificationHref(n);
+      handleClose();
+      if (href) router.push(href);
+    },
+    [handleClose, router, unreadCount],
+  );
+
+  const handleMarkAllRead = useCallback(async () => {
+    try {
+      await markAllNotificationsRead();
+      setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadNotificationCount(0);
+    } catch {
+      setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadNotificationCount(0);
+    }
   }, []);
 
   return (
@@ -226,8 +220,8 @@ export function NotificationDropdown({
           <Box sx={{ maxHeight: 320, overflowY: "auto", py: 0.5 }}>
             {items.map((n) => (
               <Box
-                key={n.id}
-                onClick={handleClose}
+                key={getRowId(n)}
+                onClick={() => handleItemClick(n)}
                 sx={{
                   display: "flex",
                   gap: 1.25,
@@ -253,9 +247,9 @@ export function NotificationDropdown({
                     mt: 0.25,
                   }}
                 >
-                  {n.icon ?? (
-                    <CircleIcon sx={{ fontSize: 9, color: "text.disabled" }} />
-                  )}
+                  <CircleIcon
+                    sx={{ fontSize: 9, color: n.read ? "text.disabled" : PRIMARY }}
+                  />
                 </Box>
                 <Box sx={{ minWidth: 0, flex: 1 }}>
                   <Typography
@@ -264,14 +258,14 @@ export function NotificationDropdown({
                     color={T.color.textPrimary}
                     sx={{ lineHeight: 1.4 }}
                   >
-                    {n.message}
+                    {n.message || n.title || ""}
                   </Typography>
                   <Typography
                     variant="caption"
                     color="text.secondary"
                     sx={{ display: "block", mt: 0.25 }}
                   >
-                    {n.timestamp}
+                    {formatTimeAgo(n.createdAt)}
                   </Typography>
                 </Box>
               </Box>

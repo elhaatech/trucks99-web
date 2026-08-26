@@ -17,6 +17,7 @@ import {
   type ChatMessage,
   type ChatRoom,
 } from "@/model/services/chatapi";
+import { notifyMarketplaceChatChanged } from "@/lib/marketplaceAuth";
 
 type Props = {
   open: boolean;
@@ -62,8 +63,19 @@ export function ChatDrawer({ open, onClose, embedded = false, productId, roomId,
     try {
       if (!silent) setLoading(true);
       const data = await getChatMessages(id);
-      setRoom(data.room);
-      setMessages(data.messages);
+      setRoom((prev) => {
+        const nextId = data.room.roomId ?? data.room._id;
+        const prevId = prev?.roomId ?? prev?._id;
+        return prevId === nextId ? prev : data.room;
+      });
+      setMessages((prev) => {
+        const prevLast = prev[prev.length - 1]?._id ?? prev[prev.length - 1]?.id;
+        const nextLast =
+          data.messages[data.messages.length - 1]?._id ??
+          data.messages[data.messages.length - 1]?.id;
+        if (prev.length === data.messages.length && prevLast === nextLast) return prev;
+        return data.messages;
+      });
     } catch (err) {
       if (!silent) setError(err instanceof Error ? err.message : "Failed to load chat");
     } finally {
@@ -91,6 +103,7 @@ export function ChatDrawer({ open, onClose, embedded = false, productId, roomId,
           if (cancelled) return;
           setRoom(res.room);
           activeRoomId = res.room.roomId ?? res.room._id;
+          notifyMarketplaceChatChanged();
         }
 
         if (activeRoomId) {
@@ -147,6 +160,7 @@ export function ChatDrawer({ open, onClose, embedded = false, productId, roomId,
       const res = await sendChatMessage(activeRoomId, text);
       setMessages((prev) => [...prev, res.chatMessage]);
       setRoom(res.room);
+      notifyMarketplaceChatChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send message");
       setDraft(text);
