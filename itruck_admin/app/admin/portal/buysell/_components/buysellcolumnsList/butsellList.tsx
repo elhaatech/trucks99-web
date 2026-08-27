@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
-import StarIcon from "@mui/icons-material/Star";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 
 import type { User } from "@/model/api";
 import { getCurrentUser } from "@/model/api";
@@ -339,11 +340,14 @@ export function BuySellListPage() {
       }
 
       if (canManageFeatured) {
+        const isFeatured =
+          row.isFeatured === true || row.featured?.featuredStatus === "active";
         actions.push({
-          label: "Make Featured",
-          icon: <StarIcon />,
+          label: isFeatured ? "Featured" : "Make Featured",
+          icon: isFeatured ? <CheckCircleIcon color="success" /> : <WorkspacePremiumIcon />,
           onClick: (r) => openFeaturedConfirm({ row: r }),
           color: "primary",
+          disabled: isFeatured,
         });
       }
 
@@ -386,6 +390,13 @@ export function BuySellListPage() {
     if (!row) return;
     try {
       const result = await makeFeaturedVehicleAdmin(getBuySellRowId(row));
+      setItems((currentItems) =>
+        currentItems.map((item) =>
+          getBuySellRowId(item) === getBuySellRowId(row)
+            ? { ...item, isFeatured: true }
+            : item,
+        ),
+      );
       notify({
         type: "success",
         message: result.message || "Vehicle is now featured.",
@@ -505,15 +516,15 @@ export function BuySellListPage() {
         open={featuredOpen}
         onClose={closeFeaturedConfirm}
         onConfirm={handleConfirmFeatured}
-        title="Make vehicle featured?"
+        title="Add vehicle to Featured Vehicles?"
         description={
           featuredTarget
-            ? `Post ${featuredTarget.row.description || "this vehicle"} as a Featured Vehicle now?`
+            ? `Add ${featuredTarget.row.description || "this vehicle"} to Featured Vehicles now?`
             : undefined
         }
-        confirmLabel="Make Featured"
+        confirmLabel="Add to Featured"
         confirmColor="primary"
-        pendingLabel="Making Featured…"
+        pendingLabel="Adding to Featured…"
       />
 
       <BulkUploadDialog
