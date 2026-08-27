@@ -5,10 +5,11 @@ import { usePathname } from "next/navigation";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
+import StarIcon from "@mui/icons-material/Star";
 
 import type { User } from "@/model/api";
 import { getCurrentUser } from "@/model/api";
-import { canAccess } from "@/lib/permissions";
+import { canAccess, isAdminLikeRole } from "@/lib/permissions";
 import { routes } from "@/lib/routes";
 import { loadListState, useAppNavigate, usePersistListState } from "@/lib/navigation";
 import { useNotification } from "@/hooks/useNotification";
@@ -37,6 +38,7 @@ import {
   getBuySellList,
   getBuySellRowId,
   bulkUploadBuySellProducts,
+  makeFeaturedVehicleAdmin,
 } from "@/model/services/buysellapi";
 import { EMPTY_FILTERS, FilterState } from "../interface/buysell_interface";
 import { useBuySellColumns } from "./buysellcolumns";
@@ -46,6 +48,7 @@ import { BulkUploadDialog } from "./bulkuploaddialog";
 
 type DeleteCtx = { mode: "single"; row: BuySellProduct } | { mode: "bulk" };
 type BlockCtx = { row: BuySellProduct; action: "block" | "unblock" };
+type FeaturedCtx = { row: BuySellProduct };
 
 type BuySellListPersistedState = {
   filters: FilterState;
@@ -90,6 +93,13 @@ export function BuySellListPage() {
     openWith: openBlockConfirm,
     close: closeBlockConfirm,
   } = useConfirmDialog<BlockCtx>();
+
+  const {
+    open: featuredOpen,
+    target: featuredTarget,
+    openWith: openFeaturedConfirm,
+    close: closeFeaturedConfirm,
+  } = useConfirmDialog<FeaturedCtx>();
 
   // ── Load list (always pass filters explicitly — no closure deps) ──────────
   const loadAll = useCallback(
@@ -250,6 +260,7 @@ export function BuySellListPage() {
   const canEdit = canAccess(currentUser?.role, "buy_sell", "update");
   const canView = canAccess(currentUser?.role, "buy_sell", "view");
   const canDelete = canAccess(currentUser?.role, "buy_sell", "delete");
+  const canManageFeatured = isAdminLikeRole(currentUser?.role ?? null);
 
   // ── Columns ───────────────────────────────────────────────────────────────
   const columns = useBuySellColumns({
@@ -327,6 +338,15 @@ export function BuySellListPage() {
         });
       }
 
+      if (canManageFeatured) {
+        actions.push({
+          label: "Make Featured",
+          icon: <StarIcon />,
+          onClick: (r) => openFeaturedConfirm({ row: r }),
+          color: "primary",
+        });
+      }
+
       // if (canEdit) {
       //   const { action, label } = getBlockUnblockAction(row.status);
       //   actions.push({
@@ -349,8 +369,39 @@ export function BuySellListPage() {
 
       return actions;
     },
-    [canDelete, canEdit, canView, handleBlockUnblock, handleDelete, navigate],
+    [
+      canDelete,
+      canEdit,
+      canManageFeatured,
+      canView,
+      handleBlockUnblock,
+      handleDelete,
+      navigate,
+      openFeaturedConfirm,
+    ],
   );
+
+  const handleConfirmFeatured = useCallback(async () => {
+    const row = featuredTarget?.row;
+    if (!row) return;
+    try {
+      const result = await makeFeaturedVehicleAdmin(getBuySellRowId(row));
+      notify({
+        type: "success",
+        message: result.message || "Vehicle is now featured.",
+      });
+      await loadAll(appliedFilters);
+    } catch (err) {
+      notify({
+        type: "error",
+        message:
+          err instanceof Error
+            ? err.message
+            : "Could not make vehicle featured",
+      });
+      throw err;
+    }
+  }, [appliedFilters, featuredTarget, loadAll, notify]);
 
   // ── Dialog labels ─────────────────────────────────────────────────────────
   const deleteTitle =
@@ -448,6 +499,21 @@ export function BuySellListPage() {
         pendingLabel={
           blockTarget?.action === "block" ? "Blocking…" : "Unblocking…"
         }
+      />
+
+      <ConfirmDialog
+        open={featuredOpen}
+        onClose={closeFeaturedConfirm}
+        onConfirm={handleConfirmFeatured}
+        title="Make vehicle featured?"
+        description={
+          featuredTarget
+            ? `Post ${featuredTarget.row.description || "this vehicle"} as a Featured Vehicle now?`
+            : undefined
+        }
+        confirmLabel="Make Featured"
+        confirmColor="primary"
+        pendingLabel="Making Featured…"
       />
 
       <BulkUploadDialog

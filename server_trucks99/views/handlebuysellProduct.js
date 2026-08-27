@@ -49,6 +49,7 @@ const {
   activateFeaturedVehicleFromPayment,
   expireStaleFeaturedRecords,
   requestFreePlanFeaturedVehicle,
+  makeFeaturedVehicleAdmin,
   updateFeaturedPlacementAdminStatus,
   removeFeaturedPlacementAdmin,
   buildFeaturedPublicMeta,
@@ -2330,6 +2331,29 @@ buySellRouter.post("/featured-vehicles/free-plan", async (req, res) => {
     });
   } catch (error) {
     sendRouteError(res, error, "Error submitting Free Plan request");
+  }
+});
+
+// POST /api/buy-sell/featured-vehicles/admin — directly feature a user listing
+buySellRouter.post("/featured-vehicles/admin", async (req, res) => {
+  try {
+    const actor = getActor(req);
+    assertAdminActor(actor);
+    const result = await makeFeaturedVehicleAdmin({
+      actor,
+      productId: req.body?.productId,
+    });
+    clearFeaturedListCache();
+    res.status(result.created ? 201 : 200).json({
+      success: true,
+      duplicate: Boolean(result.duplicate),
+      message: result.duplicate
+        ? "This vehicle is already featured."
+        : "Vehicle is now featured.",
+      data: result.record,
+    });
+  } catch (error) {
+    sendRouteError(res, error, "Error making vehicle featured");
   }
 });
 

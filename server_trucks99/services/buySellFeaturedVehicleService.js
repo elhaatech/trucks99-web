@@ -822,6 +822,87 @@ async function approveFreePlanFeaturedVehicle({
   return { record: updated.toObject(), alreadyApproved: false };
 }
 
+async function makeFeaturedVehicleAdmin({ actor, productId }) {
+  if (!productId) {
+    throw httpError("productId is required", 400);
+  }
+
+  const product = await resolveBuySellProduct(productId);
+  if (!product) {
+    throw httpError("Buy & Sell product not found", 404);
+  }
+
+  const terminal = ["sold", "purchased", "booking", "rejected"];
+  if (terminal.includes(String(product.status || "").toLowerCase())) {
+    throw httpError("This listing cannot be featured in its current status", 400);
+  }
+
+  const now = new Date();
+  const existingLive = await BuySellFeaturedVehicle.findOne({
+    productId: product._id,
+    ...liveFeaturedPlacementQuery(now),
+  }).lean();
+  if (existingLive) {
+    throw httpError("This vehicle is already featured", 409);
+  }
+
+  const pendingRequest = await BuySellFeaturedVehicle.findOne({
+    productId: product._id,
+    source: "free_plan",
+    status: "pending",
+  }).sort({ createdAt: -1 });
+  if (pendingRequest) {
+    return approveFreePlanFeaturedVehicle({
+      actor,
+      placementId: pendingRequest._id,
+    });
+  }
+
+  const ownerMongoId = await resolveSellerMongoId(null, product);
+  if (!ownerMongoId) {
+    throw httpError("Could not resolve the vehicle owner", 400);
+  }
+
+  const catalog = await Subscription.findOne({
+    subscriptions: {
+      $elemMatch: {
+        packageName: { $regex: /^Feature Your Vehicle$/i },
+        price: 0,
+        status: "active",
+      },
+    },
+  }).lean();
+  const catalogItem = catalog?.subscriptions?.find(
+    (item) =>
+      isFeaturedVehiclePackageName(item.packageName) &&
+      Number(item.price) === 0 &&
+      item.status === "active",
+  );
+  const durationDays = resolveFeaturedDurationDays(catalogItem);
+  const expiresAt = new Date(now);
+  expiresAt.setDate(expiresAt.getDate() + durationDays);
+
+  const record = await BuySellFeaturedVehicle.create({
+    productId: product._id,
+    productUuid: product.id || null,
+    userId: ownerMongoId,
+    packageId: catalogItem?.id || "admin-featured-vehicle",
+    packageName: catalogItem?.packageName || FEATURED_VEHICLE_PACKAGE_NAME,
+    packageType: catalogItem?.packageType || "admin",
+    price: 0,
+    durationDays,
+    paymentId: null,
+    orderId: null,
+    source: "free_plan",
+    status: "active",
+    expiresAt,
+    approvedBy: actorMongoId(actor),
+    approvedAt: now,
+  });
+
+  return { record: record.toObject(), created: true, duplicate: false };
+}
+
 async function rejectFreePlanFeaturedVehicle({
   actor,
   placementId,
@@ -945,6 +1026,7 @@ module.exports = {
   findSubscriptionItemById,
   activateFeaturedVehicleFromPayment,
   requestFreePlanFeaturedVehicle,
+  makeFeaturedVehicleAdmin,
   approveFreePlanFeaturedVehicle,
   rejectFreePlanFeaturedVehicle,
   updateFeaturedPlacementAdminStatus,

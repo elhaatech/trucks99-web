@@ -566,6 +566,19 @@ export async function fetchFeaturedVehiclesAdmin(
   }
 }
 
+export async function makeFeaturedVehicleAdmin(
+  productId: string,
+): Promise<{ message: string; duplicate?: boolean; data?: unknown }> {
+  try {
+    return await api("/api/buy-sell/featured-vehicles/admin", {
+      method: "POST",
+      body: JSON.stringify({ productId }),
+    });
+  } catch (error) {
+    normalizeError(error);
+  }
+}
+
 export async function updateFeaturedVehicleAdminStatus(
   placementId: string,
   status: "active" | "cancelled" | "approved" | "rejected",
