@@ -220,6 +220,7 @@ export async function verifyOtp(mobile: string, otp: string) {
 
 export type MarketplaceRegisterInput = {
   name: string;
+  email?: string;
   mobile: string;
   company_name?: string;
   city?: string;
@@ -314,6 +315,7 @@ export async function getUser(id: string): Promise<User> {
  */
 export async function createUser(body: {
   name: string;
+  email?: string;
   roleId: string;
   mobile: string;
   company_name?: string;
@@ -323,7 +325,7 @@ export async function createUser(body: {
   profileImage?: string;
   termsAccepted?: boolean;
 }) {
-  const { name, roleId, mobile, company_name, city, state, country, profileImage, termsAccepted } = body;
+  const { name, email, roleId, mobile, company_name, city, state, country, profileImage, termsAccepted } = body;
 
   if (!name?.trim()) throw new Error("Name is required.");
   if (!roleId) throw new Error("Role is required.");
@@ -331,6 +333,7 @@ export async function createUser(body: {
 
   const payload: Record<string, unknown> = {
     name: name.trim(),
+    ...(email?.trim() ? { email: email.trim() } : {}),
     roleId,
     mobile: normalizeMobileInput(mobile.trim()),
   };

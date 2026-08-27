@@ -11,7 +11,7 @@ import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import CameraAltOutlinedIcon from "@mui/icons-material/CameraAltOutlined";
 import { SearchableSelect, type SelectOption } from "@/components/common/SearchableSelect";
-import { sendOtp,
+import { registerMarketplaceUser,
   getLocationCountriesAll,
   getLocationStatesByCountry,
   getLocationCitiesByState,
@@ -266,9 +266,10 @@ export default function MarketplaceRegisterPage() {
         }
       }
 
-      const result = await sendOtp(form.mobile.trim(), {
+      const result = await registerMarketplaceUser({
         name: form.name.trim(),
         email: form.email.trim(),
+        mobile: form.mobile.trim(),
         company_name: form.company_name.trim() || undefined,
         city: form.city || undefined,
         state: form.state || undefined,
@@ -279,11 +280,7 @@ export default function MarketplaceRegisterPage() {
 
       const params = new URLSearchParams();
       params.set("mobile", form.mobile.trim());
-      if (result.isNewUser) {
-        params.set("registered", "1");
-      } else {
-        params.set("existing", "1");
-      }
+      params.set("registered", "1");
       if (!result.otpSentViaSms && !result.otpForDev) {
         params.set("smsFailed", "1");
       }

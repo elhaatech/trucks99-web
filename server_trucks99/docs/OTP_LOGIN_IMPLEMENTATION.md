@@ -19,6 +19,8 @@ Mobile → Validate user → Generate secure OTP → Store in Redis (TTL)
 
 **OTP storage:** Redis (not in-memory, not MongoDB for login OTP)
 
+Registration uses `POST /api/signup`. It creates the account and sends the registration OTP; `POST /api/otp/send` is reserved for existing-user login.
+
 ---
 
 ## Files changed

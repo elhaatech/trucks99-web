@@ -5,7 +5,6 @@ const User = require('../schema/user');
 const { signToken } = require('../helpers/jwt');
 const { transformRolePermissions } = require('../helpers/rolePermissions');
 const { normalizeMobile, findUserByMobile } = require('../helpers/otpHelper');
-const { ensureUserForMobileAuth } = require('../helpers/ensureOtpUser');
 const {
   createAndSendOtp,
   verifyOtpCode,
@@ -45,24 +44,18 @@ authRouter.post('/send-otp', async (req, res) => {
       return res.status(400).json({ message: 'Mobile number is required.' });
     }
 
-    const { isNewUser } = await ensureUserForMobileAuth(normalizedMobile, {
-      name: req.body.name,
-      email: req.body.email,
-      roleId: req.body.roleId,
-      company_name: req.body.company_name,
-      city: req.body.city,
-      state: req.body.state,
-      country: req.body.country,
-      profileImage: req.body.profileImage,
-      termsAccepted: req.body.termsAccepted,
-    });
+    const user = await findUserByMobile(User, normalizedMobile);
+    if (!user) {
+      return res.status(404).json({
+        message: 'No account found for this mobile number. Please register first.',
+      });
+    }
 
     const result = await createAndSendOtp(normalizedMobile, { isResend: false });
     if (!result.ok) {
       return res.status(result.error?.includes('Wait') ? 429 : 503).json({
         message: result.error,
         otpSentViaSms: false,
-        isNewUser,
         ...(result.smsError ? { smsError: result.smsError } : {}),
       });
     }
@@ -70,7 +63,6 @@ authRouter.post('/send-otp', async (req, res) => {
     return res.status(200).json({
       message: result.message,
       otpSentViaSms: Boolean(result.sent),
-      isNewUser,
       ...(String(process.env.DEV_OTP_FALLBACK || '').toLowerCase() === 'true' && result.otpForDev
         ? { otpForDev: result.otpForDev }
         : {}),

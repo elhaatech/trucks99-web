@@ -105,7 +105,7 @@ export default function MarketplaceLoginPage() {
                 ? "Please log in to view vehicle details, photos, and make an offer."
                 : isMyListingsReturn
                   ? "Log in to create, edit, and manage your vehicle listings."
-                  : "Enter your name, email, and mobile number to receive a one-time password."
+                  : "Enter your mobile number to receive a one-time password."
           }
           onSuccess={redirectAfterAuth}
           onCancel={handleCancel}

@@ -16,6 +16,7 @@ SignupRouter.post('/', async (req, res) => {
   try {
     const {
       name,
+      email,
       roleId,
       mobile,
       company_name,
@@ -48,7 +49,7 @@ SignupRouter.post('/', async (req, res) => {
       city: city || null,
       state: state || null,
       country: country || null,
-      email: `m_${mobileNormalized}@otp.user`,
+      email: email?.trim() || `m_${mobileNormalized}@otp.user`,
       provider: 'local',
       profileImage: profileImage || null,
       termsAccepted: termsAccepted === true,

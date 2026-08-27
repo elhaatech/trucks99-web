@@ -19,12 +19,6 @@ import { userProductRoutes } from "@/lib/userProductRoutes";
 
 const OTP_LENGTH = 4;
 const RESEND_COOLDOWN_SEC = 60;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function isValidEmail(value: string) {
-  return EMAIL_PATTERN.test(value.trim());
-}
-
 type MarketplaceLoginPanelProps = {
   title?: string;
   subtitle?: string;
@@ -41,7 +35,7 @@ type MarketplaceLoginPanelProps = {
 
 export function MarketplaceLoginPanel({
   title = "Sign in to TRUCK99",
-  subtitle = "Enter your name, email, and mobile number to receive a one-time password.",
+  subtitle = "Enter your mobile number to receive a one-time password.",
   onSuccess,
   onCancel,
   registerHref,
@@ -51,8 +45,6 @@ export function MarketplaceLoginPanel({
   isNewUser: isNewUserFromFlow = false,
 }: MarketplaceLoginPanelProps) {
   const [mobile, setMobile] = useState(initialMobile);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<"mobile" | "otp">(
     startOnOtpStep && initialMobile.trim() ? "otp" : "mobile",
@@ -141,24 +133,9 @@ export function MarketplaceLoginPanel({
       setError("Enter your mobile number.");
       return;
     }
-    if (!name.trim()) {
-      setError("Enter your name.");
-      return;
-    }
-    if (!email.trim()) {
-      setError("Enter your email.");
-      return;
-    }
-    if (!isValidEmail(email)) {
-      setError("Enter a valid email address.");
-      return;
-    }
     try {
       setLoading(true);
-      const res = await sendOtp(mobile.trim(), {
-        name: name.trim(),
-        email: email.trim(),
-      });
+      const res = await sendOtp(mobile.trim());
       setStep("otp");
       setOtp("");
       applySendResponse(res);
@@ -268,25 +245,6 @@ export function MarketplaceLoginPanel({
         <form onSubmit={handleSendOtp}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
             <AuthTextField
-              label="Name"
-              placeholder="Your full name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={loading}
-              autoComplete="name"
-              sx={{ m: 0 }}
-            />
-            <AuthTextField
-              label="Email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-              autoComplete="email"
-              sx={{ m: 0 }}
-            />
-            <AuthTextField
               label="Mobile number"
               type="tel"
               placeholder="9876543210"
@@ -302,8 +260,7 @@ export function MarketplaceLoginPanel({
             color="text.secondary"
             sx={{ display: "block", mt: 1.25, lineHeight: 1.5 }}
           >
-            New accounts are created with your name and email. Existing users
-            can still sign in with the same mobile number.
+            Enter the mobile number linked to your TRUCKS99 account.
           </Typography>
           {error ? (
             <Alert severity="error" sx={{ mt: 2 }}>

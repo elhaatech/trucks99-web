@@ -4,7 +4,6 @@ const express = require('express');
 const User = require('../schema/user');
 const Otp = require('../schema/otp');
 const { createOtpForUser, verifyOtpWithSecret, normalizeMobile, findUserByMobile } = require('../helpers/otpHelper');
-const { ensureUserForMobileAuth } = require('../helpers/ensureOtpUser');
 const {
   createAndSendOtp,
   verifyOtpCode,
@@ -75,21 +74,7 @@ function otpDevFields(result) {
   return { otpForDev: result.otpForDev };
 }
 
-function otpProfileFromBody(body = {}) {
-  return {
-    name: body.name,
-    email: body.email,
-    roleId: body.roleId,
-    company_name: body.company_name,
-    city: body.city,
-    state: body.state,
-    country: body.country,
-    profileImage: body.profileImage,
-    termsAccepted: body.termsAccepted,
-  };
-}
-
-// POST /api/otp/send — body: { mobile }. Optional profile fields used only for new users.
+// POST /api/otp/send — body: { mobile }. Login OTP for existing users.
 otpRouter.post('/send', async (req, res) => {
   try {
     const { mobile } = req.body || {};
@@ -98,12 +83,14 @@ otpRouter.post('/send', async (req, res) => {
       return res.status(400).json({ message: 'Mobile number is required.' });
     }
 
-    const { user, isNewUser } = await ensureUserForMobileAuth(
-      normalizedMobile,
-      otpProfileFromBody(req.body),
-    );
+    const user = await findUserByMobile(User, normalizedMobile);
+    if (!user) {
+      return res.status(404).json({
+        message: 'No account found for this mobile number. Please register first.',
+      });
+    }
 
-    console.log(`[OTP] sending SMS to ${normalizedMobile} (${user.name || 'user found'}, isNewUser=${isNewUser})`);
+    console.log(`[OTP] sending login SMS to ${normalizedMobile} (${user.name || 'user found'})`);
     const result = await createAndSendOtp(normalizedMobile);
     console.log(`[OTP] send result ok=${result.ok} sent=${Boolean(result.sent)} error=${result.error || result.smsError || 'none'}`);
     if (!result.ok) {
@@ -111,7 +98,6 @@ otpRouter.post('/send', async (req, res) => {
       return res.status(status).json({
         message: result.error || 'Could not send OTP.',
         otpSentViaSms: false,
-        isNewUser,
         ...(result.smsError ? { smsError: result.smsError } : {}),
         ...(result.retryAfterSeconds ? { retryAfterSeconds: result.retryAfterSeconds } : {}),
       });
@@ -120,7 +106,6 @@ otpRouter.post('/send', async (req, res) => {
     return res.status(200).json({
       message: result.message || 'OTP sent to your mobile number.',
       otpSentViaSms: Boolean(result.sent),
-      isNewUser,
       ...otpDevFields(result),
       ...(result.smsError ? { smsError: result.smsError } : {}),
     });
