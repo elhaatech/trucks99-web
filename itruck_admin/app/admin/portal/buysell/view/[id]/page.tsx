@@ -47,7 +47,6 @@ import { getCurrentUser } from "@/model/services/user";
 import type { User } from "@/model/services/user";
 import { addFavorite, removeFavorite } from "@/model/services/favoriteapi";
 import ChatInboxPage from "@/components/common/Chatinboxpage";
-import { ProductStatusChip } from "../../_components/ProductStatusChip";
 import { ProductLifecycleSection } from "./_components/ProductLifecycleSection";
 import { ProductPurchaseButtons, isProductOwner } from "./_components/ProductPurchaseButtons";
 
@@ -439,7 +438,6 @@ export default function BuySellViewPage() {
                   >
                     {item.description || "Product"}
                   </Typography>
-                  <ProductStatusChip status={item.status} />
                 </Box>
 
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 1.5, mb: 2 }}>

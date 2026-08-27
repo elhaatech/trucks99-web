@@ -423,7 +423,6 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   incomeExpenseCategory: <IncomeCategoryIcon />,
   advertisement: <AdvertisementIcon />,
   incomeExpense: <IncomeExpenseIcon />,
-  companyStartCountry: <LocationPinIcon />,
   specification: <SpecificationIcon />,
   category: <SpecificationValueIcon />,
   buySell: <BuySellIcon />,

@@ -152,12 +152,6 @@ export function getAdminPortalNavDefinitions(
       appFolder: "income-expense/list",
     },
     {
-      id: "companyStartCountry",
-      label: getLabel("companyStartCountry", role, "Locations (City/State/Country)"),
-      getHref: () => routes.companyStartCountry.list(),
-      appFolder: "company-start-country/list",
-    },
-    {
       id: "specification",
       label: getLabel("specification", role, "Specifications"),
       getHref: () => routes.specification.list(),
