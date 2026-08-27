@@ -268,7 +268,7 @@ export default function UserProductViewPage() {
 
   const summaryProps = {
     title,
-    subtitle: subtitle || (year ? `${year} Model` : undefined),
+    subtitle:"",
     price: Number(item.price) || 0,
     status: item.status,
     location: locationLabel || item.address || undefined,
