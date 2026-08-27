@@ -5,7 +5,6 @@ import { Alert, Box, CircularProgress } from "@mui/material";
 import { Controller, useForm } from "react-hook-form";
 import { useRouter, useParams } from "next/navigation";
 import {
-  CategorySubcategorySelector,
   FormFooter,
   FormSelectField,
   FormTextField,
@@ -20,19 +19,11 @@ import {
   type Specification,
   type SpecificationValue,
 } from "@/model/api";
-import {
-  getCategories,
-  getCategoryRowId,
-  getCategoryUuid,
-} from "@/model/services/category";
-import { getSubCategory, getSubCategoryRowId } from "@/model/services/sub-category";
 import { useNotification } from "@/hooks/useNotification";
 import { routes } from "@/lib/routes";
 
 type FormData = {
   specification_id: string;
-  category_id: string;
-  subcategory_id: string;
   specification_value_name: string;
   status: ActiveInactive;
 };
@@ -58,20 +49,14 @@ export function SpecificationValueForm({
   const [specifications, setSpecifications] = useState<Specification[]>([]);
   const [specsLoading, setSpecsLoading] = useState(true);
   const [specsLoaded, setSpecsLoaded] = useState(false);
-  const [editPrefillLoading, setEditPrefillLoading] = useState(isEdit);
 
-  const { control, handleSubmit, setValue, watch } = useForm<FormData>({
+  const { control, handleSubmit, setValue } = useForm<FormData>({
     defaultValues: {
       specification_id: "",
-      category_id: "",
-      subcategory_id: "",
       specification_value_name: item?.specification_value_name || "",
       status: item?.status || "Active",
     },
   });
-
-  const categoryId = watch("category_id");
-  const subcategoryId = watch("subcategory_id");
 
   useEffect(() => {
     setSpecsLoading(true);
@@ -102,48 +87,6 @@ export function SpecificationValueForm({
     }
   }, [specsLoaded, isEdit, item, specificationIdFromUrl, setValue]);
 
-  // Resolve parent category from the saved subcategory when editing.
-  useEffect(() => {
-    if (!isEdit || !item?.subcategory_id) {
-      setEditPrefillLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setEditPrefillLoading(true);
-
-    Promise.all([
-      getSubCategory(String(item.subcategory_id)),
-      getCategories({ activeOnly: true }),
-    ])
-      .then(([subcategory, categories]) => {
-        if (cancelled) return;
-
-        const parentCategory = categories.find(
-          (category) =>
-            getCategoryUuid(category) === subcategory.category_id ||
-            getCategoryRowId(category) === subcategory.category_id,
-        );
-
-        if (parentCategory) {
-          setValue("category_id", getCategoryRowId(parentCategory));
-        }
-        setValue("subcategory_id", getSubCategoryRowId(subcategory));
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setValue("subcategory_id", String(item.subcategory_id));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setEditPrefillLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isEdit, item, setValue]);
-
   const specificationOptions = specifications.map((spec) => ({
     value: getRowId(spec),
     label: spec.specification_name,
@@ -157,17 +100,10 @@ export function SpecificationValueForm({
       if (!values.specification_id || !values.specification_value_name.trim()) {
         throw new Error("Specification and value name are required.");
       }
-      if (!values.category_id) {
-        throw new Error("Category is required.");
-      }
-      if (!values.subcategory_id) {
-        throw new Error("Sub category is required.");
-      }
 
       if (isEdit && item) {
         await updateSpecificationValue(getRowId(item), {
           specification_id: values.specification_id,
-          subcategory_id: values.subcategory_id,
           specification_value_name: values.specification_value_name.trim(),
           status: values.status,
         });
@@ -175,7 +111,6 @@ export function SpecificationValueForm({
       } else {
         await createSpecificationValue({
           specification_id: values.specification_id,
-          subcategory_id: values.subcategory_id,
           specification_value_name: values.specification_value_name.trim(),
         });
         notify({ type: "success", message: "Specification value created successfully." });
@@ -192,7 +127,7 @@ export function SpecificationValueForm({
     }
   });
 
-  const loading = specsLoading || editPrefillLoading;
+  const loading = specsLoading;
 
   return (
     <Box sx={{ px: 4, py: 4, bgcolor: "background.paper", borderRadius: 2, boxShadow: 1 }}>
@@ -237,15 +172,6 @@ export function SpecificationValueForm({
                 required
               />
             )}
-          />
-
-          <CategorySubcategorySelector
-            variant="form"
-            categoryId={categoryId}
-            subcategoryId={subcategoryId}
-            onCategoryChange={(id) => setValue("category_id", id)}
-            onSubcategoryChange={(id) => setValue("subcategory_id", id)}
-            required
           />
 
           <Controller

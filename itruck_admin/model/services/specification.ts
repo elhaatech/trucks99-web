@@ -291,7 +291,7 @@ export async function getSpecificationValue(
 
 export async function createSpecificationValue(payload: {
   specification_id: string;
-  subcategory_id: string;
+  subcategory_id?: string;
   specification_value_name: string;
 }) {
   try {
@@ -309,7 +309,7 @@ export async function updateSpecificationValue(
   id: string,
   payload: {
     specification_id: string;
-    subcategory_id: string;
+    subcategory_id?: string;
     specification_value_name: string;
     status: ActiveInactive;
   }
