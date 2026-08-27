@@ -59,7 +59,7 @@ export function VehicleGrid({
   if (products.length === 0) {
     return (
       <EmptyState
-        title={emptyTitle}
+        // title={emptyTitle}
         description={emptyDescription}
         icon={<SearchOffOutlinedIcon sx={{ fontSize: 36 }} />}
       />

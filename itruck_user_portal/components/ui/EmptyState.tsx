@@ -7,7 +7,7 @@ import { alpha, useTheme } from "@mui/material/styles";
 import { InboxOutlined as InboxOutlinedIcon } from "@mui/icons-material";
 
 export interface EmptyStateProps {
-  title: string;
+  title?: string;
   description?: string;
   icon?: React.ReactNode;
   action?: React.ReactNode;

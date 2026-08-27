@@ -418,17 +418,7 @@ export function MarketplaceStatsCards({
           >
             Marketplace overview
           </Typography>
-          <Typography
-            sx={{
-              mt: 0.75,
-              fontSize: 13.5,
-              fontWeight: 500,
-              color: T.color.textSecondary,
-              lineHeight: 1.6,
-            }}
-          >
-            A premium snapshot of marketplace activity, buyer signals, and conversion movement.
-          </Typography>
+         
         </Box>
         <Box
           sx={{

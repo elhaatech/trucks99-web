@@ -106,7 +106,7 @@ export function MarketplaceLoginPanel({
     if (res.otpForDev) {
       setInfo(
         res.otpSentViaSms
-          ? ``
+          ? `OTP sent to your mobile number. Enter the code from the SMS.`
           : `SMS not delivered${res.smsError ? ` (${res.smsError})` : ""}. Local OTP: ${res.otpForDev}`,
       );
     } else if (res.otpSentViaSms) {
