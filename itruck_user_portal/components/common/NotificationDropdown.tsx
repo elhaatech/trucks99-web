@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
 import Badge from "@mui/material/Badge";
@@ -23,7 +23,10 @@ import {
 } from "@/model/services/notification";
 import { getRowId } from "@/model/services/common";
 import { resolveNotificationHref } from "@/lib/notificationHref";
-import { setUnreadNotificationCount } from "@/hooks/useUnreadNotificationCount";
+import {
+  setUnreadNotificationCount,
+  useUnreadNotificationCount,
+} from "@/hooks/useUnreadNotificationCount";
 
 export type NotificationItem = {
   id: string;
@@ -58,6 +61,7 @@ export function NotificationDropdown(_props: NotificationDropdownProps) {
   const [anchor, setAnchor] = useState<null | HTMLElement>(null);
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
+  const unreadCount = useUnreadNotificationCount();
 
   const open = Boolean(anchor);
 
@@ -81,11 +85,6 @@ export function NotificationDropdown(_props: NotificationDropdownProps) {
       active = false;
     };
   }, []);
-
-  const unreadCount = useMemo(
-    () => items.filter((n) => !n.read).length,
-    [items],
-  );
 
   const handleOpen = useCallback((e: React.MouseEvent<HTMLElement>) => {
     setAnchor(e.currentTarget);

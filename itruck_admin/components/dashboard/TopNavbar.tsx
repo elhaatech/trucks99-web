@@ -31,7 +31,7 @@ import {
 import { NotificationBell } from "./NotificationBell";
 import { ChatDrawer } from "@/components/common/ChatDrawer";
 import ChatInboxPage from "@/components/common/Chatinboxpage";
-import { getChatList } from "@/model/services/chatapi";
+import { CHAT_CHANGED_EVENT, getChatList } from "@/model/services/chatapi";
 
 export interface TopNavbarProps {
   user?: User | null;
@@ -103,8 +103,16 @@ export function TopNavbar({ user, onMenuClick }: TopNavbarProps) {
     const onVisibility = () => {
       if (document.visibilityState === "visible") run(false);
     };
+    const onChatChanged = () => {
+      lastAt = Date.now();
+      void refreshUnread();
+    };
     document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
+    window.addEventListener(CHAT_CHANGED_EVENT, onChatChanged);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener(CHAT_CHANGED_EVENT, onChatChanged);
+    };
   }, [refreshUnread]);
 
   return (

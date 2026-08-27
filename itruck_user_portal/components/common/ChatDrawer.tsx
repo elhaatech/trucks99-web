@@ -108,6 +108,7 @@ export function ChatDrawer({ open, onClose, embedded = false, productId, roomId,
 
         if (activeRoomId) {
           await loadMessages(activeRoomId);
+          notifyMarketplaceChatChanged();
         }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load chat");

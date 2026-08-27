@@ -45,6 +45,13 @@ export type ChatMessage = {
   createdAt: string;
 };
 
+export const CHAT_CHANGED_EVENT = "itruck-chat-changed";
+
+export function notifyChatChanged(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(CHAT_CHANGED_EVENT));
+}
+
 function normalizeError(error: unknown): never {
   if (typeof error === "object" && error && "response" in error) {
     const e = error as { response?: { data?: { message?: string } } };

@@ -14,6 +14,7 @@ import {
   createOrGetChatRoom,
   getChatMessages,
   sendChatMessage,
+  notifyChatChanged,
   type ChatMessage,
   type ChatRoom,
 } from "@/model/services/chatapi";
@@ -106,6 +107,7 @@ export function ChatDrawer({ open, onClose, embedded = false, productId, roomId,
 
         if (activeRoomId) {
           await loadMessages(activeRoomId);
+          notifyChatChanged();
         }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load chat");
@@ -156,6 +158,7 @@ export function ChatDrawer({ open, onClose, embedded = false, productId, roomId,
       const res = await sendChatMessage(activeRoomId, text);
       setMessages((prev) => [...prev, res.chatMessage]);
       setRoom(res.room);
+      notifyChatChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send message");
       setDraft(text);
