@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
 import Badge from "@mui/material/Badge";
@@ -27,6 +27,29 @@ import {
   setUnreadNotificationCount,
   useUnreadNotificationCount,
 } from "@/hooks/useUnreadNotificationCount";
+import { getBuySellProduct } from "@/model/services/buysellapi";
+import { getProductVehicleId } from "@/app/common/components/buysell/utils";
+
+const BS_NUMBER_RE = /\bBS\d+\b/i;
+
+function isProductBidRequest(n: Notification): boolean {
+  const postType = String(
+    n.metadata?.postType || n.metadata?.entityType || n.postType || "",
+  ).toUpperCase();
+  return n.event === "NEW_REQUEST" && postType === "PRODUCT";
+}
+
+function productIdOf(n: Notification): string {
+  return String(n.metadata?.productId || n.productId || "").trim();
+}
+
+function resolveDisplayMessage(
+  message: string,
+  vehicleId: string | undefined,
+): string {
+  if (!vehicleId || !message || !BS_NUMBER_RE.test(message)) return message;
+  return message.replace(BS_NUMBER_RE, vehicleId);
+}
 
 export type NotificationItem = {
   id: string;
@@ -62,6 +85,10 @@ export function NotificationDropdown(_props: NotificationDropdownProps) {
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const unreadCount = useUnreadNotificationCount();
+  const [vehicleIdByProduct, setVehicleIdByProduct] = useState<
+    Record<string, string>
+  >({});
+  const vehicleIdCache = useRef<Record<string, string>>({});
 
   const open = Boolean(anchor);
 
@@ -85,6 +112,37 @@ export function NotificationDropdown(_props: NotificationDropdownProps) {
       active = false;
     };
   }, []);
+
+  // Resolve the product's Vehicle ID for product bid-request notifications so the
+  // displayed message can show the Vehicle ID instead of the legacy BS number.
+  useEffect(() => {
+    const pending = new Set<string>();
+    for (const n of items) {
+      if (isProductBidRequest(n)) {
+        const pid = productIdOf(n);
+        if (pid && !(pid in vehicleIdCache.current)) pending.add(pid);
+      }
+    }
+    if (pending.size === 0) return;
+    let active = true;
+    (async () => {
+      await Promise.all(
+        [...pending].map(async (pid) => {
+          try {
+            const product = await getBuySellProduct(pid);
+            const vid = getProductVehicleId(product);
+            if (vid) vehicleIdCache.current[pid] = vid;
+          } catch {
+            // leave as-is if the product can't be resolved
+          }
+        }),
+      );
+      if (active) setVehicleIdByProduct({ ...vehicleIdCache.current });
+    })();
+    return () => {
+      active = false;
+    };
+  }, [items]);
 
   const handleOpen = useCallback((e: React.MouseEvent<HTMLElement>) => {
     setAnchor(e.currentTarget);
@@ -257,7 +315,10 @@ export function NotificationDropdown(_props: NotificationDropdownProps) {
                     color={T.color.textPrimary}
                     sx={{ lineHeight: 1.4 }}
                   >
-                    {n.message || n.title || ""}
+                    {resolveDisplayMessage(
+                      n.message || n.title || "",
+                      vehicleIdByProduct[productIdOf(n)],
+                    )}
                   </Typography>
                   <Typography
                     variant="caption"

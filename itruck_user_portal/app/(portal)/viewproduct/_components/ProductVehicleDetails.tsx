@@ -4,6 +4,13 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { PRODUCT_THEME as T } from "@/lib/theme";
 
+const EMPTY_VALUE = /^(—|-|–|none|n\/a|na|null|undefined|\s*)$/i;
+
+function displayValue(value: string | undefined): string {
+  if (!value || EMPTY_VALUE.test(value.trim())) return "";
+  return value;
+}
+
 type ProductVehicleDetailsProps = {
   specs: Array<{ label: string; value: string }>;
   listingId?: string;
@@ -24,7 +31,12 @@ export function ProductVehicleDetails({
     ...specs,
     resolvedVehicleId ? { label: "Vehicle ID", value: resolvedVehicleId } : null,
     address ? { label: "Location", value: address } : null,
-  ].filter(Boolean) as Array<{ label: string; value: string }>;
+  ]
+    .filter(Boolean)
+    .map((row) => ({ ...row, value: displayValue(row!.value) })) as Array<{
+    label: string;
+    value: string;
+  }>;
 
   if (rows.length === 0 && !description?.trim()) return null;
 
