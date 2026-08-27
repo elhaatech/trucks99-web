@@ -1,6 +1,6 @@
 import { api, publicApi } from "./common_fixed";
 import { axiosClient } from "./axiosClient";
-import { cachedRequest } from "@/lib/apiCache";
+import { cachedRequest, invalidateCache } from "@/lib/apiCache";
 
 export type BuySellSpecification = {
   specification_id: string;
@@ -892,6 +892,7 @@ export async function deleteBuySellProducts(ids: string[]): Promise<{ message: s
     const res = await axiosClient.delete<{ message: string; deletedCount: number }>("/api/buy-sell/delete", {
       data: { ids },
     });
+    invalidateCache("buy-sell-list");
     return res.data;
   } catch (error) {
     normalizeError(error);
