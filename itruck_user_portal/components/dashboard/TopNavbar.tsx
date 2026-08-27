@@ -21,6 +21,7 @@ import { getBuySellImageUrl, handleBuySellImageError } from "@/lib/buysellUtils"
 import { logout } from "@/model/api";
 import { routes } from "@/lib/routes";
 import { clearNavigationState } from "@/lib/navigation";
+import { getMarketplaceDisplayName } from "@/lib/marketplaceAuth";
 import dynamic from "next/dynamic";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
@@ -72,8 +73,9 @@ function extractId(value: unknown): string | null {
 
 export function TopNavbar({ user, onMenuClick }: TopNavbarProps) {
   const router = useRouter();
-  const initial = user?.name?.[0]?.toUpperCase() ?? "U";
-  const firstName = user?.name?.trim().split(" ")[0] ?? "User";
+  const displayName = getMarketplaceDisplayName(user);
+  const initial = displayName.charAt(0).toUpperCase();
+  const firstName = displayName.split(" ")[0];
   const roleName = user?.role?.name ?? "";
 
   const currentUserId = extractId(

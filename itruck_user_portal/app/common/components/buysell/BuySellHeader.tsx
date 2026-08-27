@@ -49,6 +49,7 @@ import { getBuySellImageUrl, handleBuySellImageError } from "@/lib/buysellUtils"
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import {
   MARKETPLACE_FAVORITES_CHANGED_EVENT,
+  getMarketplaceDisplayName,
   MARKETPLACE_CHAT_CHANGED_EVENT,
 } from "@/lib/marketplaceAuth";
 import { getBuySellFavoriteCount } from "@/model/services/favoriteapi";
@@ -106,6 +107,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
   const pathname = usePathname();
   const { user, userId, isLoggedIn, logout: marketplaceLogout } = useMarketplaceAuth();
   const navLinks = useMemo(() => getBuySellNavLinks(isLoggedIn), [isLoggedIn]);
+  const displayName = getMarketplaceDisplayName(user);
   const [favoriteCount, setFavoriteCount] = useState(0);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [headerSearch, setHeaderSearch] = useState("");
@@ -491,11 +493,11 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {user.name || "Account"}
+                  {displayName}
                 </Typography>
                 <Avatar
                   src={getBuySellImageUrl(user.profileImage) || undefined}
-                  alt={user.name || "Account"}
+                  alt={displayName}
                   slotProps={{ img: { onError: handleBuySellImageError } }}
                   sx={{
                     width: 32,
@@ -505,7 +507,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                     fontWeight: 700,
                   }}
                 >
-                  {(user.name || "U").charAt(0).toUpperCase()}
+                  {displayName.charAt(0).toUpperCase()}
                 </Avatar>
               </Button>
               <Menu
@@ -523,15 +525,15 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
                 <Box sx={{ px: 2, py: 1.5, display: "flex", alignItems: "center", gap: 1.25 }}>
                   <Avatar
                     src={getBuySellImageUrl(user.profileImage) || undefined}
-                    alt={user.name || "Account"}
+                    alt={displayName}
                     slotProps={{ img: { onError: handleBuySellImageError } }}
                     sx={{ width: 40, height: 40, bgcolor: PRIMARY, fontSize: 15, fontWeight: 700 }}
                   >
-                    {(user.name || "U").charAt(0).toUpperCase()}
+                    {displayName.charAt(0).toUpperCase()}
                   </Avatar>
                   <Box sx={{ minWidth: 0 }}>
                     <Typography fontWeight={700} fontSize={14} noWrap>
-                      {user.name || "Account"}
+                      {displayName}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       Marketplace account

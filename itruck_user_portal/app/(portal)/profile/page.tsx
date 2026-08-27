@@ -21,6 +21,7 @@ import {
 } from "@/model/services/user";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { userProductRoutes } from "@/lib/userProductRoutes";
+import { getMarketplaceDisplayName, persistMarketplaceSignInName } from "@/lib/marketplaceAuth";
 import { useNotification } from "@/hooks/useNotification";
 import { SearchableSelect, type SelectOption } from "@/components/common/SearchableSelect";
 import {
@@ -202,6 +203,7 @@ export default function ProfilePage() {
         },
       });
       setSavedProfileImage(imageToSave);
+      persistMarketplaceSignInName(name.trim());
       invalidateCurrentUserCache();
       await refresh({ force: true });
       notify({ type: "success", message: "Profile updated successfully." });
@@ -229,6 +231,7 @@ export default function ProfilePage() {
   }
 
   const avatarSrc = getBuySellImageUrl(profileImage);
+  const displayName = getMarketplaceDisplayName({ name }, "User");
 
   const textFieldSx = {
     "& .MuiOutlinedInput-root": {
@@ -277,7 +280,7 @@ export default function ProfilePage() {
               slotProps={{ img: { onError: handleBuySellImageError } }}
               sx={{ width: 88, height: 88, bgcolor: INFO, fontSize: 32, fontWeight: 700 }}
             >
-              {(name || "U").charAt(0).toUpperCase()}
+              {displayName.charAt(0).toUpperCase()}
             </Avatar>
             <Button
               type="button"
@@ -309,7 +312,7 @@ export default function ProfilePage() {
             />
           </Box>
           <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <Typography sx={{ fontWeight: 700, fontSize: 16, lineHeight: 1.3 }}>{name || "Your name"}</Typography>
+            <Typography sx={{ fontWeight: 700, fontSize: 16, lineHeight: 1.3 }}>{displayName}</Typography>
             <Typography sx={{ fontSize: 13, color: T.color.textSecondary, lineHeight: 1.3 }}>
               Tap the camera icon to change your photo
             </Typography>
@@ -318,7 +321,6 @@ export default function ProfilePage() {
 
         <TextField
           label="Name"
-          required
           fullWidth
           size="small"
           sx={textFieldSx}
