@@ -1846,36 +1846,16 @@ buySellRouter.post(
 
 /** Aggregate listing + offer metrics for a product filter (sell dashboard). */
 async function computeSellMetricsBlock(productFilter) {
-  const matchStage = Object.keys(productFilter).length
-    ? [{ $match: productFilter }]
-    : [];
-  const bitsCollection = ProductBitRecord.collection.name;
+  const productIds = await BuySellProduct.find(productFilter).distinct("_id");
 
-  const [agg, offerAgg] = await Promise.all([
+  const [agg, totalOffers] = await Promise.all([
     BuySellProduct.aggregate([
-      ...matchStage,
+      { $match: productFilter },
       { $group: { _id: "$status", count: { $sum: 1 } } },
     ]),
-    BuySellProduct.aggregate([
-      ...matchStage,
-      {
-        $lookup: {
-          from: bitsCollection,
-          localField: "_id",
-          foreignField: "productId",
-          as: "bits",
-          pipeline: [{ $count: "c" }],
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          totalOffers: {
-            $sum: { $ifNull: [{ $arrayElemAt: ["$bits.c", 0] }, 0] },
-          },
-        },
-      },
-    ]),
+    productIds.length
+      ? ProductBitRecord.countDocuments({ productId: { $in: productIds } })
+      : Promise.resolve(0),
   ]);
 
   const map = Object.fromEntries(agg.map(({ _id, count }) => [_id, count]));
@@ -1885,7 +1865,6 @@ async function computeSellMetricsBlock(productFilter) {
   const activeListings = count("pending"); // "pending" is the live/visible state
   const soldVehicles = count("sold") + count("purchased");
   const totalBooked = count("booking");
-  const totalOffers = offerAgg[0]?.totalOffers || 0;
 
   return {
     totalListings,
