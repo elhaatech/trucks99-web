@@ -764,7 +764,8 @@ export function BuySellForm({
           preview: URL.createObjectURL(file),
           status: "idle",
         };
-        if (next[i]?.kind === "new") URL.revokeObjectURL(next[i].preview);
+        const previous = next[i];
+        if (previous?.kind === "new") URL.revokeObjectURL(previous.preview);
         next[i] = entry;
         newEntries.push(entry);
         added++;
