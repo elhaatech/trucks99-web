@@ -1091,6 +1091,7 @@ export function BuySellForm({
       }}
     >
       <Button
+        type="button"
         variant="outlined"
         onClick={activeStep === 0 ? () => router.push(cancelTarget) : handleBack}
         startIcon={activeStep !== 0 ? <ArrowBackIcon sx={{ fontSize: 14 }} /> : undefined}
@@ -1101,6 +1102,7 @@ export function BuySellForm({
 
       {!isLastStep ? (
         <Button
+          type="button"
           variant="contained"
           onClick={handleNext}
           endIcon={<ArrowForwardIcon sx={{ fontSize: 14 }} />}
@@ -1427,6 +1429,7 @@ export function BuySellForm({
                           />
                           <IconButton
                             size="small"
+                            type="button"
                             disabled={submitting}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1526,6 +1529,7 @@ export function BuySellForm({
                         )}
                         <IconButton
                           size="small"
+                          type="button"
                           disabled={submitting}
                           onClick={() => handleRemoveImage(idx)}
                           sx={{
@@ -1548,6 +1552,7 @@ export function BuySellForm({
 
               {imageEntries.length < MAX_PHOTOS && (
                 <Button
+                  type="button"
                   variant="outlined"
                   startIcon={<CloudUploadIcon />}
                   disabled={submitting}
