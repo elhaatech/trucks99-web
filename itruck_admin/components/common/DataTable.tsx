@@ -21,12 +21,14 @@ import { getDateTimestamp, isDateSortColumn } from "@/lib/dateUtils";
 const headerCellSx = {
   fontWeight: 700,
   fontSize: "0.8125rem",
-  bgcolor: "rgba(15, 23, 42, 0.025)",
+  bgcolor: "background.paper",
   color: "text.secondary",
-  borderBottom: "1px solid",
+  borderBottom: "2px solid",
   borderColor: "divider",
+  boxShadow: "0 1px 2px rgba(15, 23, 42, 0.08)",
   py: 1.75,
   whiteSpace: "nowrap" as const,
+  zIndex: 3,
 } as const;
 
 type Order = "asc" | "desc";

@@ -3,6 +3,8 @@
 import { useMemo } from "react";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
+import Link from "@mui/material/Link";
+import NextLink from "next/link";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import FavoriteIcon from "@mui/icons-material/Favorite";
@@ -15,6 +17,7 @@ import { renderClickableName } from "@/components/common/table/tableColumnHelper
 import { routes } from "@/lib/routes";
 import { renderNumberColumn } from "@/components/common/table/renderNumberColumn";
 import { getFirstBuySellImageUrl } from "@/lib/buysellUtils";
+import { PRIMARY } from "@/lib/theme";
 import { BuySellImage } from "@/components/common/BuySellImage";
 
 interface UseBuySellColumnsOptions {
@@ -66,11 +69,34 @@ export function useBuySellColumns({
         id: "vehicleId",
         label: "Vehicle ID",
         minWidth: 140,
-        render: (row: BuySellProduct) => (
-          <Typography variant="body2" sx={{ fontVariantNumeric: "tabular-nums" }}>
-            {row.vehicleId || (/^\d{10}$/.test(String(row.bsNumber ?? "")) ? row.bsNumber : "—")}
-          </Typography>
-        ),
+        render: (row: BuySellProduct) => {
+          const display =
+            row.vehicleId ||
+            (/^\d{10}$/.test(String(row.bsNumber ?? "")) ? row.bsNumber : "—");
+          if (display === "—") {
+            return (
+              <Typography variant="body2" sx={{ fontVariantNumeric: "tabular-nums" }}>
+                —
+              </Typography>
+            );
+          }
+          return (
+            <Link
+              component={NextLink}
+              href={routes.buysell.view(getBuySellRowId(row))}
+              onClick={(e) => e.stopPropagation()}
+              sx={{
+                color: PRIMARY,
+                textDecoration: "none",
+                fontVariantNumeric: "tabular-nums",
+                cursor: "pointer",
+                "&:hover": { textDecoration: "underline" },
+              }}
+            >
+              {display}
+            </Link>
+          );
+        },
       },
       {
         id: "created_by",
