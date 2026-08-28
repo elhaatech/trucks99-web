@@ -313,7 +313,15 @@ export default function MarketplaceRegisterPage() {
         />
       }
       rightContent={
-        <Box sx={{ width: "100%" }}>
+        <Box
+          sx={{
+            width: "100%",
+            maxHeight: { xs: "none", md: "calc(100vh - 6.5rem)" },
+            overflowY: { xs: "visible", md: "auto" },
+            pr: { xs: 0, md: 0.5 },
+            mr: { xs: 0, md: -0.5 },
+          }}
+        >
           <Typography
             variant="h4"
             sx={{
@@ -329,14 +337,14 @@ export default function MarketplaceRegisterPage() {
           <Typography
             variant="body2"
             color="text.secondary"
-            sx={{ textAlign: "center", mb: 2, lineHeight: 1.6 }}
+            sx={{ textAlign: "center", mb: 1.5, lineHeight: 1.6 }}
           >
             Your account will be set up as a Buy/Sell marketplace user.
           </Typography>
 
           <form onSubmit={handleRegister}>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.25 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.25, mb: { xs: -0.75, sm: -0.5 } }}>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -344,33 +352,78 @@ export default function MarketplaceRegisterPage() {
                   accept="image/*"
                   onChange={handlePhotoSelect}
                 />
-                <Avatar
-                  onClick={() => fileInputRef.current?.click()}
+                <Box
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Upload profile photo"
+                  onClick={() => !loading && fileInputRef.current?.click()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      if (!loading) fileInputRef.current?.click();
+                    }
+                  }}
                   sx={{
-                    width: 80,
-                    height: 80,
-                    cursor: "pointer",
-                    border: "2px dashed",
-                    borderColor: photoError ? "error.main" : "divider",
-                    bgcolor: "background.paper",
-                    "&:hover": {
+                    display: "inline-flex",
+                    p: { xs: 1.5, sm: 1 },
+                    borderRadius: "50%",
+                    cursor: loading ? "default" : "pointer",
+                    WebkitTapHighlightColor: "transparent",
+                    outline: "none",
+                    transition: "background-color 150ms ease",
+                    "&:hover .profile-avatar": {
                       borderColor: "primary.main",
-                      opacity: 0.85,
+                      bgcolor: "action.hover",
+                    },
+                    "&:focus-visible": {
+                      outline: "2px solid",
+                      outlineColor: "primary.main",
+                      outlineOffset: 2,
                     },
                   }}
                 >
-                  {profileImagePreview ? (
-                    <img
-                      src={profileImagePreview}
-                      alt="Profile preview"
-                      onError={handleBuySellImageError}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                  ) : (
-                    <CameraAltOutlinedIcon sx={{ fontSize: 28, color: "text.secondary" }} />
-                  )}
-                </Avatar>
-                <Typography variant="caption" color="text.secondary">
+                  <Avatar
+                    className="profile-avatar"
+                    sx={{
+                      width: { xs: 50, sm: 34, md: 40 },
+                      height: { xs: 50, sm: 34, md: 40 },
+                      cursor: "inherit",
+                      pointerEvents: "none",
+                      border: "2px dashed",
+                      borderColor: photoError ? "error.main" : "divider",
+                      bgcolor: "background.paper",
+                      transition: "border-color 150ms ease, background-color 150ms ease",
+                    }}
+                  >
+                    {profileImagePreview ? (
+                      <img
+                        src={profileImagePreview}
+                        alt="Profile preview"
+                        onError={handleBuySellImageError}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    ) : (
+                      <CameraAltOutlinedIcon sx={{ fontSize: { xs: 14, sm: 17, md: 19 }, color: "text.secondary" }} />
+                    )}
+                  </Avatar>
+                </Box>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  component="button"
+                  type="button"
+                  onClick={() => !loading && fileInputRef.current?.click()}
+                  disabled={loading}
+                  sx={{
+                    border: 0,
+                    background: "none",
+                    cursor: loading ? "default" : "pointer",
+                    p: 0,
+                    font: "inherit",
+                    textDecoration: "underline",
+                    "&:hover": { color: "primary.main" },
+                  }}
+                >
                   {profileImagePreview ? "Click to change photo" : "Click to upload profile photo (optional)"}
                 </Typography>
                 {profileImagePreview ? (
@@ -495,12 +548,12 @@ export default function MarketplaceRegisterPage() {
              />
 
              {error ? (
-               <Alert severity="error" sx={{ mt: 1.5 }}>
+                <Alert severity="error" sx={{ mt: 1 }}>
                  {error}
                </Alert>
              ) : null}
 
-             <Box sx={{ mt: 2 }}>
+              <Box sx={{ mt: 1.5 }}>
                <GradientButton type="submit" disabled={loading}>
                  {loading
                    ? uploadingPhoto
@@ -511,7 +564,7 @@ export default function MarketplaceRegisterPage() {
              </Box>
            </form>
 
-           <Typography variant="body2" sx={{ textAlign: "center", mt: 2 }}>
+           <Typography variant="body2" sx={{ textAlign: "center", mt: 1.5 }}>
             Already have an account?{" "}
             <Link href={loginHref} style={{ fontWeight: 600, textDecoration: "none" }}>
               Sign in
