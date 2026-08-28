@@ -7,6 +7,7 @@ import {
   FilterTextInput,
   CategorySubcategorySelector,
 } from "@/components/common";
+import { SearchableSelect } from "@/components/common/SearchableSelect";
 import { FilterState } from "../interface/buysell_interface";
 
 export interface UserOption {
@@ -79,13 +80,14 @@ export function BuySellFilters({
       </FilterFieldItem>
 
       <FilterFieldItem>
-        <FilterSelectInput
+        <SearchableSelect
           label="User"
           value={filters.userid}
           onChange={(v) => onChange({ userid: v || "" })}
           options={userOptions}
           placeholder="All users"
           disabled={disabled}
+          noOptionsText="No users found"
         />
       </FilterFieldItem>
 
@@ -109,6 +111,7 @@ export function BuySellFilters({
           onChange={(v) => onChange({ min_price: v })}
           placeholder="0"
           disabled={disabled}
+          digitsOnly
         />
       </FilterFieldItem>
 
@@ -119,6 +122,7 @@ export function BuySellFilters({
           onChange={(v) => onChange({ max_price: v })}
           placeholder="Any"
           disabled={disabled}
+          digitsOnly
         />
       </FilterFieldItem>
 

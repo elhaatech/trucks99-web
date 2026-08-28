@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Autocomplete, { createFilterOptions } from "@mui/material/Autocomplete";
+import Autocomplete from "@mui/material/Autocomplete";
 import TextField, { type TextFieldProps } from "@mui/material/TextField";
 import type { SxProps, Theme } from "@mui/material/styles";
 
@@ -33,7 +33,16 @@ export interface SearchableSelectProps {
   error?: boolean;
 }
 
-const filter = createFilterOptions<SelectOption>();
+const filterOptions = (
+  options: SelectOption[],
+  state: { inputValue: string },
+): SelectOption[] => {
+  const query = state.inputValue.trim().toLowerCase();
+  if (!query) return options;
+  return options.filter((option) =>
+    option.label.toLowerCase().includes(query),
+  );
+};
 
 export function SearchableSelect({
   options,
@@ -77,7 +86,7 @@ export function SearchableSelect({
         }
       }}
       getOptionLabel={(option) => option.label}
-      filterOptions={(opts, params) => filter(opts, params)}
+      filterOptions={filterOptions}
       noOptionsText={noOptionsText}
       disabled={disabled}
       fullWidth={fullWidth}

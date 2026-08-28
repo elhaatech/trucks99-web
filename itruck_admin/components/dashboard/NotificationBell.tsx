@@ -8,11 +8,14 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
+import Link from "@mui/material/Link";
+import NextLink from "next/link";
 import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import { getNotifications, markNotificationRead, markAllNotificationsRead, type Notification, getRowId } from "@/model/api";
+import { getBuySellProduct } from "@/model/services/buysellapi";
 import { ListEmptyState } from "@/components/common";
 import { PRIMARY } from "@/lib/theme";
 import { routes } from "@/lib/routes";
@@ -36,24 +39,43 @@ export function NotificationBell(_props: NotificationBellProps) {
   const router = useRouter();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [items, setItems] = React.useState<Notification[]>([]);
+  const [vehicleIds, setVehicleIds] = React.useState<Record<string, string>>({});
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
   const unreadCount = useUnreadNotificationCount();
 
   const open = Boolean(anchorEl);
 
-  const load = React.useCallback(() => {
+  const load = React.useCallback(async () => {
     setLoading(true);
     setError("");
-    getNotifications()
-      .then((list) => {
-        setItems(list);
-        setUnreadNotificationCount(list.filter((n) => n.read !== true).length);
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : "Failed to load notifications");
-      })
-      .finally(() => setLoading(false));
+    try {
+      const list = await getNotifications();
+      setItems(list);
+      setUnreadNotificationCount(list.filter((n) => n.read !== true).length);
+
+      // Surface the short, human-readable Vehicle ID (same field shown in the
+      // Buy & Sell listings table) for each notification that references a product.
+      const productIds = Array.from(
+        new Set(list.map((n) => n.productId).filter((x): x is string => Boolean(x))),
+      );
+      if (productIds.length) {
+        const results = await Promise.allSettled(
+          productIds.map((id) => getBuySellProduct(id)),
+        );
+        const map: Record<string, string> = {};
+        results.forEach((r, i) => {
+          if (r.status === "fulfilled" && r.value?.vehicleId) {
+            map[productIds[i]] = r.value.vehicleId;
+          }
+        });
+        setVehicleIds(map);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load notifications");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -171,8 +193,47 @@ export function NotificationBell(_props: NotificationBellProps) {
                 }
                 secondary={
                   <>
-                    <Typography variant="body2" color="text.secondary">
-                      {n.message}
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{
+                        whiteSpace: "normal",
+                        overflowWrap: "break-word",
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {(() => {
+                        const objectId = n.productId ?? n.metadata?.productId;
+                        if (!objectId) return n.message;
+                        const match = n.message.match(/BS\d+/i);
+                        if (!match || match.index === undefined) return n.message;
+                        const display = vehicleIds[objectId] ?? objectId;
+                        const before = n.message.slice(0, match.index);
+                        const after = n.message.slice(match.index + match[0].length);
+                        return (
+                          <>
+                            {before}
+                            <Link
+                              component={NextLink}
+                              href={routes.buysell.view(objectId)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(routes.buysell.view(objectId));
+                                handleClose();
+                              }}
+                              sx={{
+                                color: PRIMARY,
+                                textDecoration: "none",
+                                cursor: "pointer",
+                                "&:hover": { textDecoration: "underline" },
+                              }}
+                            >
+                              Vehicle ID:{display}
+                            </Link>
+                            {after}
+                          </>
+                        );
+                      })()}
                     </Typography>
                     {n.createdAt && (
                       <Typography variant="caption" color="text.disabled" sx={{ display: "block", mt: 0.25 }}>

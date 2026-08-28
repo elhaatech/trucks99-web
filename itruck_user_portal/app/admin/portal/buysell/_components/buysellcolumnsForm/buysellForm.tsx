@@ -98,7 +98,18 @@ const MAX_PHOTOS = 10;
 
 type ImageEntry =
   | { kind: "existing"; url: string }
-  | { kind: "new"; file: File; preview: string };
+  | {
+      kind: "new";
+      id: string;
+      file: File;
+      preview: string;
+      status: "idle" | "uploading" | "done" | "error";
+      url?: string;
+    };
+
+/** Monotonic id for newly picked image entries (used to update upload status). */
+let photoEntrySeq = 0;
+const nextPhotoId = () => `pe_${++photoEntrySeq}`;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -373,6 +384,7 @@ export function BuySellForm({
   // Tracks which required slot (0-3) a freshly picked file should be assigned to.
   // null = append as an additional photo ("Add more").
   const pendingSlotRef = useRef<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   // ── Reference data ────────────────────────────────────────────────────────
   const [specifications, setSpecifications] = useState<Specification[]>([]);
@@ -692,48 +704,136 @@ export function BuySellForm({
   }, [isDraft, isEdit]);
 
   // ── Image handlers ────────────────────────────────────────────────────────
-  const handleImageFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    // Reset immediately so the same file can be re-picked later.
-    e.target.value = "";
+  /** Upload a single picked file, updating that entry's status as it goes.
+   *  The backend accepts one file per request, so the batch is queued one at a time. */
+  const uploadEntryFile = async (id: string, file: File) => {
+    setImageEntries((prev) =>
+      prev.map((e) =>
+        e.kind === "new" && e.id === id ? { ...e, status: "uploading" } : e,
+      ),
+    );
+    try {
+      const url = await uploadFile(file, "buy_sell_doc");
+      setImageEntries((prev) =>
+        prev.map((e) =>
+          e.kind === "new" && e.id === id ? { ...e, status: "done", url } : e,
+        ),
+      );
+    } catch {
+      setImageEntries((prev) =>
+        prev.map((e) =>
+          e.kind === "new" && e.id === id ? { ...e, status: "error" } : e,
+        ),
+      );
+    }
+  };
+
+  /**
+   * Add one or more picked/dropped image files.
+   *
+   * @param files  The selected/dropped files (already filtered to images).
+   * @param target `null` = "Add more" (append as extra photos). A slot index
+   *   (0-3) = a required angle box was clicked/dropped onto, so we auto-distribute
+   *   the files into the EMPTY required slots in order (Front → Back → Left →
+   *   Right), then overflow into the extra slots, never exceeding MAX_PHOTOS.
+   *
+   * The backend accepts one file per request, so every new entry is uploaded
+   * immediately (queued one at a time) and shows its own progress indicator.
+   */
+  const addFiles = (files: File[], target: number | null) => {
     if (!files.length) return;
 
-    const target = pendingSlotRef.current;
-    pendingSlotRef.current = null;
+    const next = [...imageEntries];
+    const selected = files;
+    const remaining = MAX_PHOTOS - next.length;
+    let cursor = 0;
+    let added = 0;
+    const newEntries: ImageEntry[] = [];
 
-    setImageEntries((prev) => {
-      const next = [...prev];
-      // Start at the clicked slot, otherwise the first empty slot, else append.
-      let pos = target != null ? target : next.findIndex((entry) => !entry);
-      if (pos === -1) pos = next.length;
-
-      for (const file of files) {
-        if (next.length >= MAX_PHOTOS) break;
+    if (target !== null) {
+      // Fill empty required slots (0..3) in order first — never overwrite a filled one.
+      for (let i = 0; i < MIN_PHOTOS; i++) {
+        if (cursor >= selected.length) break;
+        if (added >= remaining) break;
+        if (next[i]) continue;
+        const file = selected[cursor++];
         const entry: ImageEntry = {
           kind: "new",
+          id: nextPhotoId(),
           file,
           preview: URL.createObjectURL(file),
+          status: "idle",
         };
-        if (pos < next.length) {
-          const existing = next[pos];
-          if (existing.kind === "new") URL.revokeObjectURL(existing.preview);
-          next[pos] = entry;
-        } else {
-          next.push(entry);
-        }
-        pos += 1;
+        if (next[i]?.kind === "new") URL.revokeObjectURL(next[i].preview);
+        next[i] = entry;
+        newEntries.push(entry);
+        added++;
       }
+    }
 
-      const remaining = MAX_PHOTOS - prev.length;
-      if (files.length > remaining) {
-        setError(
-          `Only ${remaining} more image(s) can be added (max ${MAX_PHOTOS} total).`,
-        );
-      } else {
-        setError("");
-      }
-      return next;
+    // Append any remaining files as extra photos (also covers "Add more").
+    while (cursor < selected.length && next.length < MAX_PHOTOS) {
+      const file = selected[cursor++];
+      const entry: ImageEntry = {
+        kind: "new",
+        id: nextPhotoId(),
+        file,
+        preview: URL.createObjectURL(file),
+        status: "idle",
+      };
+      next.push(entry);
+      newEntries.push(entry);
+      added++;
+    }
+
+    const skipped = selected.length - added;
+    setImageEntries(next);
+    if (added === 0 && skipped > 0) {
+      setError(`You can upload a maximum of ${MAX_PHOTOS} images.`);
+    } else if (skipped > 0) {
+      setError(
+        `Only ${added} more photo${added === 1 ? "" : "s"} allowed — ${added} added, ${skipped} skipped.`,
+      );
+    } else {
+      setError("");
+    }
+
+    // Kick off the uploads for the whole batch (queued one file per request).
+    newEntries.forEach((entry) => {
+      if (entry.kind === "new") uploadEntryFile(entry.id, entry.file);
     });
+  };
+
+  const handleImageFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []).filter((f) =>
+      f.type.startsWith("image/"),
+    );
+    // Reset immediately so the same file can be re-picked later.
+    e.target.value = "";
+    const target = pendingSlotRef.current;
+    pendingSlotRef.current = null;
+    addFiles(files, target);
+  };
+
+  const handleImageDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (submitting) return;
+    const files = Array.from(e.dataTransfer.files ?? []).filter((f) =>
+      f.type.startsWith("image/"),
+    );
+    // Dropping distributes into empty required slots first, then extras.
+    addFiles(files, 0);
+  };
+
+  const handleImageDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!submitting) setIsDragging(true);
+  };
+
+  const handleImageDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
   };
 
   const handleRemoveImage = (idx: number) => {
@@ -945,8 +1045,13 @@ export function BuySellForm({
           const path = toRelativeUploadPath(entry.url);
           if (path) finalImages.push(path);
         } else {
-          const url = await uploadFile(entry.file, "buy_sell_doc");
-          const path = toRelativeUploadPath(url);
+          // Reuse the URL if this file was already uploaded on pick; otherwise
+          // upload now (backend accepts one file per request).
+          let raw = entry.url;
+          if (entry.status !== "done" || !raw) {
+            raw = await uploadFile(entry.file, "buy_sell_doc");
+          }
+          const path = toRelativeUploadPath(raw);
           if (path) finalImages.push(path);
         }
       }
@@ -1324,7 +1429,18 @@ export function BuySellForm({
 
       {/* ── Step 3: Images & Status ──────────────────────────────────── */}
       {activeStep === 3 && (
-        <Box>
+        <Box
+          onDrop={handleImageDrop}
+          onDragOver={handleImageDragOver}
+          onDragLeave={handleImageDragLeave}
+          sx={{
+            outline: isDragging ? "2px dashed" : "2px dashed transparent",
+            outlineColor: isDragging ? "primary.main" : "transparent",
+            outlineOffset: 4,
+            borderRadius: 2,
+            transition: "outline-color 0.15s",
+          }}
+        >
           <StepIntro
             title="Photos"
             subtitle="Upload Front, Back, Left Side and Right Side (min 4, max 10)."
@@ -1333,7 +1449,7 @@ export function BuySellForm({
           <input
             ref={imageInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
+            accept="image/*"
             multiple
             style={{ display: "none" }}
             onChange={handleImageFilePick}
@@ -1420,14 +1536,47 @@ export function BuySellForm({
                           borderRadius: 8,
                           display: "block",
                         }}
-                      />
-                      <IconButton
-                        size="small"
-                        disabled={submitting}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveImage(slotIdx);
-                        }}
+                       />
+                       {entry?.kind === "new" && entry.status === "uploading" && (
+                         <Box
+                           sx={{
+                             position: "absolute",
+                             inset: 0,
+                             display: "flex",
+                             alignItems: "center",
+                             justifyContent: "center",
+                             bgcolor: "rgba(255,255,255,0.65)",
+                           }}
+                         >
+                           <CircularProgress size={28} />
+                         </Box>
+                       )}
+                       {entry?.kind === "new" && entry.status === "error" && (
+                         <Box
+                           sx={{
+                             position: "absolute",
+                             inset: 0,
+                             display: "flex",
+                             alignItems: "center",
+                             justifyContent: "center",
+                             bgcolor: "error.main",
+                             color: "#fff",
+                             fontSize: 11,
+                             fontWeight: 700,
+                             textAlign: "center",
+                             p: 1,
+                           }}
+                         >
+                           Upload failed
+                         </Box>
+                       )}
+                       <IconButton
+                         size="small"
+                         disabled={submitting}
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           handleRemoveImage(slotIdx);
+                         }}
                         sx={{
                           position: "absolute",
                           top: 6,
@@ -1502,6 +1651,39 @@ export function BuySellForm({
                         display: "block",
                       }}
                     />
+                    {entry.kind === "new" && entry.status === "uploading" && (
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          inset: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          bgcolor: "rgba(255,255,255,0.65)",
+                        }}
+                      >
+                        <CircularProgress size={26} />
+                      </Box>
+                    )}
+                    {entry.kind === "new" && entry.status === "error" && (
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          inset: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          bgcolor: "error.main",
+                          color: "#fff",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          textAlign: "center",
+                          p: 1,
+                        }}
+                      >
+                        Upload failed
+                      </Box>
+                    )}
                     {entry.kind === "new" && (
                       <Box
                         sx={{
