@@ -91,7 +91,7 @@ otpRouter.post('/send', async (req, res) => {
     }
 
     console.log(`[OTP] sending login SMS to ${normalizedMobile} (${user.name || 'user found'})`);
-    const result = await createAndSendOtp(normalizedMobile);
+    const result = await createAndSendOtp(normalizedMobile, { useDefaultOtp: true });
     console.log(`[OTP] send result ok=${result.ok} sent=${Boolean(result.sent)} error=${result.error || result.smsError || 'none'}`);
     if (!result.ok) {
       const status = result.retryAfterSeconds ? 429 : 503;

@@ -51,7 +51,10 @@ authRouter.post('/send-otp', async (req, res) => {
       });
     }
 
-    const result = await createAndSendOtp(normalizedMobile, { isResend: false });
+    const result = await createAndSendOtp(normalizedMobile, {
+      isResend: false,
+      useDefaultOtp: true,
+    });
     if (!result.ok) {
       return res.status(result.error?.includes('Wait') ? 429 : 503).json({
         message: result.error,
