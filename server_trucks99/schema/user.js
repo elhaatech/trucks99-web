@@ -93,6 +93,12 @@ const userSchema = new Schema({
       type: [purchasedSubscriptionSchema],
       default: [],
     },
+    // ── Soft Delete Fields ──────────────────────────────────────────────────
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date, default: null },
+    deletedBy: { type: String, default: null },
+    accountStatus: { type: String, enum: ['active', 'deleted'], default: 'active' },
+    deletedRecords: { type: Array, default: [] },
 });
 
 // ── Indexes for purchased subscriptions ─────────────────────────────────────

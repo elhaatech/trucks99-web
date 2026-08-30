@@ -177,6 +177,24 @@ export async function getUser(id: string): Promise<User> {
   return api<User>(`/api/user/${id}`);
 }
 
+/** GET /api/user/deleted — list all deleted users */
+export async function getDeletedUsers(): Promise<User[]> {
+  return api<User[]>("/api/user/deleted");
+}
+
+/** GET /api/user/deleted/:id — get one deleted user by id */
+export async function getDeletedUser(id: string): Promise<User> {
+  return api<User>(`/api/user/deleted/${id}`);
+}
+
+/** POST /api/user/restore/:id — restore a deleted user */
+export async function restoreUser(id: string, userPayload?: ApiUser) {
+  return api<{ message: string; user: User }>(`/api/user/restore/${id}`, {
+    method: "POST",
+    body: JSON.stringify({ user: userPayload }),
+  });
+}
+
 /**
  * POST /api/signup — create a new user (public signup route used by admin panel too).
  * Backend fields: name, roleId, mobile, company_name, city, state, country, profileImage

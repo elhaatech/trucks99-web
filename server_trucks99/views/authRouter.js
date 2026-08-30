@@ -51,6 +51,10 @@ authRouter.post('/send-otp', async (req, res) => {
       });
     }
 
+    if (user.accountStatus === "deleted" || user.isDeleted) {
+      return res.status(403).json({ message: "Your account has been deleted. Please contact support if you want to recover your account." });
+    }
+
     const result = await createAndSendOtp(normalizedMobile, {
       isResend: false,
       useDefaultOtp: true,
@@ -96,6 +100,10 @@ authRouter.post('/resend-otp', async (req, res) => {
       });
     }
 
+    if (user.accountStatus === "deleted" || user.isDeleted) {
+      return res.status(403).json({ message: "Your account has been deleted. Please contact support if you want to recover your account." });
+    }
+
     const result = await createAndSendOtp(normalizedMobile, { isResend: true });
     if (!result.ok) {
       return res.status(result.error?.includes('wait') ? 429 : 400).json({
@@ -131,6 +139,10 @@ authRouter.post('/verify-otp', async (req, res) => {
     const user = await findUserByMobile(User, normalizedMobile);
     if (!user) {
       return res.status(404).json({ message: 'User not found.' });
+    }
+
+    if (user.accountStatus === "deleted" || user.isDeleted) {
+      return res.status(403).json({ message: "Your account has been deleted. Please contact support if you want to recover your account." });
     }
     await user.populate({ path: 'roleId', populate: { path: 'permissions' } });
     await user.populate('permissions');

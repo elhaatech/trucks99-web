@@ -17,12 +17,16 @@ import {
   getCurrentUser,
   updateUser,
   invalidateCurrentUserCache,
+  deleteUser,
+  logout,
   type User,
 } from "@/model/services/user";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { useNotification } from "@/hooks/useNotification";
 import { SearchableSelect, type SelectOption } from "@/components/common/SearchableSelect";
+import { ConfirmDialog } from "@/components/common";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import {
   getLocationCountriesAll,
   getLocationStatesByCountry,
@@ -38,7 +42,11 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
+
+  const { open: deleteOpen, openWith: openDeleteConfirm, close: closeDeleteConfirm } =
+    useConfirmDialog();
 
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -212,6 +220,30 @@ export default function ProfilePage() {
       notify({ type: "error", message: msg });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!userId || !authUser) return;
+    setDeleting(true);
+    setError("");
+    closeDeleteConfirm();
+    try {
+      await deleteUser({
+        id: userId,
+        mobile: authUser.mobile || undefined,
+        name: authUser.name,
+        user: { name: authUser.name, role: "user" },
+      });
+      notify({ type: "success", message: "Account deleted successfully." });
+      await logout();
+      router.push("/");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to delete account";
+      setError(msg);
+      notify({ type: "error", message: msg });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -421,8 +453,30 @@ export default function ProfilePage() {
           >
             Cancel
           </Button>
+          <Box sx={{ flexGrow: 1 }} />
+          <Button
+            type="button"
+            variant="text"
+            color="error"
+            disabled={saving || deleting}
+            onClick={() => openDeleteConfirm({})}
+            sx={{ textTransform: "none", fontWeight: 600 }}
+          >
+            Delete Account
+          </Button>
         </Box>
       </Box>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onClose={closeDeleteConfirm}
+        onConfirm={handleDeleteAccount}
+        title="Delete Account?"
+        description="This will deactivate your account and hide all your data. This action cannot be reversed from your side. You will be logged out immediately."
+        confirmLabel="Delete"
+        confirmColor="error"
+        pendingLabel="Deleting…"
+      />
     </Box>
   );
 }

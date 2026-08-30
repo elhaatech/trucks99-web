@@ -119,7 +119,21 @@ export function getAdminPortalNavDefinitions(
       id: "user",
       label: getLabel("user", role, "Users"),
       getHref: () => routes.user.list(),
-      appFolder: "user/list",
+      appFolder: "user",
+      children: [
+        {
+          id: "activeUsers",
+          label: "Active Users",
+          getHref: () => routes.user.list(),
+          appFolder: "user/list",
+        },
+        {
+          id: "deletedUsers",
+          label: "Deleted Users",
+          getHref: () => routes.user.deleted(),
+          appFolder: "user/deleted",
+        },
+      ],
     },
     {
       id: "enquiry",

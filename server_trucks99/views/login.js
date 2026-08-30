@@ -45,6 +45,10 @@ loginRouter.post("/", async (req, res) => {
       return invalidCredentials(res);
     }
 
+    if (user.accountStatus === "deleted" || user.isDeleted) {
+      return res.status(403).json({ message: "Your account has been deleted. Please contact support if you want to recover your account." });
+    }
+
     if (String(user.status || "active").toLowerCase() === "inactive") {
       return res.status(403).json({ message: "Account is inactive." });
     }

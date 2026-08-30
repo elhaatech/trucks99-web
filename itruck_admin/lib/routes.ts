@@ -50,6 +50,7 @@ export const routes = {
   // User
   user: {
     list: () => `${BASE}/user/list`,
+    deleted: () => `${BASE}/user/deleted`,
     create: () => `${BASE}/user/create`,
     edit: (id: string) => `${BASE}/user/edit/${id}`,
     view: (id: string) => `${BASE}/user/view/${id}`,

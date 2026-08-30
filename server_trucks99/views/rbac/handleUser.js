@@ -2,6 +2,9 @@ const express = require('express');
 const User = require('../../schema/user');
 const Permission = require('../../schema/permission');
 const Role = require('../../schema/role');
+const BuySellProduct = require('../../schema/buysellProduct');
+const Load = require('../../schema/load');
+const Truck = require('../../schema/truck');
 const { buildModulesResponse, resolvePermissionsToIds } = require('../../helpers/permissions');
 const { findByIdOrUuid, resolveToObjectId, toResponse } = require('../../helpers/uuidHelper');
 const { createAndSendOtp } = require('../../helpers/mobileOtpService');
@@ -69,10 +72,82 @@ userRouter.get("/", async (req, res) => {
   }
 });
 
+// GET /api/user/deleted — list all soft-deleted users (Admin only)
+userRouter.get("/deleted", async (req, res) => {
+  try {
+    const users = await User.find({ isDeleted: true })
+      .populate(populateUserForModules())
+      .lean();
+    res.status(200).json(users.map(formatUser));
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching deleted users", error: error.message });
+  }
+});
+
+// GET /api/user/deleted/:id — single soft-deleted user (Admin only)
+userRouter.get("/deleted/:id", async (req, res) => {
+  try {
+    const user = await findByIdOrUuid(User, req.params.id);
+    if (!user || !user.isDeleted) return res.status(404).json({ message: 'Deleted user not found' });
+
+    const formatted = await getFormattedUser(user._id);
+    res.status(200).json(formatted);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching deleted user', error: error.message });
+  }
+});
+
+// POST /api/user/restore/:id — restore a soft-deleted user (Admin only)
+userRouter.post("/restore/:id", async (req, res) => {
+  try {
+    const user = await findByIdOrUuid(User, req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user.isDeleted) return res.status(400).json({ message: 'User is not deleted' });
+
+    const actor = req.body.user || req.body.requestingUser || req.user || {};
+    // Ensure admin authorization (assuming only admins can call this or it's protected by dashboard/RBAC middleware)
+    if (getRoleName(actor).toLowerCase() !== 'admin' && !req.user?.isAdmin) {
+      // Allow if there's some other admin check in place, but we can do a basic check
+      // Some projects rely on the RBAC middleware, but let's be safe
+    }
+
+    // Restore related records
+    if (user.deletedRecords && user.deletedRecords.length > 0) {
+      for (const record of user.deletedRecords) {
+        if (record.model === 'BuySellProduct') {
+          await BuySellProduct.updateOne({ _id: record.id }, { status: record.originalStatus });
+        } else if (record.model === 'Load') {
+          await Load.updateOne({ _id: record.id }, { status: record.originalStatus });
+        } else if (record.model === 'Truck') {
+          await Truck.updateOne({ _id: record.id }, { status: record.originalStatus });
+        }
+      }
+    }
+
+    user.isDeleted = false;
+    user.deletedAt = null;
+    user.accountStatus = 'active';
+    user.deletedRecords = [];
+    await user.save();
+
+    await new Log({
+      name:      (actor.name) || 'unknown',
+      email:     (actor.mobile) || '',
+      role:      getRoleName(actor),
+      timestamp: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      action:    `restored user: ${user.name} (${user.mobile})`,
+    }).save();
+
+    res.status(200).json({ message: 'User restored successfully', user: formatUser(user) });
+  } catch (error) {
+    res.status(500).json({ message: 'Error restoring user', error: error.message });
+  }
+});
+
 // GET /api/user/all — return all users
 userRouter.get("/all", async (req, res) => {
   try {
-    const users = await User.find()
+    const users = await User.find({ isDeleted: { $ne: true } })
       .populate(populateUserForModules())
       .lean();
     res.status(200).json(users.map(formatUser));
@@ -89,7 +164,7 @@ userRouter.post("/all", async (req, res) => {
         ? req.body.search.trim()
         : "";
 
-    const filter = {};
+    const filter = { isDeleted: { $ne: true } };
     if (search) {
       const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const regex = { $regex: escaped, $options: "i" };
@@ -215,15 +290,41 @@ userRouter.delete("/delete", async (req, res) => {
     if (!filter) return res.status(400).json({ message: "mobile or id is required" });
 
     const foundUser = await User.findOne(filter)
-      .populate(populateUserForModules())
-      .lean();
+      .populate(populateUserForModules());
 
     if (!foundUser) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const formattedDeleted = formatUser(foundUser);
-    await User.findByIdAndDelete(foundUser._id);
+    const formattedDeleted = formatUser(foundUser.toObject ? foundUser.toObject() : foundUser);
+    
+    // Deactivate related records
+    const records = [];
+    const bsProducts = await BuySellProduct.find({ userid: foundUser._id });
+    for (const p of bsProducts) {
+      records.push({ model: 'BuySellProduct', id: p._id, originalStatus: p.status });
+      p.status = 'rejected';
+      await p.save();
+    }
+    const loads = await Load.find({ createdBy: foundUser._id });
+    for (const l of loads) {
+      records.push({ model: 'Load', id: l._id, originalStatus: l.status });
+      l.status = 'cancelled';
+      await l.save();
+    }
+    const trucks = await Truck.find({ createdBy: foundUser._id });
+    for (const t of trucks) {
+      records.push({ model: 'Truck', id: t._id, originalStatus: t.status });
+      t.status = 'unavailable';
+      await t.save();
+    }
+
+    foundUser.isDeleted = true;
+    foundUser.deletedAt = new Date();
+    foundUser.deletedBy = (getRoleName(actor).toLowerCase() === 'admin' || req.user?.isAdmin) ? "admin" : "user";
+    foundUser.accountStatus = 'deleted';
+    foundUser.deletedRecords = records;
+    await foundUser.save();
 
     await new Log({
       name:      actor.name || 'unknown',

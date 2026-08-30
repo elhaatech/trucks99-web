@@ -36,6 +36,11 @@ export {
   createUser,
   updateUser,
   deleteUser,
+  getDeletedUsers,
+  getDeletedUser,
+  restoreUser,
+  getRowId,
+  blockUnblock,
   logout,
 } from "./services/user";
 export * from "./services/material";

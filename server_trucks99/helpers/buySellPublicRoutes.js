@@ -4,7 +4,12 @@
  * Writes (POST /add, cart, payments, etc.) always require auth via requireAuthUnlessPublic.
  */
 
-const BUY_SELL_API_PREFIXES = ["/api/buy-sell", "/api/buysell"];
+const BUY_SELL_API_PREFIXES = [
+  "/api/buy-sell",
+  "/api/buysell",
+  "/buy-sell",
+  "/buysell",
+];
 
 /** Single-segment paths that must never be public GET shortcuts. */
 const PROTECTED_TOP_SEGMENTS = new Set([

@@ -90,6 +90,10 @@ otpRouter.post('/send', async (req, res) => {
       });
     }
 
+    if (user.accountStatus === "deleted" || user.isDeleted) {
+      return res.status(403).json({ message: "Your account has been deleted. Please contact support if you want to recover your account." });
+    }
+
     console.log(`[OTP] sending login SMS to ${normalizedMobile} (${user.name || 'user found'})`);
     const result = await createAndSendOtp(normalizedMobile, { useDefaultOtp: true });
     console.log(`[OTP] send result ok=${result.ok} sent=${Boolean(result.sent)} error=${result.error || result.smsError || 'none'}`);
@@ -138,6 +142,10 @@ otpRouter.post('/resend', async (req, res) => {
       });
     }
 
+    if (user.accountStatus === "deleted" || user.isDeleted) {
+      return res.status(403).json({ message: "Your account has been deleted. Please contact support if you want to recover your account." });
+    }
+
     const result = await createAndSendOtp(normalizedMobile, { isResend: true });
     if (!result.ok) {
       const status = result.retryAfterSeconds ? 429 : 400;
@@ -172,6 +180,10 @@ otpRouter.post('/verify', async (req, res) => {
     const user = await findUserByMobile(User, normalizedMobile);
     if (!user) {
       return res.status(404).json({ message: 'User not found.' });
+    }
+
+    if (user.accountStatus === "deleted" || user.isDeleted) {
+      return res.status(403).json({ message: "Your account has been deleted. Please contact support if you want to recover your account." });
     }
     await user.populate({ path: 'roleId', populate: { path: 'permissions' } });
     await user.populate('permissions');
