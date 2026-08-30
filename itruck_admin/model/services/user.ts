@@ -314,9 +314,9 @@ export async function signup(body: { name: string; roleId: string; mobile: strin
 
 // ─── Helpers (re-exported for consumers) ──────────────────────────────────────
 
-/** Extracts a stable string id from a User object (uuid > _id fallback) */
-export function getRowId(user: User): string {
-  return String(user.id || user._id || "");
+/** Extracts a stable string id from any row-like object (uuid > _id fallback). */
+export function getRowId<T extends { id?: string; _id?: string }>(item: T): string {
+  return String(item?.id || item?._id || "");
 }
 
 /** Block or unblock a user/entity */
