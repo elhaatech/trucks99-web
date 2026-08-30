@@ -7,6 +7,8 @@
 const BUY_SELL_API_PREFIXES = [
   "/api/buy-sell",
   "/api/buysell",
+  "/api-v1/buy-sell",
+  "/api-v1/buysell",
   "/buy-sell",
   "/buysell",
 ];

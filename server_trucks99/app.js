@@ -345,9 +345,11 @@ app.use("/api/block-unblock", blockUnblockRouter);
 
 // Vehicle marketplace (Sell POST /add, list, dashboard-stats, cart, offers, Razorpay)
 // Public browse routes: helpers/buySellPublicRoutes.js (via requireAuthUnlessPublic)
-// Support both /api/... and legacy/root aliases such as /buy-sell/... used by some clients.
+// Support both /api/... and production aliases used by nginx/proxy or legacy clients.
 app.use("/buy-sell", buySellProductRouter);
 app.use("/buysell", buySellProductRouter);
+app.use("/api-v1/buy-sell", buySellProductRouter);
+app.use("/api-v1/buysell", buySellProductRouter);
 app.use("/api/buy-sell", buySellProductRouter);
 app.use("/api/buysell", buySellProductRouter);
 // EMI calculator — public estimate endpoints
