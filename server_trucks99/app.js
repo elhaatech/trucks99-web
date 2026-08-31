@@ -63,7 +63,6 @@ const {
 } = require("./modules/specifications/routes/specificationRoutes");
 const categoryRouter = require("./views/handleCategoryrouter");
 const subCategoryRouter = require("./views/handleSubCategoryrouter");
-const buySellProductRouter = require("./views/handlebuysellProduct");
 const favoriteRouter = require("./views/handlefavoriteRoute");
 const matchRouter = require("./views/handleMatchrouter");
 const reportRouter = require("./views/handlereports");
@@ -402,8 +401,6 @@ app.use("/api/block-unblock", blockUnblockRouter);
 // Vehicle marketplace (Sell POST /add, list, dashboard-stats, cart, offers, Razorpay)
 // Public browse routes: helpers/buySellPublicRoutes.js (via requireAuthUnlessPublic)
 // Support both /api/... and production aliases used by nginx/proxy or legacy clients.
-app.use("/buy-sell", buySellProductRouter);
-app.use("/buysell", buySellProductRouter);
 
 // EMI calculator — public estimate endpoints
 app.use("/api/emi", emiRouter);
