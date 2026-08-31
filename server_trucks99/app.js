@@ -63,11 +63,7 @@ const {
 } = require("./modules/specifications/routes/specificationRoutes");
 const categoryRouter = require("./views/handleCategoryrouter");
 const subCategoryRouter = require("./views/handleSubCategoryrouter");
-const buySellProductRouterExport = require("./views/handlebuysellProduct");
-const buySellProductRouter =
-  typeof buySellProductRouterExport === "function"
-    ? buySellProductRouterExport
-    : buySellProductRouterExport?.buySellRouter;
+const buySellProductRouter = require("./views/handlebuysellProduct");
 const favoriteRouter = require("./views/handlefavoriteRoute");
 const matchRouter = require("./views/handleMatchrouter");
 const reportRouter = require("./views/handlereports");
