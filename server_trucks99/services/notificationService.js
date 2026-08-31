@@ -929,11 +929,6 @@ async function seedDefaultTemplates() {
               description: def.description || '',
               templates: def.templates,
               placeholders: def.placeholders || [],
-              'channels.push': true,
-            },
-            $setOnInsert: {
-              event: def.event,
-              enabled: true,
               channels: {
                 in_app: true,
                 whatsapp: true,
@@ -941,6 +936,10 @@ async function seedDefaultTemplates() {
                 email: false,
                 push: true,
               },
+            },
+            $setOnInsert: {
+              event: def.event,
+              enabled: true,
             },
           }
         : {
