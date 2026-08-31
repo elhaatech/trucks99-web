@@ -614,6 +614,37 @@ function enrichBitRecordForResponse(record, contactMap) {
   };
 }
 
+/**
+ * Self-heal old rows that predate the YYMMDD#### vehicleId format.
+ * If resolveVehicleId() can't produce a usable id (both vehicleId and
+ * bsNumber are empty/old), generate one now and persist it, so it's fixed
+ * in the DB permanently instead of just patched in the response.
+ */
+async function ensureVehicleId(doc) {
+  if (!doc || !doc._id) return doc;
+  if (resolveVehicleId(doc)) return doc; // already has a usable id
+  try {
+    const newId = await generateNextVehicleId(doc.createdAt);
+    await BuySellProduct.updateOne(
+      { _id: doc._id },
+      { $set: { vehicleId: newId } },
+    );
+    doc.vehicleId = newId;
+  } catch (err) {
+    console.warn(
+      `[buy-sell] failed to backfill vehicleId for ${doc._id}:`,
+      err.message,
+    );
+  }
+  return doc;
+}
+
+async function ensureVehicleIds(docs) {
+  if (!Array.isArray(docs) || docs.length === 0) return docs;
+  await Promise.all(docs.map((doc) => ensureVehicleId(doc)));
+  return docs;
+}
+
 function enrichProductListItem(
   item,
   contactMap,
@@ -754,6 +785,10 @@ async function getBidSummaryByProductIds(productIds) {
 
 // ─── SHARED ENRICHMENT HELPER ──────────────────────────────────────────────────
 async function buildEnrichedResponse(data) {
+  // Backfill any old row missing a proper YYMMDD#### vehicleId before
+  // building the response.
+  await ensureVehicleId(data);
+
   const [countryDoc, stateDoc, cityDoc, sellerContactMap, featuredDoc] =
     await Promise.all([
       data.country_id
@@ -1226,6 +1261,10 @@ function buildListingHighlights(specifications) {
 /** Shared list enrichment: favorites, seller mobile/name, and bid summary. */
 async function enrichBuySellListItems(items, actor, options = {}) {
   if (!Array.isArray(items) || items.length === 0) return [];
+
+  // Backfill any old rows missing a proper YYMMDD#### vehicleId before
+  // building the response.
+  await ensureVehicleIds(items);
 
   const includeBitRecords = options.includeBitRecords === true;
   /** Marketplace cards: skip bids + user lookups (biggest list latency). */
