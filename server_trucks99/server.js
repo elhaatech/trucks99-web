@@ -133,7 +133,7 @@ async function startServer() {
             console.error("Failed to start reminder scheduler:", err.message || err);
         }
     } catch (err) {
-        console.error("Server startup failed:", err.message || err);
+        console.error("Server startup failed:", err.stack || err.message || err);
         if (err && err.code === "EADDRINUSE") {
             console.error("[startup] Free the port above, then run npm run start again.");
             process.exit(1);

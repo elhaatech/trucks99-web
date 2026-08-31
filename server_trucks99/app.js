@@ -281,6 +281,62 @@ app.use(passport.session());
 const { jwtAuth } = require("./helpers/jwtAuth");
 const { requireAuthUnlessPublic } = require("./helpers/requireAuth");
 
+function assertRouteMiddleware(name, middleware) {
+  if (typeof middleware !== "function") {
+    const received = middleware === null ? "null" : typeof middleware;
+    throw new TypeError(
+      `Route export "${name}" must be an Express middleware function; received ${received}.`,
+    );
+  }
+  return middleware;
+}
+
+[
+  ["loginRouter", loginRouter],
+  ["signupRouter", signupRouter],
+  ["userRouter", userRouter],
+  ["googleRouter", googleRouter],
+  ["githubRouter", githubRouter],
+  ["logoutRouter", logoutRouter],
+  ["roleRouter", roleRouter],
+  ["permissionRouter", permissionRouter],
+  ["logRouter", logRouter],
+  ["otpRouter", otpRouter],
+  ["authRouter", authRouter],
+  ["bitRecordsRouter", bitRecordsRouter],
+  ["loadRouter", loadRouter],
+  ["materialRouter", materialRouter],
+  ["vehicleTypeRouter", vehicleTypeRouter],
+  ["vehicleBodyTypeRouter", vehicleBodyTypeRouter],
+  ["companyStartCountryRouter", companyStartCountryRouter],
+  ["locationRouter", locationRouter],
+  ["subscriptionRouter", subscriptionRouter],
+  ["paymentRouter", paymentRouter],
+  ["cmspagerouter", cmspagerouter],
+  ["chatRouter", chatRouter],
+  ["assistantRouter", assistantRouter],
+  ["truckRouter", truckRouter],
+  ["dashboardRouter", dashboardRouter],
+  ["notificationRouter", notificationRouter],
+  ["incomeExpenseCategoryRouter", incomeExpenseCategoryRouter],
+  ["incomeExpenseRouter", incomeExpenseRouter],
+  ["uploadRouter", uploadRouter],
+  ["blockUnblockRouter", blockUnblockRouter],
+  ["firebaseSendMessageRouter", firebaseSendMessageRouter],
+  ["specificationRouter", specificationRouter],
+  ["specificationValueRouter", specificationValueRouter],
+  ["categoryRouter", categoryRouter],
+  ["subCategoryRouter", subCategoryRouter],
+  ["buySellProductRouter", buySellProductRouter],
+  ["favoriteRouter", favoriteRouter],
+  ["matchRouter", matchRouter],
+  ["reportRouter", reportRouter],
+  ["advertisementRouter", advertisementRouter],
+  ["emiRouter", emiRouter],
+  ["contactRouter", contactRouter],
+  ["legalRouter", legalRouter],
+].forEach(([name, middleware]) => assertRouteMiddleware(name, middleware));
+
 app.use(jwtAuth);
 app.use(requireAuthUnlessPublic);
 
@@ -348,10 +404,7 @@ app.use("/api/block-unblock", blockUnblockRouter);
 // Support both /api/... and production aliases used by nginx/proxy or legacy clients.
 app.use("/buy-sell", buySellProductRouter);
 app.use("/buysell", buySellProductRouter);
-app.use("/api-v1/buy-sell", buySellProductRouter);
-app.use("/api-v1/buysell", buySellProductRouter);
-app.use("/api/buy-sell", buySellProductRouter);
-app.use("/api/buysell", buySellProductRouter);
+
 // EMI calculator — public estimate endpoints
 app.use("/api/emi", emiRouter);
 // Contact us — public info + form submit
