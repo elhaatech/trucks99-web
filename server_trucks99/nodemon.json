@@ -1,0 +1,1 @@
+{\n  "watch": ["."],\n  "ignore": [\n    "uploads/**",\n    "uploads/*",\n    "node_modules/**",\n    ".git/**",\n    "*.log"\n  ],\n  "ext": "js,json"\n}

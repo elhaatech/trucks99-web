@@ -812,11 +812,6 @@ export function BuySellForm({
     } else {
       setError("");
     }
-
-    // Kick off the uploads for the whole batch (queued one file per request).
-    newEntries.forEach((entry) => {
-      if (entry.kind === "new") uploadEntryFile(entry.id, entry.file);
-    });
   };
 
   const handleImageFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1289,6 +1284,11 @@ export function BuySellForm({
         component="form"
         id={FORM_ID}
         onSubmit={handleSubmit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.target as HTMLElement)?.tagName !== "TEXTAREA") {
+            e.preventDefault();
+          }
+        }}
         sx={{ minHeight: 320, "& > *": { minWidth: 0 } }}
       >
           {/* ── Step 0: Category, Sub Category & Brand ─────────────────── */}

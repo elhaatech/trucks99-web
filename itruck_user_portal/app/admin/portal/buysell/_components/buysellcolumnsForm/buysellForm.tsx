@@ -798,11 +798,6 @@ export function BuySellForm({
     } else {
       setError("");
     }
-
-    // Kick off the uploads for the whole batch (queued one file per request).
-    newEntries.forEach((entry) => {
-      if (entry.kind === "new") uploadEntryFile(entry.id, entry.file);
-    });
   };
 
   const handleImageFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1130,6 +1125,7 @@ export function BuySellForm({
       }}
     >
       <Button
+        type="button"
         variant="outlined"
         onClick={
           activeStep === 0 ? () => router.push(cancelTarget) : handleBack
@@ -1144,6 +1140,7 @@ export function BuySellForm({
 
       {!isLastStep ? (
         <Button
+          type="button"
           variant="contained"
           onClick={handleNext}
           endIcon={<ArrowForwardIcon sx={{ fontSize: 14 }} />}
@@ -1184,6 +1181,7 @@ export function BuySellForm({
         severity="warning"
         action={
           <Button
+            type="button"
             color="inherit"
             size="small"
             onClick={() => router.push(loginHref)}
@@ -1232,6 +1230,11 @@ export function BuySellForm({
       component="form"
       id={FORM_ID}
       onSubmit={handleSubmit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && (e.target as HTMLElement)?.tagName !== "TEXTAREA") {
+          e.preventDefault();
+        }
+      }}
       sx={{ minHeight: 320, "& > *": { minWidth: 0 } }}
     >
       {/* ── Step 0: Category, Sub Category & Brand ─────────────────── */}
@@ -1572,6 +1575,7 @@ export function BuySellForm({
                          </Box>
                        )}
                        <IconButton
+                         type="button"
                          size="small"
                          disabled={submitting}
                          onClick={(e) => {
@@ -1704,6 +1708,7 @@ export function BuySellForm({
                       </Box>
                     )}
                     <IconButton
+                      type="button"
                       size="small"
                       disabled={submitting}
                       onClick={() => handleRemoveImage(idx)}
@@ -1727,6 +1732,7 @@ export function BuySellForm({
 
           {imageEntries.length < MAX_PHOTOS && (
             <Button
+              type="button"
               variant="outlined"
               startIcon={<CloudUploadIcon />}
               disabled={submitting}
