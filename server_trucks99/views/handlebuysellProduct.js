@@ -937,6 +937,14 @@ async function findUserByEitherId(userId) {
     .lean();
 }
 
+async function resolveActorMongoId(actor) {
+  const directId = toObjectId(actor?.mongoId) || toObjectId(actor?.id);
+  if (directId) return directId;
+
+  const user = await findUserByEitherId(actor?.id);
+  return user?._id || null;
+}
+
 /**
  * Build a BuySellProduct filter for `userid`, which may be stored as either a
  * Mongo ObjectId or a custom user uuid string (see create handler: userid: actor.id).
@@ -1843,6 +1851,13 @@ buySellRouter.post(
 
       let inserted = [];
       if (docsToInsert.length) {
+        const listingUserId = await resolveActorMongoId(actor);
+        if (!listingUserId) {
+          return res.status(401).json({ message: "User account could not be resolved." });
+        }
+        docsToInsert.forEach((doc) => {
+          doc.userid = listingUserId;
+        });
         const vehicleIds = await allocateVehicleIds(docsToInsert.length);
         const bsNumbers = await allocateBsNumbers(docsToInsert.length);
         docsToInsert.forEach((doc, index) => {
@@ -3639,7 +3654,10 @@ buySellRouter.post("/add", upload.array("images", 10), async (req, res) => {
 
     // Regular users always own their own listing. If an admin sends a user
     // id, post the vehicle under that account instead of the admin.
-    let listingUserId = actor.id;
+    let listingUserId = await resolveActorMongoId(actor);
+    if (!listingUserId) {
+      return res.status(401).json({ message: "User account could not be resolved." });
+    }
     let listingCreatedBy = actor.name;
     if (isAdminActor(actor)) {
       const requestedUserId = bodyUserid || bodyUserId || bodyOwnerId;
