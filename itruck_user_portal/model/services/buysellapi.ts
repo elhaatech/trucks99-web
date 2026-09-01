@@ -468,6 +468,38 @@ export function getBuySellRowId(row: BuySellProduct): string {
   return row.id ?? row._id;
 }
 
+export function resolveBuySellRefId(
+  value: unknown,
+): string | undefined {
+  if (value == null) return undefined;
+
+  if (typeof value === "string") {
+    const str = value.trim();
+    return str && str !== "null" && str !== "undefined" ? str : undefined;
+  }
+
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+
+    for (const key of ["_id", "id", "uuid"]) {
+      const candidate = obj[key];
+      if (candidate == null) continue;
+      const str = String(candidate).trim();
+      if (str && str !== "null" && str !== "undefined") {
+        return str;
+      }
+    }
+
+    if (typeof (obj as { toHexString?: () => string }).toHexString === "function") {
+      const hex = (obj as { toHexString: () => string }).toHexString();
+      if (hex) return hex;
+    }
+  }
+
+  const str = String(value).trim();
+  return str && str !== "null" && str !== "undefined" ? str : undefined;
+}
+
 export async function getBuySellList(
   body: BuySellListFilter = {},
   options?: { signal?: AbortSignal },
@@ -957,15 +989,20 @@ export async function postBuySellProductsByOwner(
 ): Promise<BuySellOwnerProductsResponse["data"]> {
   try {
     const { ownerId, excludeProductId, page = 1, limit = 12, cityId, countryId, stateId, categoryId, subcategoryId } = params;
+    const normalizedCityId = resolveBuySellRefId(cityId);
+    const normalizedCountryId = resolveBuySellRefId(countryId);
+    const normalizedStateId = resolveBuySellRefId(stateId);
+    const normalizedCategoryId = resolveBuySellRefId(categoryId);
+    const normalizedSubcategoryId = resolveBuySellRefId(subcategoryId);
     const body: BuySellOwnerProductsBody = {
       excludeProductId,
       page,
       limit,
-      ...(cityId ? { city_id: cityId } : {}),
-      ...(countryId !== undefined ? { country_id: countryId } : {}),
-      ...(stateId ? { state_id: stateId } : {}),
-      ...(categoryId ? { category_id: categoryId } : {}),
-      ...(subcategoryId ? { subcategory_id: subcategoryId } : {}),
+      ...(normalizedCityId ? { city_id: normalizedCityId } : {}),
+      ...(normalizedCountryId !== undefined ? { country_id: normalizedCountryId } : {}),
+      ...(normalizedStateId ? { state_id: normalizedStateId } : {}),
+      ...(normalizedCategoryId ? { category_id: normalizedCategoryId } : {}),
+      ...(normalizedSubcategoryId ? { subcategory_id: normalizedSubcategoryId } : {}),
     };
 
     const res = await api<BuySellOwnerProductsResponse>(

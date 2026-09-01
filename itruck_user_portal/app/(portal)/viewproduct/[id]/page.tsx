@@ -38,6 +38,7 @@ import {
   getBuySellProduct,
   incrementMarketItemView,
   postBuySellProductsByOwner,
+  resolveBuySellRefId,
   type BuySellOwnerProductsOwner,
 } from "@/model/services/buysellapi";
 import { useMarketplaceFavorites } from "@/components/marketplace/MarketplaceFavoritesProvider";
@@ -498,24 +499,8 @@ export default function UserProductViewPage() {
                     ? String(item.state_info._id)
                     : (item.state_id ? String(item.state_id) : undefined)
                  }
-                  currentCategoryId={
-                    item.category_id
-                      ? String(
-                          typeof item.category_id === "object"
-                            ? item.category_id._id
-                            : item.category_id,
-                        )
-                      : undefined
-                  }
-                  currentSubcategoryId={
-                    item.subcategory_id
-                      ? String(
-                          typeof item.subcategory_id === "object"
-                            ? item.subcategory_id._id
-                            : item.subcategory_id,
-                        )
-                      : undefined
-                  }
+                  currentCategoryId={resolveBuySellRefId(item.category_id)}
+                  currentSubcategoryId={resolveBuySellRefId(item.subcategory_id)}
                   currentCategoryName={
                     typeof item.category_id === "object" ? item.category_id?.category_name : undefined
                   }
