@@ -26,6 +26,10 @@ type SubCategoryResponse =
   | { data: SubCategory }
   | { sub_category: SubCategory };
 
+function asRecordId(value: unknown): string {
+  return value == null ? "" : String(value);
+}
+
 function normalizeError(error: unknown): never {
   if (typeof error === "object" && error && "response" in error) {
     const e = error as { response?: { data?: { message?: string } } };
@@ -45,7 +49,7 @@ function extractSubCategory(raw: SubCategoryResponse): SubCategory {
  * Returns the MongoDB _id for use in BuySell payload (ObjectId ref).
  */
 export function getSubCategoryRowId(row: SubCategory): string {
-  return row._id;
+  return asRecordId(row._id ?? row.id ?? row.uuid ?? "");
 }
 
 export type GetSubCategoriesOptions = {

@@ -65,18 +65,20 @@ export function useCategorySubcategories({
     };
   }, [activeOnly]);
 
+  const normalizedCategoryId = String(categoryId ?? "");
+
   const selectedCategory = useMemo(
     () =>
-      categories.find(
-        (c) =>
-          getCategoryRowId(c) === categoryId ||
-          getCategoryUuid(c) === categoryId,
-      ) ?? null,
-    [categories, categoryId],
+      categories.find((c) => {
+        const rowId = String(getCategoryRowId(c));
+        const uuidId = String(getCategoryUuid(c));
+        return rowId === normalizedCategoryId || uuidId === normalizedCategoryId;
+      }) ?? null,
+    [categories, normalizedCategoryId],
   );
 
   const selectedCategoryUuid = useMemo(
-    () => (selectedCategory ? getCategoryUuid(selectedCategory) : ""),
+    () => (selectedCategory ? String(getCategoryUuid(selectedCategory)) : ""),
     [selectedCategory],
   );
 

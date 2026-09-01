@@ -23,6 +23,10 @@ export type BulkUploadResult = {
 
 type CategoryResponse = Category | { data: Category } | { category: Category };
 
+function asRecordId(value: unknown): string {
+  return value == null ? "" : String(value);
+}
+
 function normalizeError(error: unknown): never {
   if (typeof error === "object" && error && "response" in error) {
     const e = error as { response?: { data?: { message?: string } } };
@@ -39,11 +43,11 @@ function extractCategory(raw: CategoryResponse): Category {
 }
 
 /**
- * Returns the MongoDB _id — used as the value in BuySell payload
- * because the BuySell schema stores category_id as ObjectId ref.
+ * Returns the MongoDB _id as a stable string — used as the value in BuySell
+ * payloads because the BuySell schema stores category_id as an ObjectId ref.
  */
 export function getCategoryRowId(row: Category): string {
-  return row._id;
+  return asRecordId(row._id ?? row.id ?? row.uuid ?? "");
 }
 
 /**
@@ -52,7 +56,7 @@ export function getCategoryRowId(row: Category): string {
  * Backend validates: Category.findOne({ id: category_id })
  */
 export function getCategoryUuid(row: Category): string {
-  return row.id ?? row.uuid ?? row._id;
+  return asRecordId(row.id ?? row.uuid ?? row._id ?? "");
 }
 
 export type GetCategoriesOptions = {
