@@ -72,6 +72,7 @@ const PUBLIC_METHOD_PATHS = [
   { method: "GET", path: "/api/specification-values" },
   { method: "GET", path: "/api/buy-sell/dashboard-stats" },
   { method: "GET", path: "/api/buysell/dashboard-stats" },
+  { method: "GET", path: "/api/dashboard/summary" },
   { method: "POST", path: "/api/buy-sell/recent-vehicles" },
   { method: "POST", path: "/api/buysell/recent-vehicles" },
   {"method": "POST", "path": "/api/buy-sell/featured-vehicles/list"},

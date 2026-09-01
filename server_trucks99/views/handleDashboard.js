@@ -141,8 +141,25 @@ function marketplaceFilters(req) {
   return { ...(req.query || {}), ...(req.body || {}) };
 }
 
-const marketplaceRoutes = [
-  ['summary', marketplaceDashboardService.getSummary],
+const wrapMarketplace = (path, handler) =>
+  asyncHandler(async (req, res) => {
+    try {
+      const data = await handler(marketplaceFilters(req));
+      return res.status(200).json(data);
+    } catch (error) {
+      return handleError(res, error, path);
+    }
+  });
+
+/** Public marketplace totals used by the user portal dashboard/list. */
+dashboardRouter.get('/summary', wrapMarketplace('summary', marketplaceDashboardService.getSummary));
+dashboardRouter.post(
+  '/summary',
+  requireAdminAnalytics,
+  wrapMarketplace('summary', marketplaceDashboardService.getSummary),
+);
+
+const adminMarketplaceRoutes = [
   ['product-status', marketplaceDashboardService.getProductStatus],
   ['most-viewed-products', marketplaceDashboardService.getMostViewedProducts],
   ['top-performing-products', marketplaceDashboardService.getTopPerformingProducts],
@@ -152,15 +169,8 @@ const marketplaceRoutes = [
   ['recent-activity', marketplaceDashboardService.getRecentActivity],
 ];
 
-marketplaceRoutes.forEach(([path, handler]) => {
-  const wrap = asyncHandler(async (req, res) => {
-    try {
-      const data = await handler(marketplaceFilters(req));
-      return res.status(200).json(data);
-    } catch (error) {
-      return handleError(res, error, path);
-    }
-  });
+adminMarketplaceRoutes.forEach(([path, handler]) => {
+  const wrap = wrapMarketplace(path, handler);
   dashboardRouter.get(`/${path}`, requireAdminAnalytics, wrap);
   dashboardRouter.post(`/${path}`, requireAdminAnalytics, wrap);
 });

@@ -13,7 +13,7 @@ export {
 } from "./VehicleGrid";
 export { CategoryCard, CategoryScroller } from "./CategoryCard";
 export { QuickNavCard, QuickNavGrid } from "./QuickNavCard";
-export { HeroSearchSection, MarketplaceStatsCards } from "./MarketplaceStats";
+export { HeroSearchSection, MarketplaceStatsCards, MarketplaceSummaryStrip } from "./MarketplaceStats";
 export {
   VehicleFilterPanel,
   MobileFilterButton,

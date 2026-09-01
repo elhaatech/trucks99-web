@@ -15,6 +15,7 @@ import {
   FeaturedVehiclesGrid,
   StatsSkeleton,
   mapDashboardMetricsToMarketplaceStats,
+  mapSummaryToMarketplaceStats,
 } from "@/app/common/components/buysell";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { PRODUCT_THEME as T, GRADIENT, PRIMARY_DARK } from "@/lib/theme";
@@ -28,6 +29,7 @@ import {
   type BuySellDashboardStatsResponse,
 } from "@/model/services/buysellapi";
 import { getCategories, type Category } from "@/model/services/category";
+import { getMarketplaceDashboardSummary, type MarketplaceDashboardSummary } from "@/model/services/dashboard";
 import { useNotification } from "@/hooks/useNotification";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { ensureLoggedInToViewProduct } from "@/lib/requireMarketplaceLogin";
@@ -63,6 +65,9 @@ export default function UserProductDashboard() {
   const [dashboardData, setDashboardData] = useState<
     BuySellDashboardStatsResponse["data"] | null
   >(null);
+  const [summaryData, setSummaryData] = useState<MarketplaceDashboardSummary | null>(
+    null,
+  );
   const [statsError, setStatsError] = useState("");
   const [statsUpdatedAt, setStatsUpdatedAt] = useState<Date | null>(null);
   const [featuredError, setFeaturedError] = useState("");
@@ -177,19 +182,32 @@ export default function UserProductDashboard() {
         /* categories are non-critical for first paint */
       });
 
-    void getBuySellDashboardStats()
-      .then((dashStats) => {
-        if (signal.aborted) return;
-        setDashboardData(dashStats);
-        if (dashStats) setStatsUpdatedAt(new Date());
-      })
-      .catch((err) => {
-        if (signal.aborted) return;
-        setStatsError(toErrorMessage(err, "Failed to load statistics"));
-      })
-      .finally(() => {
-        if (!signal.aborted) setStatsLoading(false);
-      });
+    const statsJobs: Promise<void>[] = [
+      getBuySellDashboardStats()
+        .then((dashStats) => {
+          if (signal.aborted) return;
+          setDashboardData(dashStats);
+          if (dashStats) setStatsUpdatedAt(new Date());
+        })
+        .catch((err) => {
+          if (signal.aborted) return;
+          setStatsError(toErrorMessage(err, "Failed to load statistics"));
+        }),
+      getMarketplaceDashboardSummary("last_30_days")
+        .then((summary) => {
+          if (signal.aborted) return;
+          setSummaryData(summary);
+          if (summary) setStatsUpdatedAt(new Date());
+        })
+        .catch((err) => {
+          if (signal.aborted) return;
+          setStatsError((prev) => prev || toErrorMessage(err, "Failed to load statistics"));
+        }),
+    ];
+
+    void Promise.allSettled(statsJobs).finally(() => {
+      if (!signal.aborted) setStatsLoading(false);
+    });
 
     void getBuySellRecentVehicles(MARKETPLACE.RECENT_SECTION_LIMIT)
       .then((data) => {
@@ -248,11 +266,15 @@ export default function UserProductDashboard() {
   }, [isLoggedIn]);
 
   const marketplaceStats = useMemo(() => {
+    const offers = dashboardData?.marketplace?.totalOffers ?? 0;
+    if (summaryData) {
+      return mapSummaryToMarketplaceStats(summaryData, offers);
+    }
     if (dashboardData?.marketplace) {
       return mapDashboardMetricsToMarketplaceStats(dashboardData.marketplace);
     }
     return EMPTY_STATS;
-  }, [dashboardData]);
+  }, [dashboardData, summaryData]);
 
   const mySellStats = useMemo(() => {
     if (dashboardData?.mySell) {

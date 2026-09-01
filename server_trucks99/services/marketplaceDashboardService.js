@@ -358,7 +358,7 @@ async function getSummary(body = {}) {
     pendingProducts: metricBlock(periodPending, prevPending),
     approvedProducts: metricBlock(periodApproved, prevApproved),
     rejectedProducts: metricBlock(periodRejected, prevRejected),
-    soldProducts: metricBlock(periodSold, prevSold),
+    soldProducts: metricBlock(periodApproved, prevApproved),
     totalUsers: metricBlock(periodUsers, prevUsers),
     activeUsers: metricBlock(periodActiveUsers, prevActiveUsers),
   };
@@ -369,7 +369,8 @@ async function getSummary(body = {}) {
     pendingProducts,
     approvedProducts,
     rejectedProducts,
-    soldProducts: soldLifetime,
+    // User portal Sold card uses approved (`accepeted`) listings.
+    soldProducts: approvedProducts,
     totalUsers,
     activeUsers,
     changes,
@@ -379,7 +380,7 @@ async function getSummary(body = {}) {
       pendingProducts: periodPending,
       approvedProducts: periodApproved,
       rejectedProducts: periodRejected,
-      soldProducts: periodSold,
+      soldProducts: periodApproved,
       totalUsers: periodUsers,
       activeUsers: periodActiveUsers,
     },

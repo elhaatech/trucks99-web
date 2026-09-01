@@ -15,25 +15,26 @@ import {
   MobileFilterButton,
   VehicleGrid,
   VehicleListHeader,
+  MarketplaceSummaryStrip,
   EMPTY_VEHICLE_FILTERS,
   VEHICLE_PAGE_SIZE,
   type SortOption,
   type VehicleFilterValues,
+  mapSummaryToMarketplaceStats,
 } from "@/app/common/components/buysell";
 import { userProductRoutes } from "@/lib/userProductRoutes";
 import { toBuySellListPayload } from "@/lib/buySellListUtils";
 import { useMarketplaceFavorites } from "@/components/marketplace/MarketplaceFavoritesProvider";
 import { ensureLoggedInToViewProduct } from "@/lib/requireMarketplaceLogin";
-import {
-  getBuySellListPage,
-  type BuySellProduct,
-} from "@/model/services/buysellapi";
+import { getBuySellListPage, type BuySellProduct } from "@/model/services/buysellapi";
+import { getMarketplaceDashboardSummary } from "@/model/services/dashboard";
 import { useMarketplaceAuth } from "@/components/marketplace/MarketplaceAuthProvider";
 import { useNotification } from "@/hooks/useNotification";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { isAbortError } from "@/lib/apiCache";
 import { toErrorMessage } from "@/lib/errors";
 import { LAYOUT } from "@/lib/theme";
+import type { MarketplaceStats } from "@/app/common/components/buysell/utils";
 import { GoogleAdBanner } from "@/components/ads/GoogleAdBanner";
 import { SHOW_ADS } from "@/components/ads/adsConfig";
 
@@ -119,6 +120,7 @@ export default function UserProductListContent() {
   const [layout, setLayout] = useState<"grid" | "list">("grid");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [applyLoading, setApplyLoading] = useState(false);
+  const [summaryStats, setSummaryStats] = useState<MarketplaceStats | null>(null);
 
   const { toggleFavorite } = useMarketplaceFavorites();
 
@@ -164,6 +166,20 @@ export default function UserProductListContent() {
       });
     }
   }, [list.error, notify]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getMarketplaceDashboardSummary("last_30_days")
+      .then((summary) => {
+        if (!cancelled) setSummaryStats(mapSummaryToMarketplaceStats(summary));
+      })
+      .catch(() => {
+        /* list page still works without marketplace totals */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     setFilters(urlFilters);
@@ -227,7 +243,7 @@ export default function UserProductListContent() {
           justifyContent: "space-between",
           alignItems: "center",
           gap: 2,
-          mb: 3,
+          mb: 1.5,
           flexWrap: "wrap",
         }}
       >
@@ -287,6 +303,8 @@ export default function UserProductListContent() {
           <MobileFilterButton onClick={() => setMobileFiltersOpen(true)} />
         </Box>
       </Box>
+
+      <MarketplaceSummaryStrip stats={summaryStats} />
 
       {/* ---- Body row: sticky filter pane + normal-flow product pane ---- */}
       <Box

@@ -1,3 +1,4 @@
+import { cachedRequest } from "@/lib/apiCache";
 import { api } from "./common_fixed";
 
 export type DashboardPeriod = "daily" | "weekly" | "monthly" | "yearly" | "custom";
@@ -68,6 +69,57 @@ export type DashboardAccessCheck = {
   isAdmin: boolean;
 };
 
+export type MarketplaceSummaryPeriod =
+  | "today"
+  | "yesterday"
+  | "last_7_days"
+  | "last_30_days"
+  | "last_3_months"
+  | "last_6_months"
+  | "this_year"
+  | "custom"
+  | "all";
+
+export type MarketplaceSummaryMetricChange = {
+  count: number;
+  previousCount: number;
+  change: number;
+  percentChange: number;
+};
+
+/** GET /api/dashboard/summary */
+export type MarketplaceDashboardSummary = {
+  totalProducts: number;
+  activeProducts: number;
+  pendingProducts: number;
+  approvedProducts: number;
+  rejectedProducts: number;
+  soldProducts: number;
+  totalUsers: number;
+  activeUsers: number;
+  changes?: {
+    totalProducts: MarketplaceSummaryMetricChange;
+    activeProducts: MarketplaceSummaryMetricChange;
+    pendingProducts: MarketplaceSummaryMetricChange;
+    approvedProducts: MarketplaceSummaryMetricChange;
+    rejectedProducts: MarketplaceSummaryMetricChange;
+    soldProducts: MarketplaceSummaryMetricChange;
+    totalUsers: MarketplaceSummaryMetricChange;
+    activeUsers: MarketplaceSummaryMetricChange;
+  };
+  periodCounts?: {
+    totalProducts?: number;
+    activeProducts?: number;
+    pendingProducts?: number;
+    approvedProducts?: number;
+    rejectedProducts?: number;
+    soldProducts?: number;
+    totalUsers?: number;
+    activeUsers?: number;
+  };
+  period?: { start?: string | null; end?: string | null; key?: string };
+};
+
 function postDashboard<T>(path: string, body: DashboardFilterPayload = {}): Promise<T> {
   return api<T>(`/api/dashboard/${path}`, {
     method: "POST",
@@ -80,6 +132,19 @@ export function checkDashboardAccess(): Promise<DashboardAccessCheck> {
     method: "POST",
     body: JSON.stringify({}),
   });
+}
+
+export function getMarketplaceDashboardSummary(
+  period: MarketplaceSummaryPeriod = "last_30_days",
+): Promise<MarketplaceDashboardSummary> {
+  return cachedRequest(
+    `dashboard-summary:${period}`,
+    () =>
+      api<MarketplaceDashboardSummary>("/api/dashboard/summary", {
+        params: { period },
+      }),
+    20_000,
+  );
 }
 
 export function getDashboardOverview(body: DashboardFilterPayload = {}) {

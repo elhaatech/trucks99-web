@@ -1,4 +1,5 @@
 import type { BuySellProduct, BuySellSpecification, BuySellDashboardMetrics } from "@/model/services/buysellapi";
+import type { MarketplaceDashboardSummary } from "@/model/services/dashboard";
 
 export function extractId(value: unknown): string | null {
   if (!value) return null;
@@ -559,6 +560,9 @@ export type MarketplaceStats = {
   activeListings: number;
   soldVehicles: number;
   totalOffers: number;
+  totalUsers?: number;
+  newListingsInPeriod?: number;
+  newUsersInPeriod?: number;
 };
 
 /** Map GET /api/buy-sell/dashboard-stats metrics to dashboard cards. */
@@ -570,6 +574,22 @@ export function mapDashboardMetricsToMarketplaceStats(
     activeListings: metrics.activeListings ?? 0,
     soldVehicles: metrics.soldVehicles ?? 0,
     totalOffers: metrics.totalOffers ?? 0,
+  };
+}
+
+/** Map GET /api/dashboard/summary onto the same dashboard cards. */
+export function mapSummaryToMarketplaceStats(
+  summary: MarketplaceDashboardSummary,
+  offers = 0,
+): MarketplaceStats {
+  return {
+    totalListings: summary.totalProducts ?? 0,
+    activeListings: summary.activeProducts ?? 0,
+    soldVehicles: summary.approvedProducts ?? summary.soldProducts ?? 0,
+    totalOffers: offers,
+    totalUsers: summary.totalUsers ?? 0,
+    newListingsInPeriod: summary.periodCounts?.totalProducts ?? 0,
+    newUsersInPeriod: summary.periodCounts?.totalUsers ?? 0,
   };
 }
 

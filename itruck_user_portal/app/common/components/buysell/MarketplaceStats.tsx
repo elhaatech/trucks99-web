@@ -15,6 +15,7 @@ import {
   ListChecks,
   Sparkles,
   Truck,
+  Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PRODUCT_THEME as T, DASHBOARD_ACCENTS, INFO, LAYOUT, PRIMARY, SHADOW } from "@/lib/theme";
@@ -353,29 +354,20 @@ export function MarketplaceStatsCards({
         value: stats.totalListings,
         accent: DASHBOARD_ACCENTS.blue,
         description: "A complete view of inventory currently available in the marketplace.",
-        subtitle: "Live inventory breadth",
+        subtitle: stats.newListingsInPeriod != null
+          ? `${stats.newListingsInPeriod.toLocaleString("en-IN")} new in last 30 days`
+          : "Live inventory breadth",
         trendText: `${activeShare}% active now`,
         progressValue: Math.max(14, Math.min(100, activeShare + 12)),
         icon: ListChecks,
       },
-      {
-        label: "Active listings",
-        value:  stats.activeListings,
-        accent: DASHBOARD_ACCENTS.green,
-        description: "Vehicles that remain visible and ready for buyer discovery.",
-        subtitle: "Available to browse",
-        trendText: stats.totalListings > 0
-          ? `${stats.activeListings.toLocaleString("en-IN")}/${stats.totalListings.toLocaleString("en-IN")}`
-          : "No listings yet",
-        progressValue: activeShare,
-        icon: Truck,
-      },
+   
       {
         label: "Sold",
         value: stats.soldVehicles,
         accent: DASHBOARD_ACCENTS.purple,
-        description: "Successful closes and completed transactions across the platform.",
-        subtitle: "Completed deals",
+        description: "Listings with approved (offer accepted) status.",
+        subtitle: "Approved status",
         trendText: `${soldShare}% of inventory`,
         progressValue: soldShare,
         icon: CheckCircle2,
@@ -390,8 +382,24 @@ export function MarketplaceStatsCards({
         progressValue: Math.min(100, Math.max(8, offersPerListing * 22)),
         icon: Handshake,
       },
+      ...(stats.totalUsers != null
+        ? [
+            {
+              label: "Total users",
+              value: stats.totalUsers,
+              accent: DASHBOARD_ACCENTS.teal,
+              description: "Registered buyers and sellers on TRUCKS99.",
+              subtitle: stats.newUsersInPeriod != null
+                ? `${stats.newUsersInPeriod.toLocaleString("en-IN")} new in last 30 days`
+                : "Registered accounts",
+              trendText: "Marketplace community",
+              progressValue: Math.min(100, Math.max(12, Math.round((stats.totalUsers / Math.max(stats.totalListings, 1)) * 8))),
+              icon: Users,
+            },
+          ]
+        : []),
     ],
-    [activeShare, offersPerListing, soldShare, stats.activeListings, stats.totalListings, stats.totalOffers, stats.soldVehicles],
+    [activeShare, offersPerListing, soldShare, stats],
   );
 
   return (
@@ -446,7 +454,9 @@ export function MarketplaceStatsCards({
             xs: "1fr",
             sm: "repeat(2, minmax(0, 1fr))",
             lg: "repeat(3, minmax(0, 1fr))",
-            xl: "repeat(4, minmax(0, 1fr))",
+            xl: stats.totalUsers != null
+              ? "repeat(5, minmax(0, 1fr))"
+              : "repeat(4, minmax(0, 1fr))",
           },
           alignItems: "stretch",
           gap: { xs: 1.5, md: 2 },
@@ -461,6 +471,77 @@ export function MarketplaceStatsCards({
 
       {mySell ? (
         <MySellActivityStrip stats={mySell} onViewMyListings={onViewMyListings} />
+      ) : null}
+    </Box>
+  );
+}
+
+/** Compact last-30-days totals for the vehicle list header. */
+export function MarketplaceSummaryStrip({
+  stats,
+}: {
+  stats: MarketplaceStats | null;
+}) {
+  if (!stats) return null;
+
+  const items = [
+    { label: "Products", value: stats.totalListings },
+    { label: "Active", value: stats.activeListings },
+    { label: "Sold", value: stats.soldVehicles },
+    ...(stats.totalUsers != null ? [{ label: "Users", value: stats.totalUsers }] : []),
+  ];
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        flexWrap: "wrap",
+        alignItems: "center",
+        gap: { xs: 1.25, sm: 2 },
+        mb: 2,
+      }}
+    >
+      {items.map((item, i) => (
+        <Box
+          key={item.label}
+          sx={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: 0.6,
+            ...(i > 0
+              ? {
+                  pl: { sm: 2 },
+                  borderLeft: { sm: `1px solid ${alpha(T.color.border, 0.8)}` },
+                }
+              : {}),
+          }}
+        >
+          <Typography
+            sx={{
+              fontWeight: 800,
+              fontSize: 16,
+              color: T.color.textPrimary,
+              letterSpacing: "-0.02em",
+              lineHeight: 1,
+            }}
+          >
+            {item.value.toLocaleString("en-IN")}
+          </Typography>
+          <Typography sx={{ fontSize: 12, color: T.color.textMuted, fontWeight: 600 }}>
+            {item.label}
+          </Typography>
+        </Box>
+      ))}
+      {stats.newListingsInPeriod != null || stats.newUsersInPeriod != null ? (
+        <Typography sx={{ fontSize: 12, color: T.color.textMuted, fontWeight: 500, ml: { sm: "auto" } }}>
+          Last 30 days
+          {stats.newListingsInPeriod != null
+            ? ` · ${stats.newListingsInPeriod.toLocaleString("en-IN")} new listings`
+            : ""}
+          {stats.newUsersInPeriod != null
+            ? ` · ${stats.newUsersInPeriod.toLocaleString("en-IN")} new users`
+            : ""}
+        </Typography>
       ) : null}
     </Box>
   );
