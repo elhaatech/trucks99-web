@@ -937,6 +937,17 @@ async function findUserByEitherId(userId) {
     .lean();
 }
 
+async function findOwnerReference(ownerId) {
+  const user = await findUserByEitherId(ownerId);
+  if (user) return user;
+
+  const mongoId = toObjectId(ownerId);
+  if (!mongoId) return null;
+
+  const hasProducts = await BuySellProduct.exists({ userid: mongoId });
+  return hasProducts ? { _id: mongoId, id: null } : null;
+}
+
 async function resolveActorMongoId(actor) {
   const directId = toObjectId(actor?.mongoId) || toObjectId(actor?.id);
   if (directId) return directId;
@@ -4279,7 +4290,7 @@ buySellRouter.patch("/:id/view", async (req, res) => {
 buySellRouter.post("/products/owner/:ownerId", async (req, res) => {
   try {
     const actor = getActor(req);
-    const ownerUser = await findUserByEitherId(req.params.ownerId);
+    const ownerUser = await findOwnerReference(req.params.ownerId);
     if (!ownerUser) {
       return res
         .status(404)
