@@ -6,7 +6,7 @@ const BuySellProduct = require('../../schema/buysellProduct');
 const Load = require('../../schema/load');
 const Truck = require('../../schema/truck');
 const { buildModulesResponse, resolvePermissionsToIds } = require('../../helpers/permissions');
-const { findByIdOrUuid, resolveToObjectId, toResponse } = require('../../helpers/uuidHelper');
+const { findByIdOrUuid, findByIdOrUuidDoc, resolveToObjectId, toResponse } = require('../../helpers/uuidHelper');
 const { createAndSendOtp } = require('../../helpers/mobileOtpService');
 const { normalizeMobile, findUserByMobile } = require('../../helpers/otpHelper');
 const { formatUser } = require('../../views/rbac/formatuser');
@@ -100,7 +100,7 @@ userRouter.get("/deleted/:id", async (req, res) => {
 // POST /api/user/restore/:id — restore a soft-deleted user (Admin only)
 userRouter.post("/restore/:id", async (req, res) => {
   try {
-    const user = await findByIdOrUuid(User, req.params.id);
+    const user = await findByIdOrUuidDoc(User, req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (!user.isDeleted) return res.status(400).json({ message: 'User is not deleted' });
 
