@@ -39,9 +39,6 @@ export class AppErrorBoundary extends Component<Props, State> {
 
   private handleReload = () => {
     this.setState({ hasError: false, message: "" });
-    if (typeof window !== "undefined") {
-      window.location.reload();
-    }
   };
 
   render() {

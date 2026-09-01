@@ -10,6 +10,9 @@ export const MARKETPLACE_FAVORITES_CHANGED_EVENT =
   "itruck-marketplace-favorites-changed";
 export const MARKETPLACE_CHAT_CHANGED_EVENT = "itruck-marketplace-chat-changed";
 
+const AUTH_EVENT_DEBOUNCE_MS = 250;
+let lastMarketplaceAuthEventAt = 0;
+
 export function hasMarketplaceBearerToken(): boolean {
   return Boolean(getAuthHeaders().Authorization);
 }
@@ -17,6 +20,13 @@ export function hasMarketplaceBearerToken(): boolean {
 /** Notify shell + pages to reload user after login/logout. */
 export function notifyMarketplaceAuthChanged(): void {
   if (typeof window === "undefined") return;
+
+  const now = Date.now();
+  if (now - lastMarketplaceAuthEventAt < AUTH_EVENT_DEBOUNCE_MS) {
+    return;
+  }
+
+  lastMarketplaceAuthEventAt = now;
   window.dispatchEvent(new Event(MARKETPLACE_AUTH_CHANGED_EVENT));
 }
 
