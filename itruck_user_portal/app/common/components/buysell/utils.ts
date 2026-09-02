@@ -201,6 +201,9 @@ const FUEL_SPEC_IDS = new Set([
   "6a32447946ebddbeb905e6f2",
   "6a7dae0a3bd76bf10c1e4a8d",
 ]);
+const YEAR_SPEC_IDS = new Set(["6a32441146ebddbeb905e6c4"]);
+const KM_SPEC_IDS = new Set(["6a32444546ebddbeb905e6db"]);
+const OWNER_SPEC_IDS = new Set(["6a32457a46ebddbeb905e8b9"]);
 const KNOWN_FUEL_NAMES = new Set([
   "diesel",
   "petrol",
@@ -251,6 +254,17 @@ function pullFuelType(
   return undefined;
 }
 
+function pullSpecByIds(
+  specifications: BuySellSpecification[] | undefined,
+  ids: Set<string>,
+): string | undefined {
+  const match = specifications?.find((spec) =>
+    ids.has(extractRefId(spec.specification_id)),
+  );
+  const value = specDisplayValue(match);
+  return value || undefined;
+}
+
 /**
  * List-card highlights aligned with Vehicle Details:
  * Make Year, Fuel Type, No. of Owners.
@@ -277,11 +291,13 @@ export function getListingSpecChips(
       "manufacture year",
       "model year",
       "year",
-    );
+    ) ||
+    pullSpecByIds(specs, YEAR_SPEC_IDS);
   const km =
     highlights?.mileage?.trim() ||
     String((product as BuySellProduct & { kmDriven?: string | null }).kmDriven ?? "").trim() ||
-    pullSpecLoose(specs, "kilometers", "km", "mileage", "odometer", "driven");
+    pullSpecLoose(specs, "kilometers", "km", "mileage", "odometer", "driven") ||
+    pullSpecByIds(specs, KM_SPEC_IDS);
   const fuel =
     highlights?.fuelType?.trim() ||
     String((product as BuySellProduct & { fuelType?: string | null }).fuelType ?? "").trim() ||
@@ -297,7 +313,8 @@ export function getListingSpecChips(
       "number of owner",
       "owners",
       "owner",
-    );
+    ) ||
+    pullSpecByIds(specs, OWNER_SPEC_IDS);
 
   const fallback = "N/A";
   const chips: ListingSpecChip[] = [];
@@ -477,9 +494,10 @@ export function contactTelHref(mobile?: string | null): string | null {
 
 export function getSpecDisplayValue(spec: BuySellSpecification): string {
   const name = spec.specification_info?.specification_name?.toLowerCase() ?? "";
-  const raw =
+  const rawValue =
     spec.specification_value_info?.specification_value_name ??
     (spec.specification_value != null ? String(spec.specification_value) : "");
+  const raw = String(rawValue).trim();
 
   if (!raw) return "—";
   if (/^[a-fA-F0-9]{24}$/.test(raw.trim())) return "—";

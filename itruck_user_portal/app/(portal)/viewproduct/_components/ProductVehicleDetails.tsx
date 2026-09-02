@@ -4,7 +4,7 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { PRODUCT_THEME as T } from "@/lib/theme";
 
-const EMPTY_VALUE = /^(—|-|–|none|n\/a|na|null|undefined|\s*)$/i;
+const EMPTY_VALUE = /^(—|-|–|n\/a|na|null|undefined|\s*)$/i;
 
 function displayValue(value: string | undefined): string {
   if (!value || EMPTY_VALUE.test(value.trim())) return "";

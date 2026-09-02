@@ -161,7 +161,7 @@ export function NotificationDropdown(_props: NotificationDropdownProps) {
           setItems((prev) =>
             prev.map((x) => (getRowId(x) === id ? { ...x, read: true } : x)),
           );
-          setUnreadNotificationCount(Math.max(0, unreadCount - 1));
+          setUnreadNotificationCount((current) => current - 1);
         }
       } catch {
         // still navigate even if mark-read fails
@@ -170,7 +170,7 @@ export function NotificationDropdown(_props: NotificationDropdownProps) {
       handleClose();
       if (href) router.push(href);
     },
-    [handleClose, router, unreadCount],
+    [handleClose, router],
   );
 
   const handleMarkAllRead = useCallback(async () => {

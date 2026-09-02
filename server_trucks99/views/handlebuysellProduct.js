@@ -4370,7 +4370,8 @@ buySellRouter.post("/products/owner/:ownerId", async (req, res) => {
     ]);
 
     const withLocation = await enrichBuySellProductsWithLocation(list);
-    const enrichedList = await enrichBuySellListItems(withLocation, actor);
+    const withSpecifications = await enrichBuySellSpecifications(withLocation);
+    const enrichedList = await enrichBuySellListItems(withSpecifications, actor);
 
     res.json({
       success: true,

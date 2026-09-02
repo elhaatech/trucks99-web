@@ -33,8 +33,9 @@ async function loadUnread(force: boolean): Promise<void> {
   return inflight;
 }
 
-export function setUnreadNotificationCount(next: number) {
-  emit(Math.max(0, next));
+export function setUnreadNotificationCount(next: number | ((current: number) => number)) {
+  const resolved = typeof next === "function" ? next(sharedCount) : next;
+  emit(Math.max(0, resolved));
 }
 
 /** Unread badge count. Shared across navbar/sidebar so only those widgets re-render. */

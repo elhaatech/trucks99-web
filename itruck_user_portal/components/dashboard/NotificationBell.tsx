@@ -73,7 +73,7 @@ export function NotificationBell(_props: NotificationBellProps) {
       if (n.read !== true) {
         await markNotificationRead(id);
         setItems((prev) => prev.map((x) => (getRowId(x) === id ? { ...x, read: true } : x)));
-        setUnreadNotificationCount(unreadCount - 1);
+        setUnreadNotificationCount((current) => current - 1);
       }
     } catch {
       // ignore dropdown marking errors; page still works
