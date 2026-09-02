@@ -55,8 +55,9 @@ axiosClient.interceptors.response.use(
   (res) => res,
   (error) => {
     if (error?.response?.status === 401) {
+      const hadToken = Boolean(getToken());
       clearMarketplaceAuthStorage();
-      notifyMarketplaceAuthChanged();
+      if (hadToken) notifyMarketplaceAuthChanged();
     }
     return Promise.reject(error);
   },

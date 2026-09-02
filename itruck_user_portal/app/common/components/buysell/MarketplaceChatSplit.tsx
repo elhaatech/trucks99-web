@@ -31,7 +31,7 @@ function roomsFingerprint(rooms: ChatRoom[]): string {
 }
 
 export function MarketplaceChatSplit() {
-  const { user: currentUser } = useMarketplaceAuth();
+  const { user: currentUser, isLoggedIn } = useMarketplaceAuth();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -51,6 +51,7 @@ export function MarketplaceChatSplit() {
   }, []);
 
   useEffect(() => {
+    if (!isLoggedIn) return;
     void loadRooms();
     const interval = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") {
@@ -59,7 +60,7 @@ export function MarketplaceChatSplit() {
       void loadRooms(true);
     }, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [loadRooms]);
+  }, [isLoggedIn, loadRooms]);
 
   const currentUserId = extractId(
     (currentUser as { _id?: unknown; id?: unknown })?._id ??

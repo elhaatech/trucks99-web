@@ -6,7 +6,8 @@
     "free:3002": "node scripts/free-port.js 3002",
     "dev": "node scripts/free-port.js 3002 && next dev -p 3002",
     "build": "next build",
-    "start": "nodemon --watch app --watch components --watch features --watch hooks --watch lib --watch services --watch utils --watch constants --watch model --watch providers --watch types --ext ts,tsx,js,jsx,css,json --exec \"npm run build && node scripts/free-port.js 3002 && next start -p 3002\"",
+    "start": "node scripts/free-port.js 3002 && next start -p 3002",
+    "start:watch": "nodemon --watch app --watch components --watch features --watch hooks --watch lib --watch services --watch utils --watch constants --watch model --watch providers --watch types --ext ts,tsx,js,jsx,css,json --exec \"npm run build && node scripts/free-port.js 3002 && next start -p 3002\"",
     "start:prod": "node scripts/free-port.js 3002 && next start -p 3002",
     "lint": "eslint"
   },

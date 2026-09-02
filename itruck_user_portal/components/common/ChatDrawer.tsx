@@ -18,6 +18,7 @@ import {
   type ChatRoom,
 } from "@/model/services/chatapi";
 import { notifyMarketplaceChatChanged } from "@/lib/marketplaceAuth";
+import { useMarketplaceAuthOptional } from "@/components/marketplace/MarketplaceAuthProvider";
 
 type Props = {
   open: boolean;
@@ -50,6 +51,8 @@ function formatDateLabel(dateStr: string) {
 }
 
 export function ChatDrawer({ open, onClose, embedded = false, productId, roomId, currentUserId }: Props) {
+  const auth = useMarketplaceAuthOptional();
+  const isAuthenticated = auth ? auth.isLoggedIn : true;
   const [room, setRoom] = useState<ChatRoom | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -87,7 +90,7 @@ export function ChatDrawer({ open, onClose, embedded = false, productId, roomId,
   // productId into a room (buyer flow) or loading an existing roomId directly
   // (seller / inbox flow).
   useEffect(() => {
-    if (!open) return;
+    if (!open || !isAuthenticated) return;
     if (!productId && !roomId) return;
 
     let cancelled = false;
@@ -120,12 +123,12 @@ export function ChatDrawer({ open, onClose, embedded = false, productId, roomId,
     return () => {
       cancelled = true;
     };
-  }, [open, productId, roomId, loadMessages]);
+  }, [open, isAuthenticated, productId, roomId, loadMessages]);
 
   // Poll for new messages while open (placeholder until Socket.IO is wired up).
   const activePollRoomId = room?.roomId ?? room?._id ?? null;
   useEffect(() => {
-    if (!open || !activePollRoomId) return;
+    if (!open || !isAuthenticated || !activePollRoomId) return;
     pollRef.current = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") {
         return;
@@ -135,7 +138,7 @@ export function ChatDrawer({ open, onClose, embedded = false, productId, roomId,
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [open, activePollRoomId, loadMessages]);
+  }, [open, isAuthenticated, activePollRoomId, loadMessages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

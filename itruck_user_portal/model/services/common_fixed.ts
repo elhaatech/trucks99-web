@@ -79,8 +79,9 @@ export async function api<T = unknown>(path: string, options: RequestOptions = {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       if (res.status === 401) {
+        const hadToken = Boolean(getToken());
         clearToken();
-        notifyMarketplaceAuthChanged();
+        if (hadToken) notifyMarketplaceAuthChanged();
         throw new Error(data?.message || "Token missing or expired. Please log in again.");
       }
       throw new Error(data?.message || res.statusText || "Request failed");
