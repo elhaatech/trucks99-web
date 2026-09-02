@@ -234,22 +234,7 @@ function MySellActivityStrip({
         boxShadow: SHADOW.sm,
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0, flex: 1 }}>
-        <Box
-          sx={{
-            width: 44,
-            height: 44,
-            borderRadius: "50%",
-            display: "grid",
-            placeItems: "center",
-            bgcolor: alpha(PRIMARY, 0.12),
-            color: PRIMARY,
-          }}
-        >
-          <Sparkles size={20} strokeWidth={1.8} />
-        </Box>
-    
-      </Box>
+     
 
       <Box
         sx={{
