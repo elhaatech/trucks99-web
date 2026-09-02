@@ -47,7 +47,7 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
         sx={{
           width: "100%",
           bgcolor: T.color.trustNavyDark,
-          color: "rgba(255,255,255,0.88)",
+          color: "#fff",
           borderTop: `1px solid ${alpha(PRIMARY, 0.22)}`,
           px: LAYOUT.pageGutterX,
           py: { xs: 1.25, md: 1.5 },
@@ -72,7 +72,7 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
             <Typography
               sx={{
                 fontSize: 11,
-                opacity: 0.7,
+                color: "#fff",
                 display: { xs: "none", sm: "block" },
                 whiteSpace: "nowrap",
               }}
@@ -99,8 +99,7 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
                 <Typography
                   sx={{
                     fontSize: 12,
-                    color: "inherit",
-                    opacity: 0.85,
+                    color: "#fff",
                     whiteSpace: "nowrap",
                     "&:hover": { color: PRIMARY, opacity: 1 },
                   }}
@@ -126,7 +125,7 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
       sx={{
         width: "100%",
         bgcolor: T.color.trustNavyDark,
-        color: "rgba(255,255,255,0.88)",
+        color: "#fff",
       }}
     >
       <Box
@@ -159,7 +158,7 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
               sx={{
                 fontSize: 12.5,
                 lineHeight: 1.65,
-                opacity: 0.8,
+                color: "#fff",
                 maxWidth: 280,
                 mb: 2,
               }}
@@ -216,7 +215,7 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
                 fontWeight: 700,
                 letterSpacing: "0.06em",
                 textTransform: "uppercase",
-                color: alpha(PRIMARY, 0.85),
+                color: "#fff",
                 mb: 2,
               }}
             >

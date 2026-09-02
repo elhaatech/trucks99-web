@@ -16,7 +16,7 @@ export function FooterLinkColumn({ group }: { group: FooterLinkGroup }) {
           fontWeight: 700,
           letterSpacing: "0.06em",
           textTransform: "uppercase",
-          color: alpha(PRIMARY, 0.85),
+          color: "#fff",
           mb: 2,
         }}
       >
@@ -29,8 +29,7 @@ export function FooterLinkColumn({ group }: { group: FooterLinkGroup }) {
               <Typography
                 sx={{
                   fontSize: 13.5,
-                  color: "inherit",
-                  opacity: 0.85,
+                  color: "#fff",
                   transition: "opacity 0.15s, color 0.15s, padding-left 0.15s",
                   "&:hover": { color: PRIMARY, opacity: 1, pl: 0.5 },
                 }}
@@ -112,7 +111,7 @@ export function FooterStatCard({ stat }: { stat: FooterStat }) {
       >
         {stat.value}
       </Typography>
-      <Typography sx={{ fontSize: 12, opacity: 0.68, mt: 0.25 }}>{stat.label}</Typography>
+      <Typography sx={{ fontSize: 12, color: "#fff", mt: 0.25 }}>{stat.label}</Typography>
     </Box>
   );
 }
@@ -135,7 +134,7 @@ export function FooterTrustBadge({ badge }: { badge: TrustBadge }) {
       }}
     >
       <Icon size={14} style={{ color: PRIMARY, flexShrink: 0 }} />
-      <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: "rgba(255,255,255,0.9)", whiteSpace: "nowrap" }}>
+      <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: "#fff", whiteSpace: "nowrap" }}>
         {badge.label}
       </Typography>
     </Box>

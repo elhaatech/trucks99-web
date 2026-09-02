@@ -99,7 +99,18 @@ export async function getChatMessages(
 export async function getChatList(): Promise<ChatRoom[]> {
   try {
     const res = await axiosClient.get<ChatRoom[]>("/api/chat/list");
-    return res.data ?? [];
+    const rooms = Array.isArray(res.data) ? res.data : [];
+    const uniqueRooms = new Map<string, ChatRoom>();
+
+    for (const room of rooms) {
+      const roomKey = String(room.roomId ?? room._id);
+      const existing = uniqueRooms.get(roomKey);
+      if (!existing || new Date(room.lastMessageAt ?? 0).getTime() > new Date(existing.lastMessageAt ?? 0).getTime()) {
+        uniqueRooms.set(roomKey, room);
+      }
+    }
+
+    return Array.from(uniqueRooms.values());
   } catch (error) {
     normalizeError(error);
   }

@@ -31,6 +31,7 @@ import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import { NotificationBell } from "./NotificationBell";
 import { getChatList } from "@/model/services/chatapi";
 import { isAdminLikeRole } from "@/lib/permissions";
+import { MARKETPLACE_CHAT_CHANGED_EVENT } from "@/lib/marketplaceAuth";
 
 const ChatDrawer = dynamic(
   () => import("@/components/common/ChatDrawer").then((m) => m.ChatDrawer),
@@ -111,8 +112,16 @@ export function TopNavbar({ user, onMenuClick }: TopNavbarProps) {
     const onVisibility = () => {
       if (document.visibilityState === "visible") run(false);
     };
+    const onChatChanged = () => {
+      lastAt = 0;
+      void refreshUnread();
+    };
     document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
+    window.addEventListener(MARKETPLACE_CHAT_CHANGED_EVENT, onChatChanged);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener(MARKETPLACE_CHAT_CHANGED_EVENT, onChatChanged);
+    };
   }, [refreshUnread]);
 
   return (
