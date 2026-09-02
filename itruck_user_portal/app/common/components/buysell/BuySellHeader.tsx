@@ -387,6 +387,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
               aria-label="Open AI Chatbot"
               startIcon={<ChatBubbleOutlineRoundedIcon sx={{ fontSize: 18 }} />}
               sx={{
+                display: { xs: "none", sm: "inline-flex" },
                 textTransform: "none",
                 fontWeight: 700,
                 fontSize: 13,
