@@ -14,6 +14,7 @@ export function AssistantFab() {
   const onAssistant =
     pathname === userProductRoutes.assistant() ||
     pathname.startsWith(`${userProductRoutes.assistant()}/`);
+  const onProductView = pathname.startsWith(userProductRoutes.view(""));
 
   if (onAssistant) return null;
 
@@ -26,7 +27,7 @@ export function AssistantFab() {
         sx={{
           position: "fixed",
           right: { xs: 16, md: 24 },
-          bottom: { xs: 88, md: 28 },
+          bottom: { xs: onProductView ? 178 : 88, md: 28 },
           zIndex: Z_INDEX.navbar + 5,
           width: 56,
           height: 56,

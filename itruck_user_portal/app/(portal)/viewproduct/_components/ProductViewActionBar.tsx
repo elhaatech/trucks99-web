@@ -8,7 +8,7 @@ import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
-import { PRODUCT_THEME as T, INFO, LAYOUT } from "@/lib/theme";
+import { PRODUCT_THEME as T, INFO } from "@/lib/theme";
 
 type ProductViewActionBarProps = {
   show: boolean;
@@ -113,7 +113,7 @@ export function ProductViewActionBar({
               position: "fixed",
               left: 0,
               right: 0,
-              bottom: LAYOUT.buySellCompactFooterHeight,
+              bottom: 0,
               zIndex: 30,
               bgcolor: T.color.surface,
               borderTop: `1px solid ${T.color.border}`,
