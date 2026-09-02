@@ -248,22 +248,7 @@ function MySellActivityStrip({
         >
           <Sparkles size={20} strokeWidth={1.8} />
         </Box>
-        <Box>
-          <Typography
-            sx={{
-              fontSize: 12,
-              fontWeight: 700,
-              color: T.color.textSecondary,
-              letterSpacing: "0.16em",
-              textTransform: "uppercase",
-            }}
-          >
-            Your sell activity
-          </Typography>
-          <Typography sx={{ fontSize: 13.5, color: T.color.textSecondary, mt: 0.25 }}>
-            Keep a pulse on what is live, active, and converting.
-          </Typography>
-        </Box>
+    
       </Box>
 
       <Box
