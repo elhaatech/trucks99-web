@@ -347,10 +347,7 @@ export function MarketplaceStatsCards({
           gridTemplateColumns: {
             xs: "1fr",
             sm: "repeat(2, minmax(0, 1fr))",
-            lg: "repeat(3, minmax(0, 1fr))",
-            xl: stats.totalUsers != null
-              ? "repeat(5, minmax(0, 1fr))"
-              : "repeat(4, minmax(0, 1fr))",
+            lg: "repeat(4, minmax(0, 1fr))",
           },
           alignItems: "stretch",
           gap: { xs: 1.5, md: 2 },

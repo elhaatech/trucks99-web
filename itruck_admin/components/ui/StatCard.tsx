@@ -52,6 +52,7 @@ export function StatCard({
       onClick={onClick}
       padding={3}
       sx={{
+        height: "100%",
         background: `linear-gradient(135deg, ${alpha(accentMain, 0.05)} 0%, ${theme.palette.background.paper} 55%)`,
       }}
     >

@@ -108,7 +108,19 @@ export function SummaryCards({
 
   return (
     <Box sx={{ mb: 3 }}>
-      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 2.5, mb: 2.5 }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: "repeat(2, minmax(0, 1fr))",
+            lg: "repeat(5, minmax(0, 1fr))",
+          },
+          alignItems: "stretch",
+          gap: 2.5,
+          mb: 2.5,
+        }}
+      >
         {primary.map((card) => (
           <StatCard
             key={card.title}
