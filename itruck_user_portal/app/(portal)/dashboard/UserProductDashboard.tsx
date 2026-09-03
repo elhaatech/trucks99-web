@@ -267,11 +267,19 @@ export default function UserProductDashboard() {
 
   const marketplaceStats = useMemo(() => {
     const offers = dashboardData?.marketplace?.totalOffers ?? 0;
+    if (dashboardData?.marketplace) {
+      const metrics = mapDashboardMetricsToMarketplaceStats(dashboardData.marketplace);
+      if (!summaryData) return metrics;
+
+      return {
+        ...metrics,
+        totalUsers: summaryData.totalUsers ?? 0,
+        newListingsInPeriod: summaryData.periodCounts?.totalProducts ?? 0,
+        newUsersInPeriod: summaryData.periodCounts?.totalUsers ?? 0,
+      };
+    }
     if (summaryData) {
       return mapSummaryToMarketplaceStats(summaryData, offers);
-    }
-    if (dashboardData?.marketplace) {
-      return mapDashboardMetricsToMarketplaceStats(dashboardData.marketplace);
     }
     return EMPTY_STATS;
   }, [dashboardData, summaryData]);
