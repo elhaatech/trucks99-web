@@ -217,6 +217,7 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
                 textTransform: "uppercase",
                 color: "#fff",
                 mb: 2,
+                textAlign: "center",
               }}
             >
               Get the App
@@ -226,7 +227,7 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
                 display: "flex",
                 flexDirection: "column",
                 gap: 1,
-                alignItems: "flex-start",
+                alignItems: "center",
               }}
             >
               <Box
@@ -248,8 +249,25 @@ export function BuySellFooter({ compact = false }: BuySellFooterProps) {
                   style={{ height: 80, width: "auto", display: "block" }}
                 />
               </Box>
-              {/* TODO: replace with actual App Store URL */}
-             
+              <Box
+                component="a"
+                href="https://apps.apple.com/in/app/trucks99-buy-sell-used-vehicle/id6757944457"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Download on the App Store"
+                sx={{
+                  display: "inline-block",
+                  transition: "opacity 0.15s, transform 0.15s",
+                  "&:hover": { opacity: 0.9, transform: "translateY(-2px)" },
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg"
+                  alt="Download on the App Store"
+                  style={{ height: 58, width: "auto", display: "block" }}
+                />
+              </Box>
             </Box>
           </Box>
 
