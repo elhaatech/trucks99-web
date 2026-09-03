@@ -44,6 +44,7 @@ import {
 import { useMarketplaceFavorites } from "@/components/marketplace/MarketplaceFavoritesProvider";
 import { ProductLifecycleSection } from "@/app/admin/portal/buysell/view/[id]/_components/ProductLifecycleSection";
 import { UserRelatedProductsSection } from "../_components/UserRelatedProductsSection";
+import { UserSimilarProductsSection } from "../_components/UserSimilarProductsSection";
 import { extractId } from "@/app/common/components/buysell/utils";
 import { getFirstBuySellImageUrl } from "@/lib/buysellUtils";
 import { ProductViewGallery } from "../_components/ProductViewGallery";
@@ -512,6 +513,27 @@ export default function UserProductViewPage() {
                   currentStateName={item.state_info?.name}
                />
           ) : null}
+
+              <UserSimilarProductsSection
+                excludeProductId={id}
+                isLoggedIn={isLoggedIn}
+                currentStateId={
+                  item.state_info?._id
+                    ? String(item.state_info._id)
+                    : (item.state_id ? String(item.state_id) : undefined)
+                }
+                currentCategoryId={resolveBuySellRefId(item.category_id)}
+                currentSubcategoryId={resolveBuySellRefId(item.subcategory_id)}
+                currentCategoryName={
+                  typeof item.category_id === "object" ? item.category_id?.category_name : undefined
+                }
+                currentSubcategoryName={
+                  typeof item.subcategory_id === "object"
+                    ? item.subcategory_id?.sub_category_name
+                    : undefined
+                }
+                currentStateName={item.state_info?.name}
+              />
         </Box>
 
         <Box

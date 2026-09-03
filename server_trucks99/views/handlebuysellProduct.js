@@ -4298,6 +4298,83 @@ buySellRouter.post("/products/owner/:ownerId", async (req, res) => {
     }
 
     const ownerUserFilter = buildBuySellUseridFilter(ownerUser);
+
+// POST /api/buy-sell/products/similar
+// Body: { excludeProductId?, page?, limit?, state_id?, category_id?, subcategory_id? }
+buySellRouter.post("/products/similar", async (req, res) => {
+  try {
+    const actor = getActor(req);
+    const {
+      excludeProductId,
+      page: pageRaw,
+      limit: limitRaw,
+      state_id,
+      category_id,
+      subcategory_id,
+    } = req.body || {};
+    const andConditions = [
+      { status: { $nin: SELLER_PRODUCTS_EXCLUDED_STATUSES } },
+    ];
+
+    if (excludeProductId) {
+      const excluded = await findByIdOrUuid(
+        BuySellProduct,
+        String(excludeProductId),
+      );
+      if (excluded?._id) andConditions.push({ _id: { $ne: excluded._id } });
+    }
+
+    if (state_id) {
+      const id = await resolveLocationMongoId(LocationState, state_id);
+      if (id) andConditions.push({ state_id: id });
+    }
+    if (category_id) {
+      const id = toObjectId(category_id);
+      if (id) andConditions.push({ category_id: id });
+    }
+    if (subcategory_id) {
+      const id = toObjectId(subcategory_id);
+      if (id) andConditions.push({ subcategory_id: id });
+    }
+
+    const filter = { $and: andConditions };
+    const page = Math.max(1, parseInt(pageRaw, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(limitRaw, 10) || 12));
+    const skip = (page - 1) * limit;
+    const [list, total] = await Promise.all([
+      BuySellProduct.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("category_id", "category_name")
+        .populate("subcategory_id", "sub_category_name")
+        .lean(),
+      BuySellProduct.countDocuments(filter),
+    ]);
+
+    const withLocation = await enrichBuySellProductsWithLocation(list);
+    const withSpecifications = await enrichBuySellSpecifications(withLocation);
+    const enrichedList = await enrichBuySellListItems(withSpecifications, actor);
+    return res.json({
+      success: true,
+      data: {
+        products: toResponseList(enrichedList),
+        total,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit) || 1,
+        },
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to load similar products",
+    });
+  }
+});
     if (!ownerUserFilter) {
       return res
         .status(404)

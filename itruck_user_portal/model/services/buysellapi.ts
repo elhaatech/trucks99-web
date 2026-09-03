@@ -1027,6 +1027,78 @@ export async function postBuySellProductsByOwner(
 /** @deprecated Use postBuySellProductsByOwner */
 export const getBuySellProductsByOwner = postBuySellProductsByOwner;
 
+export type BuySellSimilarProductsParams = {
+  excludeProductId?: string;
+  page?: number;
+  limit?: number;
+  stateId?: string;
+  categoryId?: string;
+  subcategoryId?: string;
+};
+
+/** POST /api/buy-sell/products/similar — active listings matching location and classification. */
+export async function postBuySellSimilarProducts(
+  params: BuySellSimilarProductsParams,
+): Promise<Pick<BuySellOwnerProductsResponse["data"], "products" | "total" | "pagination">> {
+  const normalizedStateId = resolveBuySellRefId(params.stateId);
+  const normalizedCategoryId = resolveBuySellRefId(params.categoryId);
+  const normalizedSubcategoryId = resolveBuySellRefId(params.subcategoryId);
+  try {
+    const {
+      excludeProductId,
+      page = 1,
+      limit = 12,
+      stateId,
+      categoryId,
+      subcategoryId,
+    } = params;
+    const body = {
+      excludeProductId,
+      page,
+      limit,
+      ...(normalizedStateId ? { state_id: normalizedStateId } : {}),
+      ...(normalizedCategoryId ? { category_id: normalizedCategoryId } : {}),
+      ...(normalizedSubcategoryId ? { subcategory_id: normalizedSubcategoryId } : {}),
+    };
+    const res = await api<BuySellOwnerProductsResponse>(
+      "/api/buy-sell/products/similar",
+      { method: "POST", body: JSON.stringify(body) },
+    );
+    if (!res?.success || !res.data) {
+      throw new Error(res?.message || "Failed to load similar products");
+    }
+    return {
+      products: normalizeBuySellList(res.data.products ?? []),
+      total: res.data.total ?? 0,
+      pagination: res.data.pagination,
+    };
+  } catch (error) {
+    // Older deployments do not have /products/similar yet. The list endpoint
+    // supports the same filters, so keep recommendations working during rollout.
+    if (error instanceof Error && error.message === "API route not found") {
+      const products = await getBuySellList({
+        state_id: normalizedStateId,
+        category_id: normalizedCategoryId,
+        subcategory_id: normalizedSubcategoryId,
+      });
+      const filteredProducts = products
+        .filter((product) => getBuySellRowId(product) !== params.excludeProductId)
+        .slice(0, params.limit ?? 12);
+      return {
+        products: filteredProducts,
+        total: filteredProducts.length,
+        pagination: {
+          page: params.page ?? 1,
+          limit: params.limit ?? 12,
+          total: filteredProducts.length,
+          totalPages: filteredProducts.length ? 1 : 0,
+        },
+      };
+    }
+    normalizeError(error);
+  }
+}
+
 export async function getBuySellPurchaseList(
   body: BuySellListFilter = {},
 ): Promise<BuySellPurchaseListResponse> {

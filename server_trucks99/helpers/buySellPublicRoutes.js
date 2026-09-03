@@ -61,6 +61,7 @@ function isPublicBuySellMarketplaceRoute(method, originalUrlPath) {
   if (method === "POST" && subPath === "recent-vehicles") return true;
   if (method === "POST" && subPath === "list") return true;
   if (method === "POST" && subPath.startsWith("products/owner/")) return true;
+  if (method === "POST" && subPath === "products/similar") return true;
   if (method === "PATCH" && /^[^/]+\/view$/.test(subPath)) return true;
 
   if (method === "GET") {
