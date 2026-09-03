@@ -1,4 +1,4 @@
-import { api } from "@/model/services/common_fixed";
+import { api, publicApi } from "@/model/services/common_fixed";
 
 export type EmiDefaults = {
   tenures: number[];
@@ -40,11 +40,11 @@ type EmiCalculateResponse = {
   data: EmiCalculateResult;
 };
 
-/** GET /api/emi/tenures — calculator defaults + tenure list. (auth required) */
+/** GET /api/emi/tenures — public calculator defaults + tenure list. */
 export async function getEmiDefaults(
   signal?: AbortSignal,
 ): Promise<EmiDefaults> {
-  const res = await api<EmiDefaultsResponse>("/api/emi/tenures", {
+  const res = await publicApi<EmiDefaultsResponse>("/api/emi/tenures", {
     signal,
   });
   const raw = (res?.data ?? {}) as Partial<EmiDefaults> & Record<string, unknown>;
