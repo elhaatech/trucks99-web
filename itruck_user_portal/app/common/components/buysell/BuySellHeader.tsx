@@ -237,6 +237,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
           px: LAYOUT.pageGutterX,
           py: 0,
           gap: { xs: 1, md: 2 },
+          minWidth: 0,
         }}
       >
         <IconButton
@@ -302,7 +303,7 @@ export function BuySellHeader({ onMobileMenuToggle }: BuySellHeaderProps) {
           </Box>
         </Link>
 
-        <Box sx={{ display: { xs: "none", lg: "flex" }, gap: 0.5, ml: 1.5 }}>
+        <Box sx={{ display: { xs: "none", lg: "flex" }, gap: 0.5, ml: 1.5, minWidth: 0, flexShrink: 1 }}>
           {[{ label: "Marketplace", href: "/#explore-all-vehicles" }, ...navLinks].map(
             (link) => {
             const active = isLinkActive(link);

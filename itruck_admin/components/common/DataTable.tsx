@@ -254,6 +254,7 @@ export function DataTable<T>({
         borderColor: "divider",
         overflow: "hidden",
         boxShadow: (t) => t.tokens?.shadow?.card,
+        minWidth: 0,
       }}
     >
       {/* Selection count banner */}
@@ -296,7 +297,7 @@ export function DataTable<T>({
 
       <TableContainer
         className="custom-scrollbar"
-        sx={{ maxHeight: 560, minHeight: 300 }}
+        sx={{ maxHeight: { xs: "none", md: 560 }, minHeight: { xs: 220, md: 300 }, width: "100%", overflowX: "auto" }}
       >
         {loading ? (
           <TableSkeleton
@@ -305,7 +306,7 @@ export function DataTable<T>({
             showHeader
           />
         ) : (
-        <Table stickyHeader={stickyHeader} size="medium">
+        <Table stickyHeader={stickyHeader} size="medium" sx={{ minWidth: 720 }}>
           <TableHead>
             <TableRow>
               {selectable && (
@@ -472,6 +473,7 @@ export function DataTable<T>({
         rowsPerPage={rowsPerPage}
         onRowsPerPageChange={handleRowsPerPageChange}
         rowsPerPageOptions={[5, 10, 25, 50]}
+        sx={{ overflowX: "auto" }}
       />
     </Paper>
   );

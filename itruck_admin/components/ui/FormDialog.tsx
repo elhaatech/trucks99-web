@@ -81,6 +81,7 @@ export function FormDialog({
           borderColor: "divider",
           overflow: "hidden",
           m: { xs: 1.5, sm: 3 },
+          maxHeight: "calc(100dvh - 24px)",
         },
       }}
     >
@@ -133,6 +134,7 @@ export function FormDialog({
           py: 2,
           gap: 1,
           justifyContent: "flex-end",
+          flexWrap: "wrap",
           bgcolor: (t) => alpha(t.palette.background.default, 0.5),
         }}
       >

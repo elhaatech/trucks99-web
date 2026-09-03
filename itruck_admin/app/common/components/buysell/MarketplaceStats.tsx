@@ -129,7 +129,7 @@ function HeroTruckBackground({
               alt={image.alt}
               fill
               priority={index === 0}
-              sizes="100vw"
+              sizes="100%"
               unoptimized
               style={{ objectFit: "cover", objectPosition: "center" }}
             />

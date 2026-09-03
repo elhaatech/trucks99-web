@@ -463,7 +463,7 @@ function HeroTruckBackground({
               alt={image.alt}
               fill
               priority={index === 0}
-              sizes="100vw"
+              sizes="100%"
               unoptimized
               style={{ objectFit: "cover", objectPosition: "center" }}
             />
@@ -573,12 +573,12 @@ export function HeroSearchSection({
         mb: 4,
         ...(fullBleed
           ? {
-              width: "100vw",
+              width: "100%",
               position: "relative",
-              left: "50%",
-              right: "50%",
-              marginLeft: "-50vw",
-              marginRight: "-50vw",
+              left: "auto",
+              right: "auto",
+              marginLeft: 0,
+              marginRight: 0,
               borderTopLeftRadius: 0,
               borderTopRightRadius: 0,
             }

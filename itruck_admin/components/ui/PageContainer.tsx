@@ -26,6 +26,9 @@ export function PageContainer({
         width: "100%",
         maxWidth,
         mx: "auto",
+        px: { xs: 0, sm: 0.5 },
+        minWidth: 0,
+        overflow: "hidden",
         ...(noPadding ? {} : { pb: 2 }),
         ...sx,
       }}

@@ -18,6 +18,8 @@ export function PageContainer({ children, className, sx = {} }: PageContainerPro
         maxWidth: LAYOUT.contentMaxWidth,
         mx: "auto",
         px: LAYOUT.pageGutterX,
+        minWidth: 0,
+        overflow: "hidden",
         ...sx,
       }}
     >

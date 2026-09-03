@@ -2,9 +2,48 @@ html,
 body {
   margin: 0;
   padding: 0;
+  min-width: 320px;
+  overflow-x: hidden;
   min-height: 100%;
   font-family: var(--font-inter), var(--font-sora), "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+.MuiContainer-root,
+.MuiBox-root,
+.MuiStack-root,
+.MuiGrid-root {
+  min-width: 0;
+}
+
+.MuiDialog-paper {
+  max-width: calc(100% - 24px);
+}
+
+@media (max-width: 599.95px) {
+  .MuiTablePagination-toolbar {
+    min-height: 56px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding-inline: 8px;
+  }
+
+  .MuiTablePagination-spacer {
+    display: none;
+  }
 }
